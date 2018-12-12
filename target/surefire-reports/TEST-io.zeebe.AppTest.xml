@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://maven.apache.org/surefire/maven-surefire-plugin/xsd/surefire-test-report.xsd" name="io.zeebe.AppTest" time="0.024" tests="1" errors="0" skipped="0" failures="0">
+  <properties>
+    <property name="awt.toolkit" value="sun.awt.X11.XToolkit"/>
+    <property name="file.encoding.pkg" value="sun.io"/>
+    <property name="java.specification.version" value="1.8"/>
+    <property name="sun.cpu.isalist" value=""/>
+    <property name="sun.jnu.encoding" value="UTF-8"/>
+    <property name="java.class.path" value="/home/nicolas/work/src/github.com/npepinpe/zb-kafka-exporter/target/test-classes:/home/nicolas/work/src/github.com/npepinpe/zb-kafka-exporter/target/classes:/home/nicolas/.m2/repository/io/zeebe/zb-exporter-api/0.15.0-SNAPSHOT/zb-exporter-api-0.15.0-SNAPSHOT.jar:/home/nicolas/.m2/repository/io/zeebe/zb-protocol/0.15.0-SNAPSHOT/zb-protocol-0.15.0-SNAPSHOT.jar:/home/nicolas/.m2/repository/io/zeebe/zb-util/0.15.0-SNAPSHOT/zb-util-0.15.0-SNAPSHOT.jar:/home/nicolas/.m2/repository/uk/co/real-logic/sbe-tool/1.10.0/sbe-tool-1.10.0.jar:/home/nicolas/.m2/repository/org/agrona/agrona/0.9.27/agrona-0.9.27.jar:/home/nicolas/.m2/repository/org/slf4j/slf4j-api/1.7.25/slf4j-api-1.7.25.jar:/home/nicolas/.m2/repository/org/apache/logging/log4j/log4j-slf4j-impl/2.11.1/log4j-slf4j-impl-2.11.1.jar:/home/nicolas/.m2/repository/org/apache/logging/log4j/log4j-api/2.11.1/log4j-api-2.11.1.jar:/home/nicolas/.m2/repository/org/apache/logging/log4j/log4j-core/2.11.1/log4j-core-2.11.1.jar:/home/nicolas/.m2/repository/junit/junit/4.12/junit-4.12.jar:/home/nicolas/.m2/repository/org/hamcrest/hamcrest-core/1.3/hamcrest-core-1.3.jar:/home/nicolas/.m2/repository/org/assertj/assertj-core/3.11.1/assertj-core-3.11.1.jar:/home/nicolas/.m2/repository/org/mockito/mockito-core/2.23.4/mockito-core-2.23.4.jar:/home/nicolas/.m2/repository/net/bytebuddy/byte-buddy/1.9.3/byte-buddy-1.9.3.jar:/home/nicolas/.m2/repository/net/bytebuddy/byte-buddy-agent/1.9.3/byte-buddy-agent-1.9.3.jar:/home/nicolas/.m2/repository/org/objenesis/objenesis/2.6/objenesis-2.6.jar:/home/nicolas/.m2/repository/io/zeebe/zb-build-tools/0.15.0-SNAPSHOT/zb-build-tools-0.15.0-SNAPSHOT.jar:"/>
+    <property name="java.vm.vendor" value="Oracle Corporation"/>
+    <property name="sun.arch.data.model" value="64"/>
+    <property name="java.vendor.url" value="http://java.oracle.com/"/>
+    <property name="user.timezone" value=""/>
+    <property name="java.vm.specification.version" value="1.8"/>
+    <property name="os.name" value="Linux"/>
+    <property name="user.country" value="US"/>
+    <property name="sun.java.launcher" value="SUN_STANDARD"/>
+    <property name="sun.boot.library.path" value="/usr/local/java/jdk1.8.0_181/jre/lib/amd64"/>
+    <property name="sun.java.command" value="/home/nicolas/work/src/github.com/npepinpe/zb-kafka-exporter/target/surefire/surefirebooter8055396943171421200.jar /home/nicolas/work/src/github.com/npepinpe/zb-kafka-exporter/target/surefire 2018-12-11T13-09-01_462-jvmRun1 surefire1615644742045680246tmp surefire_05777072364251591380tmp"/>
+    <property name="surefire.test.class.path" value="/home/nicolas/work/src/github.com/npepinpe/zb-kafka-exporter/target/test-classes:/home/nicolas/work/src/github.com/npepinpe/zb-kafka-exporter/target/classes:/home/nicolas/.m2/repository/io/zeebe/zb-exporter-api/0.15.0-SNAPSHOT/zb-exporter-api-0.15.0-SNAPSHOT.jar:/home/nicolas/.m2/repository/io/zeebe/zb-protocol/0.15.0-SNAPSHOT/zb-protocol-0.15.0-SNAPSHOT.jar:/home/nicolas/.m2/repository/io/zeebe/zb-util/0.15.0-SNAPSHOT/zb-util-0.15.0-SNAPSHOT.jar:/home/nicolas/.m2/repository/uk/co/real-logic/sbe-tool/1.10.0/sbe-tool-1.10.0.jar:/home/nicolas/.m2/repository/org/agrona/agrona/0.9.27/agrona-0.9.27.jar:/home/nicolas/.m2/repository/org/slf4j/slf4j-api/1.7.25/slf4j-api-1.7.25.jar:/home/nicolas/.m2/repository/org/apache/logging/log4j/log4j-slf4j-impl/2.11.1/log4j-slf4j-impl-2.11.1.jar:/home/nicolas/.m2/repository/org/apache/logging/log4j/log4j-api/2.11.1/log4j-api-2.11.1.jar:/home/nicolas/.m2/repository/org/apache/logging/log4j/log4j-core/2.11.1/log4j-core-2.11.1.jar:/home/nicolas/.m2/repository/junit/junit/4.12/junit-4.12.jar:/home/nicolas/.m2/repository/org/hamcrest/hamcrest-core/1.3/hamcrest-core-1.3.jar:/home/nicolas/.m2/repository/org/assertj/assertj-core/3.11.1/assertj-core-3.11.1.jar:/home/nicolas/.m2/repository/org/mockito/mockito-core/2.23.4/mockito-core-2.23.4.jar:/home/nicolas/.m2/repository/net/bytebuddy/byte-buddy/1.9.3/byte-buddy-1.9.3.jar:/home/nicolas/.m2/repository/net/bytebuddy/byte-buddy-agent/1.9.3/byte-buddy-agent-1.9.3.jar:/home/nicolas/.m2/repository/org/objenesis/objenesis/2.6/objenesis-2.6.jar:/home/nicolas/.m2/repository/io/zeebe/zb-build-tools/0.15.0-SNAPSHOT/zb-build-tools-0.15.0-SNAPSHOT.jar:"/>
+    <property name="sun.cpu.endian" value="little"/>
+    <property name="user.home" value="/home/nicolas"/>
+    <property name="user.language" value="en"/>
+    <property name="java.specification.vendor" value="Oracle Corporation"/>
+    <property name="java.home" value="/usr/local/java/jdk1.8.0_181/jre"/>
+    <property name="basedir" value="/home/nicolas/work/src/github.com/npepinpe/zb-kafka-exporter"/>
+    <property name="file.separator" value="/"/>
+    <property name="line.separator" value="&#10;"/>
+    <property name="java.vm.specification.vendor" value="Oracle Corporation"/>
+    <property name="java.specification.name" value="Java Platform API Specification"/>
+    <property name="java.awt.graphicsenv" value="sun.awt.X11GraphicsEnvironment"/>
+    <property name="surefire.real.class.path" value="/home/nicolas/work/src/github.com/npepinpe/zb-kafka-exporter/target/surefire/surefirebooter8055396943171421200.jar"/>
+    <property name="sun.boot.class.path" value="/usr/local/java/jdk1.8.0_181/jre/lib/resources.jar:/usr/local/java/jdk1.8.0_181/jre/lib/rt.jar:/usr/local/java/jdk1.8.0_181/jre/lib/sunrsasign.jar:/usr/local/java/jdk1.8.0_181/jre/lib/jsse.jar:/usr/local/java/jdk1.8.0_181/jre/lib/jce.jar:/usr/local/java/jdk1.8.0_181/jre/lib/charsets.jar:/usr/local/java/jdk1.8.0_181/jre/lib/jfr.jar:/usr/local/java/jdk1.8.0_181/jre/classes"/>
+    <property name="sun.management.compiler" value="HotSpot 64-Bit Tiered Compilers"/>
+    <property name="java.runtime.version" value="1.8.0_181-b13"/>
+    <property name="user.name" value="nicolas"/>
+    <property name="path.separator" value=":"/>
+    <property name="os.version" value="4.19.6-300.fc29.x86_64"/>
+    <property name="java.endorsed.dirs" value="/usr/local/java/jdk1.8.0_181/jre/lib/endorsed"/>
+    <property name="java.runtime.name" value="Java(TM) SE Runtime Environment"/>
+    <property name="file.encoding" value="UTF-8"/>
+    <property name="java.vm.name" value="Java HotSpot(TM) 64-Bit Server VM"/>
+    <property name="localRepository" value="/home/nicolas/.m2/repository"/>
+    <property name="java.vendor.url.bug" value="http://bugreport.sun.com/bugreport/"/>
+    <property name="java.io.tmpdir" value="/tmp"/>
+    <property name="java.version" value="1.8.0_181"/>
+    <property name="user.dir" value="/home/nicolas/work/src/github.com/npepinpe/zb-kafka-exporter"/>
+    <property name="os.arch" value="amd64"/>
+    <property name="java.vm.specification.name" value="Java Virtual Machine Specification"/>
+    <property name="java.awt.printerjob" value="sun.print.PSPrinterJob"/>
+    <property name="sun.os.patch.level" value="unknown"/>
+    <property name="java.library.path" value="/usr/java/packages/lib/amd64:/usr/lib64:/lib64:/lib:/usr/lib"/>
+    <property name="java.vm.info" value="mixed mode"/>
+    <property name="java.vendor" value="Oracle Corporation"/>
+    <property name="java.vm.version" value="25.181-b13"/>
+    <property name="java.ext.dirs" value="/usr/local/java/jdk1.8.0_181/jre/lib/ext:/usr/java/packages/lib/ext"/>
+    <property name="sun.io.unicode.encoding" value="UnicodeLittle"/>
+    <property name="java.class.version" value="52.0"/>
+  </properties>
+  <testcase name="shouldAnswerWithTrue" classname="io.zeebe.AppTest" time="0.001"/>
+</testsuite>
