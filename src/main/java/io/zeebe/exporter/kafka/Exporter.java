@@ -1,45 +1,80 @@
+/*
+ * Copyright © 2017 camunda services GmbH (info@camunda.com)
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package io.zeebe.exporter.kafka;
 
 import io.zeebe.exporter.context.Context;
 import io.zeebe.exporter.context.Controller;
+import io.zeebe.exporter.context.ScheduledTimer;
 import io.zeebe.exporter.record.Record;
+import org.apache.kafka.clients.producer.KafkaProducer;
+import org.apache.kafka.clients.producer.Producer;
 import org.apache.kafka.clients.producer.ProducerRecord;
-import org.apache.kafka.common.KafkaException;
-import org.apache.kafka.common.errors.AuthorizationException;
-import org.apache.kafka.common.errors.OutOfOrderSequenceException;
-import org.apache.kafka.common.errors.ProducerFencedException;
+import org.apache.kafka.clients.producer.RecordMetadata;
 import org.slf4j.Logger;
+
+import java.time.Duration;
+import java.util.ArrayDeque;
+import java.util.Deque;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
 
 public class Exporter implements io.zeebe.exporter.spi.Exporter {
   private static final int UNSET_POSITION = -1;
+  private static final Duration IN_FLIGHT_REQUEST_CHECKER_INTERVAL = Duration.ofSeconds(1);
 
   private Controller controller;
   private Configuration configuration;
   private Logger logger;
-
-  private ProducerRecord<Record, Record> producerRecord;
-  private ZeebeProducer producer;
-  private long latestRecordPosition = UNSET_POSITION;
-  private int recordsSinceLastFlush = 0;
+  private Producer<Record, Record> producer;
+  private Deque<ExportFuture> inFlightRequests;
+  private ScheduledTimer checkInFlightRequestTimerId;
 
   @Override
   public void configure(Context context) {
     this.logger = context.getLogger();
     this.configuration = context.getConfiguration().instantiate(Configuration.class);
+    this.inFlightRequests = new ArrayDeque<>(this.configuration.getBatchSize());
+
+    if (this.configuration.getTopic().isEmpty()) {
+      throw new KafkaExporterException("Must configure a topic");
+    }
   }
 
   @Override
   public void open(Controller controller) {
     this.controller = controller;
-    this.producer = new ZeebeProducer(this.configuration, this.logger);
-
-
+    this.producer = new KafkaProducer<>(new ExporterProperties(this.configuration));
+    this.checkInFlightRequestTimerId =
+        this.controller.scheduleTask(
+            IN_FLIGHT_REQUEST_CHECKER_INTERVAL, this::checkCompletedInFlightRequests);
   }
 
   @Override
   public void close() {
+    if (checkInFlightRequestTimerId != null) {
+      checkInFlightRequestTimerId.cancel();
+      checkInFlightRequestTimerId = null;
+    }
+
     if (producer != null) {
-      flush(false);
+      if (inFlightRequests != null && !inFlightRequests.isEmpty()) {
+        awaitAllInFlightRequestCompletion();
+        cancelInFlightRequests();
+      }
+
       producer.close();
       producer = null;
     }
@@ -56,42 +91,79 @@ public class Exporter implements io.zeebe.exporter.spi.Exporter {
 
     final ProducerRecord<Record, Record> producedRecord =
         new ProducerRecord<>("topic", record, record);
-    producer.send(producedRecord);
-    latestRecordPosition = record.getPosition();
-    recordsSinceLastFlush++;
+    final Future<RecordMetadata> future = producer.send(producedRecord);
+    inFlightRequests.add(new ExportFuture(record.getPosition(), future));
 
-    if (recordsSinceLastFlush >= 1000) {
-      flush(true);
+    if (inFlightRequests.size() >= this.configuration.getBatchSize()) {
+      awaitNextInFlightRequestCompletion();
     }
   }
 
-  private void flush(boolean beginTransaction) {
-    if (latestRecordPosition == UNSET_POSITION) {
-      return;
+  /** Blocks and waits until the next in-flight request is completed */
+  private void awaitNextInFlightRequestCompletion() {
+    long latestPosition = getNextCompletedInFlightRequestPosition();
+    controller.updateLastExportedRecordPosition(latestPosition);
+  }
+
+  /**
+   * Blocks until in-flight requests are completed or until the first one fails, and updates the
+   * position
+   */
+  private void awaitAllInFlightRequestCompletion() {
+    updatePositionBasedOnCompletedInFlightRequests(true);
+  }
+
+  private void updatePositionBasedOnCompletedInFlightRequests(boolean blockForCompletion) {
+    long position = UNSET_POSITION;
+
+    while (!inFlightRequests.isEmpty()) {
+      if (!inFlightRequests.peek().isDone() && !blockForCompletion) {
+        break;
+      }
+
+      final long latestPosition = getNextCompletedInFlightRequestPosition();
+      if (latestPosition != UNSET_POSITION) {
+        position = latestPosition;
+      } else {
+        break;
+      }
     }
 
-    try {
-      producer.commitTransaction();
-      controller.updateLastExportedRecordPosition(latestRecordPosition);
-      latestRecordPosition = -1;
-      recordsSinceLastFlush = 0;
-      if (beginTransaction) {
-        producer.beginTransaction();
+    if (position != UNSET_POSITION) {
+      controller.updateLastExportedRecordPosition(position);
+    }
+  }
+
+  private void checkCompletedInFlightRequests() {
+    updatePositionBasedOnCompletedInFlightRequests(false);
+  }
+
+  private long getNextCompletedInFlightRequestPosition() {
+    final Future<Long> inFlightRequest = inFlightRequests.poll();
+
+    if (inFlightRequest != null) {
+      try {
+        return inFlightRequest.get();
+      } catch (InterruptedException e) {
+        onUnrecoverableError(
+            "Kafka producer thread was interrupted, most likely indicating the producer is closing",
+            e);
+      } catch (ExecutionException e) {
+        onUnrecoverableError(
+            "An exception occurred while awaiting the completion of an in flight export request",
+            e);
       }
-    } catch (IllegalStateException e) {
-      onUnrecoverableError("the Zeebe Kafka producer is misconfigured for transactions", e);
-    } catch (ProducerFencedException e) {
-      onUnrecoverableError(
-          "another producer is currently running and configured with the same transaction ID", e);
-    } catch (OutOfOrderSequenceException e) {
-      onUnrecoverableError(
-          "Kafka received an unexpected sequence number from the Zeebe producer, which means that data may have been lost",
-          e);
-    } catch (AuthorizationException e) {
-      onUnrecoverableError(
-          "the Zeebe producer is misconfigured and not authorized for the given Kafka broker", e);
-    } catch (KafkaException e) {
-      producer.abortTransaction();
+    }
+
+    return -1;
+  }
+
+  private void cancelInFlightRequests() {
+    while (!inFlightRequests.isEmpty()) {
+      final Future inFlightRequest = inFlightRequests.poll();
+      if (inFlightRequest != null) {
+        inFlightRequest.cancel(true);
+      }
     }
   }
 

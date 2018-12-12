@@ -1,17 +1,33 @@
+/*
+ * Copyright © 2017 camunda services GmbH (info@camunda.com)
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package io.zeebe.exporter.kafka;
 
+import io.zeebe.exporter.kafka.serialization.RecordKeySerializer;
+import io.zeebe.exporter.kafka.serialization.RecordSerializer;
 import org.apache.kafka.clients.producer.ProducerConfig;
 
 import java.util.Properties;
 
-public class ZeebeProperties extends Properties {
+public class ExporterProperties extends Properties {
   private final Configuration configuration;
 
-  public ZeebeProperties(Configuration configuration) {
+  public ExporterProperties(Configuration configuration) {
     this.configuration = configuration;
 
     setRequiredProperties();
-    setBatching();
     setCompression();
     setSerializers();
     setTimeouts();
@@ -19,13 +35,12 @@ public class ZeebeProperties extends Properties {
   }
 
   protected void setExtraProperties() {
-    putAll(configuration.getExtraProperties());
+    putAll(configuration.getClientProperties());
   }
 
   protected void setRequiredProperties() {
     // Sets the known servers, a list of host:port pair, e.g. "localhost:3000,localhost:5000"
     put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, configuration.getServers());
-    // Sets the current topic
   }
 
   protected void setSerializers() {
@@ -33,13 +48,6 @@ public class ZeebeProperties extends Properties {
     put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, RecordKeySerializer.class);
     // Use RecordSerializer as value serializer
     put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, RecordSerializer.class);
-  }
-
-  protected void setBatching() {
-    // Batch up to 64K buffer sizes
-    put(ProducerConfig.BATCH_SIZE_CONFIG, configuration.getBatchSize().toBytes());
-    // Linger up to 100 ms before sending batch if size not met
-    put(ProducerConfig.LINGER_MS_CONFIG, configuration.getBatchLinger().toMillis());
   }
 
   protected void setCompression() {
