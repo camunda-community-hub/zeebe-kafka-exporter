@@ -136,6 +136,12 @@ public class Exporter implements io.zeebe.exporter.spi.Exporter {
 
   private void checkCompletedInFlightRequests() {
     updatePositionBasedOnCompletedInFlightRequests(false);
+
+    // could be null if closed in the meantime
+    if (producer != null) {
+      controller.scheduleTask(
+          IN_FLIGHT_REQUEST_CHECKER_INTERVAL, this::checkCompletedInFlightRequests);
+    }
   }
 
   private long getNextCompletedInFlightRequestPosition() {
