@@ -19,7 +19,6 @@ import io.zeebe.exporter.context.Context;
 import io.zeebe.exporter.context.Controller;
 import io.zeebe.exporter.context.ScheduledTimer;
 import io.zeebe.exporter.record.Record;
-import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.Producer;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.clients.producer.RecordMetadata;
@@ -31,24 +30,24 @@ import java.util.Deque;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 
-public class Exporter implements io.zeebe.exporter.spi.Exporter {
+public class KafkaExporter implements io.zeebe.exporter.spi.Exporter {
   private static final int UNSET_POSITION = -1;
   private static final Duration IN_FLIGHT_REQUEST_CHECKER_INTERVAL = Duration.ofSeconds(1);
 
   private Controller controller;
-  private Configuration configuration;
+  private KafkaExporterConfiguration configuration;
   private Logger logger;
   private Producer<Record, Record> producer;
-  private Deque<ExportFuture> inFlightRequests;
+  private Deque<KafkaExporterFuture> inFlightRequests;
   private ScheduledTimer checkInFlightRequestTimerId;
 
   @Override
   public void configure(Context context) {
     this.logger = context.getLogger();
-    this.configuration = context.getConfiguration().instantiate(Configuration.class);
+    this.configuration = context.getConfiguration().instantiate(KafkaExporterConfiguration.class);
     this.inFlightRequests = new ArrayDeque<>(this.configuration.getBatchSize());
 
-    if (this.configuration.getTopic().isEmpty()) {
+    if (this.configuration.getTopic() == null || this.configuration.getTopic().isEmpty()) {
       throw new KafkaExporterException("Must configure a topic");
     }
   }
@@ -56,7 +55,7 @@ public class Exporter implements io.zeebe.exporter.spi.Exporter {
   @Override
   public void open(Controller controller) {
     this.controller = controller;
-    this.producer = new KafkaProducer<>(new ExporterProperties(this.configuration));
+    this.producer = this.configuration.newProducer();
     this.checkInFlightRequestTimerId =
         this.controller.scheduleTask(
             IN_FLIGHT_REQUEST_CHECKER_INTERVAL, this::checkCompletedInFlightRequests);
@@ -92,7 +91,7 @@ public class Exporter implements io.zeebe.exporter.spi.Exporter {
     final ProducerRecord<Record, Record> producedRecord =
         new ProducerRecord<>("topic", record, record);
     final Future<RecordMetadata> future = producer.send(producedRecord);
-    inFlightRequests.add(new ExportFuture(record.getPosition(), future));
+    inFlightRequests.add(new KafkaExporterFuture(record.getPosition(), future));
 
     if (inFlightRequests.size() >= this.configuration.getBatchSize()) {
       awaitNextInFlightRequestCompletion();

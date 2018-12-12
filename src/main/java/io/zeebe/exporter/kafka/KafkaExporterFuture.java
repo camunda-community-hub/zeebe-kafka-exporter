@@ -7,11 +7,11 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
-public class ExportFuture implements Future<Long> {
+public class KafkaExporterFuture implements Future<Long> {
   private final Future<RecordMetadata> wrappedFuture;
   private final long position;
 
-  public ExportFuture(long position, Future<RecordMetadata> wrappedFuture) {
+  public KafkaExporterFuture(long position, Future<RecordMetadata> wrappedFuture) {
     this.position = position;
     this.wrappedFuture = wrappedFuture;
   }

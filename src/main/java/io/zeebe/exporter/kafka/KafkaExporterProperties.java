@@ -21,10 +21,10 @@ import org.apache.kafka.clients.producer.ProducerConfig;
 
 import java.util.Properties;
 
-public class ExporterProperties extends Properties {
-  private final Configuration configuration;
+public class KafkaExporterProperties extends Properties {
+  private final KafkaExporterConfiguration configuration;
 
-  public ExporterProperties(Configuration configuration) {
+  public KafkaExporterProperties(KafkaExporterConfiguration configuration) {
     this.configuration = configuration;
 
     setRequiredProperties();

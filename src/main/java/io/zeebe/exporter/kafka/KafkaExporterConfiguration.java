@@ -15,7 +15,10 @@
  */
 package io.zeebe.exporter.kafka;
 
+import io.zeebe.exporter.record.Record;
 import io.zeebe.util.DurationUtil;
+import org.apache.kafka.clients.producer.KafkaProducer;
+import org.apache.kafka.clients.producer.Producer;
 import org.apache.kafka.common.record.CompressionType;
 
 import java.time.Duration;
@@ -24,7 +27,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public class Configuration {
+public class KafkaExporterConfiguration {
   private String topic;
   private List<String> servers = new ArrayList<>();
   private Duration requestTimeout = Duration.ofSeconds(5);
@@ -103,5 +106,9 @@ public class Configuration {
 
   public void setServers(List<String> servers) {
     this.servers = servers;
+  }
+
+  public Producer<Record, Record> newProducer() {
+    return new KafkaProducer<Record, Record>(new KafkaExporterProperties(this));
   }
 }
