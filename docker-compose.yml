@@ -1,6 +1,20 @@
-version: '3'
+version: '3.3'
 
 services:
+  zeebe:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        version: 0.15.0-SNAPSHOT-fat
+      labels:
+        io.zeebe.exporter.kafka: "Zeebe Kafka Exporter"
+    container_name: zeebe
+    hostname: zeebe
+    ports:
+      - "26500:26500"
+    restart: always
+
   zookeeper:
     image: confluentinc/cp-zookeeper:3.2.0
     container_name: zookeeper
@@ -12,10 +26,10 @@ services:
       ZOOKEEPER_TICK_TIME: 2000
     restart: always
 
-  kafka:
+  kafka-broker:
     image: confluentinc/cp-kafka:3.2.0
     hostname: kafka
-    container_name: kafka
+    container_name: kafka-broker
     depends_on:
       - zookeeper
     ports:
@@ -23,7 +37,15 @@ services:
     environment:
       KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: 'zookeeper:2181'
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://192.168.99.100:9092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://0.0.0.0:9092
       LISTENERS: PLAINTEXT://0.0.0.0:9092
+    restart: always
+
+  kafka-consumer:
+    image: confluentinc/cp-kafka:3.2.0
+    container_name: kafka-consumer
+    depends_on:
+      - kafka-broker
+    command: kafka-console-consumer --bootstrap-server 0.0.0.0:9092 --topic foo --new-consumer --from-beginning
     restart: always
 

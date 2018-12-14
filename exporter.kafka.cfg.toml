@@ -1,0 +1,14 @@
+[[exporters]]
+id = "kafka"
+className = "io.zeebe.exporter.kafka.KafkaExporter"
+
+  [exporters.args]
+  topic = "zeebe"
+  maxInFlightRecords = 1000
+  servers = [ "kafka:9092" ]
+
+  [exporters.args.producer]
+  batchSize = "128K"
+  batchLinger = "50ms"
+  compressionType = "snappy"
+  requestTimeout = "5s"
