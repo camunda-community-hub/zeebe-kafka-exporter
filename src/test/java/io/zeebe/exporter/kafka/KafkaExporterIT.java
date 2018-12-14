@@ -1,4 +1,23 @@
+/*
+ * Copyright © 2017 camunda services GmbH (info@camunda.com)
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package io.zeebe.exporter.kafka;
+
+import static io.zeebe.test.util.record.RecordingExporter.workflowInstanceRecords;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.entry;
 
 import com.github.charithe.kafka.EphemeralKafkaBroker;
 import com.github.charithe.kafka.KafkaJunitRule;
@@ -14,8 +33,11 @@ import io.zeebe.protocol.intent.IncidentIntent;
 import io.zeebe.protocol.intent.WorkflowInstanceIntent;
 import io.zeebe.test.util.TestUtil;
 import io.zeebe.test.util.record.RecordingExporter;
+import java.time.Duration;
+import java.util.*;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
-import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.common.serialization.StringDeserializer;
 import org.junit.After;
@@ -23,17 +45,6 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.RuleChain;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import java.time.Duration;
-import java.util.*;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.atomic.AtomicBoolean;
-
-import static io.zeebe.test.util.record.RecordingExporter.workflowInstanceRecords;
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.entry;
 
 public class KafkaExporterIT {
   private static final String TOPIC = "zeebe";
@@ -105,19 +116,25 @@ public class KafkaExporterIT {
     // create job worker which fails on first try and sets retries to 0 to create an incident
     final AtomicBoolean fail = new AtomicBoolean(true);
 
-    final JobWorker worker = zeebeClient
-        .newWorker()
-        .jobType("work")
-        .handler(
-            (client, job) -> {
-              if (fail.getAndSet(false)) {
-                // fail job
-                client.newFailCommand(job.getKey()).retries(0).errorMessage("failed").send().join();
-              } else {
-                client.newCompleteCommand(job.getKey()).send().join();
-              }
-            })
-        .open();
+    final JobWorker worker =
+        zeebeClient
+            .newWorker()
+            .jobType("work")
+            .handler(
+                (client, job) -> {
+                  if (fail.getAndSet(false)) {
+                    // fail job
+                    client
+                        .newFailCommand(job.getKey())
+                        .retries(0)
+                        .errorMessage("failed")
+                        .send()
+                        .join();
+                  } else {
+                    client.newCompleteCommand(job.getKey()).send().join();
+                  }
+                })
+            .open();
 
     // publish message to trigger message catch event
     zeebeClient

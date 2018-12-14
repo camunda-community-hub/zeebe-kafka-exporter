@@ -20,19 +20,15 @@ import io.zeebe.exporter.context.Controller;
 import io.zeebe.exporter.kafka.configuration.ExporterConfiguration;
 import io.zeebe.exporter.record.Record;
 import io.zeebe.exporter.spi.Exporter;
-import org.apache.kafka.clients.admin.AdminClient;
-import org.apache.kafka.clients.admin.NewTopic;
+import java.time.Duration;
+import java.util.ArrayDeque;
+import java.util.Deque;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
 import org.apache.kafka.clients.producer.Producer;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.clients.producer.RecordMetadata;
 import org.slf4j.Logger;
-
-import java.time.Duration;
-import java.util.ArrayDeque;
-import java.util.Collections;
-import java.util.Deque;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Future;
 
 /**
  * Implementation of a Zeebe exporter producing serialized records to a given Kafka topic.
@@ -106,7 +102,7 @@ public class KafkaExporter implements Exporter {
 
   /** Blocks and waits until the next in-flight record is completed */
   private void awaitNextInFlightRecordCompletion() {
-    long latestPosition = getNextCompletedInFlightRecordPosition();
+    final long latestPosition = getNextCompletedInFlightRecordPosition();
     controller.updateLastExportedRecordPosition(latestPosition);
   }
 

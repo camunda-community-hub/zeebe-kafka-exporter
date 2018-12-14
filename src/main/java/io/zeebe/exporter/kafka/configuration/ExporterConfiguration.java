@@ -16,11 +16,10 @@
 package io.zeebe.exporter.kafka.configuration;
 
 import io.zeebe.exporter.record.Record;
+import java.util.*;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.Producer;
 import org.apache.kafka.clients.producer.ProducerConfig;
-
-import java.util.*;
 
 public class ExporterConfiguration {
   private static final String CLIENT_ID_FORMAT = "zb-kafka-exporter-%s";
@@ -73,11 +72,16 @@ public class ExporterConfiguration {
 
   @Override
   public String toString() {
-    return "ExporterConfiguration{" +
-      "servers=" + servers +
-      ", maxInFlightRecords=" + maxInFlightRecords +
-      ", producer=" + producer +
-      ", topic='" + topic + '\'' +
-      '}';
+    return "ExporterConfiguration{"
+        + "servers="
+        + servers
+        + ", maxInFlightRecords="
+        + maxInFlightRecords
+        + ", producer="
+        + producer
+        + ", topic='"
+        + topic
+        + '\''
+        + '}';
   }
 }

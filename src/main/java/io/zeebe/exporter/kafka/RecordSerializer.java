@@ -16,20 +16,16 @@
 package io.zeebe.exporter.kafka;
 
 import io.zeebe.exporter.record.Record;
+import java.util.Map;
 import org.apache.kafka.common.serialization.Serializer;
 import org.apache.kafka.common.serialization.StringSerializer;
-
-import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
-import java.util.Map;
 
 /**
  * Serializes a {@link Record} for consumption by Kafka.
  *
  * <p>If used as a key serializer (see {@link Serializer#configure(Map, boolean)}), serializes a
- * buffer containing first the partition ID, followed by the position. This is a
- * unique combination for a given Zeebe cluster, and should be enough to efficiently deduplicate
- * records.
+ * buffer containing first the partition ID, followed by the position. This is a unique combination
+ * for a given Zeebe cluster, and should be enough to efficiently deduplicate records.
  *
  * <p>If used as a value serializer, it serializes the record to JSON and reuses Kafka's built-in
  * {@link StringSerializer}.
