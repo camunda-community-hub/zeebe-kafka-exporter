@@ -17,7 +17,6 @@ package io.zeebe.exporter.kafka;
 
 import io.zeebe.exporter.context.Context;
 import io.zeebe.exporter.context.Controller;
-import io.zeebe.exporter.context.ScheduledTimer;
 import io.zeebe.exporter.record.Record;
 import org.apache.kafka.clients.producer.Producer;
 import org.apache.kafka.clients.producer.ProducerRecord;
@@ -39,7 +38,6 @@ public class KafkaExporter implements io.zeebe.exporter.spi.Exporter {
   private Logger logger;
   private Producer<Record, Record> producer;
   private Deque<KafkaExporterFuture> inFlightRequests;
-  private ScheduledTimer checkInFlightRequestTimerId;
 
   @Override
   public void configure(Context context) {
@@ -56,18 +54,12 @@ public class KafkaExporter implements io.zeebe.exporter.spi.Exporter {
   public void open(Controller controller) {
     this.controller = controller;
     this.producer = this.configuration.newProducer();
-    this.checkInFlightRequestTimerId =
-        this.controller.scheduleTask(
+    this.controller.scheduleTask(
             IN_FLIGHT_REQUEST_CHECKER_INTERVAL, this::checkCompletedInFlightRequests);
   }
 
   @Override
   public void close() {
-    if (checkInFlightRequestTimerId != null) {
-      checkInFlightRequestTimerId.cancel();
-      checkInFlightRequestTimerId = null;
-    }
-
     if (producer != null) {
       if (inFlightRequests != null && !inFlightRequests.isEmpty()) {
         awaitAllInFlightRequestCompletion();
