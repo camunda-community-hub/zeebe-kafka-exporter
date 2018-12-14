@@ -1,14 +1,13 @@
 package io.zeebe.exporter.kafka;
 
+import io.zeebe.exporter.kafka.configuration.ExporterConfiguration;
 import io.zeebe.exporter.record.Record;
 import io.zeebe.exporter.record.RecordMetadata;
 import io.zeebe.exporter.test.MockConfiguration;
 import io.zeebe.exporter.test.MockContext;
 import io.zeebe.exporter.test.MockController;
-import io.zeebe.exporter.test.MockScheduledTask;
-import io.zeebe.protocol.clientapi.RecordType;
-import io.zeebe.protocol.clientapi.ValueType;
 import org.apache.kafka.clients.producer.MockProducer;
+import org.apache.kafka.clients.producer.ProducerRecord;
 import org.junit.Before;
 import org.junit.Test;
 import org.slf4j.Logger;
@@ -20,51 +19,59 @@ import static org.mockito.Mockito.*;
 public class KafkaExporterTest {
 
   private final KafkaExporter exporter = new KafkaExporter();
-  private final KafkaExporterConfiguration configuration = spy(new KafkaExporterConfiguration());
-  private final MockProducer<Record, Record> mockProducer = new MockProducer<>();
+  private final ExporterConfiguration configuration = spy(new ExporterConfiguration());
 
-  private final MockContext exporterContext = new MockContext();
-  private final MockConfiguration<KafkaExporterConfiguration> exporterConfig =
+  private final MockProducer<Record, Record> mockProducer = new MockProducer<>();
+  private final MockContext mockContext = new MockContext();
+  private final MockConfiguration<ExporterConfiguration> mockConfiguration =
       new MockConfiguration<>(configuration);
-  private final MockController exporterController = new MockController();
+  private final MockController mockController = new MockController();
   private final Logger logger = LoggerFactory.getLogger(KafkaExporter.class);
 
   @Before
   public void setup() {
     configuration.setTopic("topic");
-    exporterConfig.setId("kafka");
-    doAnswer(i -> mockProducer).when(configuration).newProducer();
+    mockConfiguration.setId("kafka");
+    doAnswer(i -> mockProducer).when(configuration).newProducer("kafka");
 
-    exporterContext.setConfiguration(exporterConfig);
-    exporterContext.setLogger(logger);
+    mockContext.setConfiguration(mockConfiguration);
+    mockContext.setLogger(logger);
   }
 
   @Test
   public void shouldExportRecords() {
     // given
     final long position = 2L;
-    final Record record = mockRecord(ValueType.MESSAGE, RecordType.COMMAND);
-    when(record.getPosition()).thenReturn(position);
+    final int partition = 1;
+    final String json = "{\"foo\": \"bar\" }";
+    final Record record = mockRecord(partition, position, json);
 
     // when
-    exporter.configure(exporterContext);
-    exporter.open(exporterController);
+    exporter.configure(mockContext);
+    exporter.open(mockController);
     exporter.export(record);
 
     // then
-    mockProducer.completeNext();
-    final MockScheduledTask task = exporterController.getScheduledTasks().get(0);
-    task.getTask().run();
-    assertThat(exporterController.getPosition()).isEqualTo(position);
+    assertThat(mockProducer.history())
+        .hasSize(1)
+        .containsExactly(new ProducerRecord<>(configuration.getTopic(), record, record));
   }
 
-  private Record mockRecord(final ValueType valueType, final RecordType recordType) {
+  @Test
+  public void shouldUpdatePositionBasedOnCompletedRequests() {}
+
+  private void checkInFlightRequests() {
+    mockController.runScheduledTasks(KafkaExporter.IN_FLIGHT_RECORD_CHECKER_INTERVAL);
+  }
+
+  private Record mockRecord(int partitionId, long position, String json) {
     final RecordMetadata metadata = mock(RecordMetadata.class);
-    when(metadata.getValueType()).thenReturn(valueType);
-    when(metadata.getRecordType()).thenReturn(recordType);
+    when(metadata.getPartitionId()).thenReturn(partitionId);
 
     final Record record = mock(Record.class);
+    when(record.getPosition()).thenReturn(position);
     when(record.getMetadata()).thenReturn(metadata);
+    when(record.toJson()).thenReturn(json);
 
     return record;
   }
