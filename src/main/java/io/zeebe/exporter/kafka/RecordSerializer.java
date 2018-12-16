@@ -16,9 +16,10 @@
 package io.zeebe.exporter.kafka;
 
 import io.zeebe.exporter.record.Record;
-import java.util.Map;
 import org.apache.kafka.common.serialization.Serializer;
 import org.apache.kafka.common.serialization.StringSerializer;
+
+import java.util.Map;
 
 /**
  * Serializes a {@link Record} for consumption by Kafka.
@@ -53,7 +54,9 @@ public class RecordSerializer implements Serializer<Record> {
   }
 
   @Override
-  public void close() {}
+  public void close() {
+    serializer.close();
+  }
 
   private String serializeKey(Record record) {
     return String.format("%d-%d", record.getMetadata().getPartitionId(), record.getPosition());

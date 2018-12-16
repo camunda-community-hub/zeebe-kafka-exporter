@@ -15,9 +15,6 @@
  */
 package io.zeebe.exporter.kafka;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Mockito.*;
-
 import io.zeebe.exporter.kafka.configuration.ExporterConfiguration;
 import io.zeebe.exporter.record.Record;
 import io.zeebe.exporter.record.RecordMetadata;
@@ -31,6 +28,10 @@ import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.*;
+
 public class KafkaExporterTest {
 
   private final KafkaExporter exporter = new KafkaExporter();
@@ -41,7 +42,7 @@ public class KafkaExporterTest {
   private final MockConfiguration<ExporterConfiguration> mockConfiguration =
       new MockConfiguration<>(configuration);
   private final MockController mockController = new MockController();
-  private final Logger logger = LoggerFactory.getLogger(KafkaExporter.class);
+  private final Logger logger = LoggerFactory.getLogger("io.zeebe.exporter.kafka");
 
   @Before
   public void setup() {
@@ -51,6 +52,16 @@ public class KafkaExporterTest {
 
     mockContext.setConfiguration(mockConfiguration);
     mockContext.setLogger(logger);
+  }
+
+  @Test
+  public void shouldThrowExceptionIfNoTopicConfigured() {
+    // given
+    configuration.setTopic("");
+
+    // then
+    assertThatThrownBy(() -> exporter.configure(mockContext))
+        .isInstanceOf(KafkaExporterException.class);
   }
 
   @Test

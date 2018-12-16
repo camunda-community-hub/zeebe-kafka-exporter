@@ -15,15 +15,21 @@
  */
 package io.zeebe.exporter.kafka.configuration;
 
+import io.zeebe.exporter.kafka.RecordSerializer;
 import io.zeebe.exporter.record.Record;
-import java.util.*;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.Producer;
 import org.apache.kafka.clients.producer.ProducerConfig;
 
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+
 public class ExporterConfiguration {
   private static final String CLIENT_ID_FORMAT = "zb-kafka-exporter-%s";
 
+  private final RecordSerializer keySerializer = new RecordSerializer();
+  private final RecordSerializer valueSerializer = new RecordSerializer();
   private List<String> servers = Collections.singletonList("localhost:9092");
   private int maxInFlightRecords = 1_000;
   private ProducerConfiguration producer = new ProducerConfiguration();
@@ -31,11 +37,14 @@ public class ExporterConfiguration {
   private String topic;
 
   public Producer<Record, Record> newProducer(String exporterId) {
-    final Properties properties = producer.newProperties();
-    properties.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, String.join(",", servers));
-    properties.put(ProducerConfig.CLIENT_ID_CONFIG, String.format(CLIENT_ID_FORMAT, exporterId));
+    final Map<String, Object> config = producer.newConfig();
+    config.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, servers);
+    config.put(ProducerConfig.CLIENT_ID_CONFIG, String.format(CLIENT_ID_FORMAT, exporterId));
 
-    return new KafkaProducer<>(properties);
+    keySerializer.configure(config, true);
+    valueSerializer.configure(config, false);
+
+    return new KafkaProducer<>(config, keySerializer, valueSerializer);
   }
 
   public String getTopic() {

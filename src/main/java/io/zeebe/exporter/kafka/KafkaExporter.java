@@ -20,20 +20,25 @@ import io.zeebe.exporter.context.Controller;
 import io.zeebe.exporter.kafka.configuration.ExporterConfiguration;
 import io.zeebe.exporter.record.Record;
 import io.zeebe.exporter.spi.Exporter;
-import java.time.Duration;
-import java.util.ArrayDeque;
-import java.util.Deque;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Future;
 import org.apache.kafka.clients.producer.Producer;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.clients.producer.RecordMetadata;
 import org.slf4j.Logger;
 
+import java.time.Duration;
+import java.util.ArrayDeque;
+import java.util.Deque;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
+
 /**
  * Implementation of a Zeebe exporter producing serialized records to a given Kafka topic.
  *
  * <p>TODO: implement another transmission strategy using transactions and see which is better
+ *
+ * <p>TODO: better error handling; at the moment, if a record is dropped, the exporter can never
+ *
+ * <p>TODO: when exporter closed unexpectedly, what should happen?
  */
 public class KafkaExporter implements Exporter {
   static final Duration IN_FLIGHT_RECORD_CHECKER_INTERVAL = Duration.ofSeconds(1);
@@ -45,7 +50,7 @@ public class KafkaExporter implements Exporter {
   private Logger logger;
   private Producer<Record, Record> producer;
   private Deque<KafkaExporterFuture> inFlightRecords;
-  private boolean isClosing;
+  private boolean isClosed;
 
   @Override
   public void configure(Context context) {
@@ -58,6 +63,13 @@ public class KafkaExporter implements Exporter {
       throw new KafkaExporterException("Must configure a topic");
     }
 
+    // create and close a producer immediately to validate the configuration
+    try {
+      this.configuration.newProducer(this.id).close();
+    } catch (Exception e) {
+      throw new KafkaExporterException("Unable to configure a new Kafka producer", e);
+    }
+
     logger.debug("Configured exporter {} with {}", this.id, this.configuration);
   }
 
@@ -67,7 +79,7 @@ public class KafkaExporter implements Exporter {
     this.controller.scheduleTask(
         IN_FLIGHT_RECORD_CHECKER_INTERVAL, this::checkCompletedInFlightRecords);
     this.producer = this.configuration.newProducer(this.id);
-    this.isClosing = false;
+    this.isClosed = false;
 
     logger.debug("Opened exporter {}", this.id);
   }
@@ -107,12 +119,14 @@ public class KafkaExporter implements Exporter {
   }
 
   private void closeInternal(boolean awaitInFlightRecords) {
-    if (!isClosing) {
+    if (!isClosed) {
       logger.debug(
           "Closing exporter, waiting for in flight records to complete: {}", awaitInFlightRecords);
-      isClosing = true;
+      isClosed = true;
 
       if (producer != null) {
+        // flushes any remaining records and awaits their completion
+        // todo: currently waits forever, should configure a timeout
         producer.close();
         producer = null;
       }

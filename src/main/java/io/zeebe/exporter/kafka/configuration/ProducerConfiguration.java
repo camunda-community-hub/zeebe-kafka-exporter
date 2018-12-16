@@ -18,33 +18,41 @@ package io.zeebe.exporter.kafka.configuration;
 import io.zeebe.exporter.kafka.RecordSerializer;
 import io.zeebe.util.ByteValue;
 import io.zeebe.util.DurationUtil;
-import java.time.Duration;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Properties;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.common.record.CompressionType;
 
+import java.time.Duration;
+import java.util.HashMap;
+import java.util.Map;
+
 public class ProducerConfiguration {
-  private String batchSize = "64K";
+  private String batchSize = "128K";
   private String batchLinger = "100ms";
   private String compressionType = CompressionType.SNAPPY.name;
-  private String requestTimeout = "5s";
+  private String requestTimeout = "10s";
+  private int maxConcurrentRequests = 3;
   private Map<String, String> extra = new HashMap<>();
 
-  public Properties newProperties() {
-    final Properties properties = new Properties();
+  /**
+   * Configures the producer to be idempotent and deliver messages in order. setting idempotence to
+   * true defaults retries to {@link Integer.MAX_VALUE} and acks to all. This also restricts the
+   * number of maximum in flight requests per connection to at most 5.
+   *
+   * @return producer configuration
+   */
+  public Map<String, Object> newConfig() {
+    final Map<String, Object> config = new HashMap<>(extra);
 
-    properties.putAll(extra);
-    properties.put(ProducerConfig.BATCH_SIZE_CONFIG, String.valueOf(getBatchSize().toBytes()));
-    properties.put(ProducerConfig.LINGER_MS_CONFIG, String.valueOf(getBatchLinger().toMillis()));
-    properties.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, RecordSerializer.class.getName());
-    properties.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, RecordSerializer.class.getName());
-    properties.put(ProducerConfig.COMPRESSION_TYPE_CONFIG, getCompressionType().name);
-    properties.put(
-        ProducerConfig.REQUEST_TIMEOUT_MS_CONFIG, String.valueOf(getRequestTimeout().toMillis()));
+    config.put(ProducerConfig.BATCH_SIZE_CONFIG, (int) getBatchSize().toBytes());
+    config.put(ProducerConfig.LINGER_MS_CONFIG, (int) getBatchLinger().toMillis());
+    config.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, RecordSerializer.class);
+    config.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, RecordSerializer.class);
+    config.put(ProducerConfig.COMPRESSION_TYPE_CONFIG, getCompressionType().name);
+    config.put(ProducerConfig.REQUEST_TIMEOUT_MS_CONFIG, (int) getRequestTimeout().toMillis());
+    config.put(ProducerConfig.ENABLE_IDEMPOTENCE_CONFIG, true);
+    config.put(ProducerConfig.MAX_IN_FLIGHT_REQUESTS_PER_CONNECTION, getMaxConcurrentRequests());
 
-    return properties;
+    return config;
   }
 
   public ByteValue getBatchSize() {
@@ -85,6 +93,14 @@ public class ProducerConfiguration {
 
   public void setExtra(Map<String, String> extra) {
     this.extra = extra;
+  }
+
+  public int getMaxConcurrentRequests() {
+    return maxConcurrentRequests;
+  }
+
+  public void setMaxConcurrentRequests(int maxConcurrentRequests) {
+    this.maxConcurrentRequests = maxConcurrentRequests;
   }
 
   @Override
