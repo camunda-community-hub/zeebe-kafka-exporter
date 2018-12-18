@@ -18,7 +18,6 @@ package io.zeebe.exporter.kafka;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.charithe.kafka.KafkaJunitRule;
 import io.zeebe.broker.system.configuration.ExporterCfg;
-import io.zeebe.exporter.kafka.configuration.ExporterConfiguration;
 import io.zeebe.test.EmbeddedBrokerRule;
 import java.util.Collections;
 import java.util.Map;
@@ -27,13 +26,15 @@ public class ZeebeRule extends EmbeddedBrokerRule {
   private static final ObjectMapper MAPPER = new ObjectMapper();
 
   @SuppressWarnings("unchecked")
-  public ZeebeRule(KafkaJunitRule kafkaRule, ExporterConfiguration configuration) {
+  public ZeebeRule(KafkaJunitRule kafkaRule, KafkaExporterConfiguration configuration) {
     super(
         c -> {
-          configuration.setServers(
+          configuration.servers =
               Collections.singletonList(
-                  String.format("localhost:%d", kafkaRule.helper().kafkaPort())));
-          configuration.setTopic("zeebe");
+                  String.format("localhost:%d", kafkaRule.helper().kafkaPort()));
+          configuration.topic = "zeebe";
+          configuration.producer.batchLinger = "1ms";
+          configuration.maxInFlightRecords = 1;
 
           final ExporterCfg exporterCfg = new ExporterCfg();
           exporterCfg.setId("kafka");

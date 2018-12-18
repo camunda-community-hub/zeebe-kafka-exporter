@@ -9,6 +9,7 @@
 
   <Loggers>
     <Logger name="io.zeebe.exporter.kafka" level="debug"/>
+    <Logger name="io.zeebe.broker.exporter" level="debug"/>
 
     <Root level="info">
       <AppenderRef ref="Console"/>

@@ -17,19 +17,17 @@ package io.zeebe.exporter.kafka;
 
 import io.zeebe.exporter.context.Context;
 import io.zeebe.exporter.context.Controller;
-import io.zeebe.exporter.kafka.configuration.ExporterConfiguration;
 import io.zeebe.exporter.record.Record;
 import io.zeebe.exporter.spi.Exporter;
-import org.apache.kafka.clients.producer.Producer;
-import org.apache.kafka.clients.producer.ProducerRecord;
-import org.apache.kafka.clients.producer.RecordMetadata;
-import org.slf4j.Logger;
-
 import java.time.Duration;
 import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
+import org.apache.kafka.clients.producer.Producer;
+import org.apache.kafka.clients.producer.ProducerRecord;
+import org.apache.kafka.clients.producer.RecordMetadata;
+import org.slf4j.Logger;
 
 /**
  * Implementation of a Zeebe exporter producing serialized records to a given Kafka topic.
@@ -46,7 +44,7 @@ public class KafkaExporter implements Exporter {
 
   private String id;
   private Controller controller;
-  private ExporterConfiguration configuration;
+  private KafkaExporterConfiguration configuration;
   private Logger logger;
   private Producer<Record, Record> producer;
   private Deque<KafkaExporterFuture> inFlightRecords;
@@ -55,19 +53,12 @@ public class KafkaExporter implements Exporter {
   @Override
   public void configure(Context context) {
     this.logger = context.getLogger();
-    this.configuration = context.getConfiguration().instantiate(ExporterConfiguration.class);
-    this.inFlightRecords = new ArrayDeque<>(this.configuration.getMaxInFlightRecords());
+    this.configuration = context.getConfiguration().instantiate(KafkaExporterConfiguration.class);
+    this.inFlightRecords = new ArrayDeque<>(this.configuration.maxInFlightRecords);
     this.id = context.getConfiguration().getId();
 
-    if (this.configuration.getTopic() == null || this.configuration.getTopic().isEmpty()) {
+    if (this.configuration.topic == null || this.configuration.topic.isEmpty()) {
       throw new KafkaExporterException("Must configure a topic");
-    }
-
-    // create and close a producer immediately to validate the configuration
-    try {
-      this.configuration.newProducer(this.id).close();
-    } catch (Exception e) {
-      throw new KafkaExporterException("Unable to configure a new Kafka producer", e);
     }
 
     logger.debug("Configured exporter {} with {}", this.id, this.configuration);
@@ -101,12 +92,12 @@ public class KafkaExporter implements Exporter {
     }
 
     final ProducerRecord<Record, Record> producedRecord =
-        new ProducerRecord<>(configuration.getTopic(), record, record);
+        new ProducerRecord<>(configuration.topic, record, record);
     final Future<RecordMetadata> future = producer.send(producedRecord);
     inFlightRecords.add(new KafkaExporterFuture(record.getPosition(), future));
     logger.debug(">>> Exported new record {}", record);
 
-    if (inFlightRecords.size() >= this.configuration.getMaxInFlightRecords()) {
+    if (inFlightRecords.size() >= this.configuration.maxInFlightRecords) {
       logger.debug("Too many in flight records, blocking until the next one completes...");
       awaitNextInFlightRecordCompletion();
     }

@@ -16,10 +16,9 @@
 package io.zeebe.exporter.kafka;
 
 import io.zeebe.exporter.record.Record;
+import java.util.Map;
 import org.apache.kafka.common.serialization.Serializer;
 import org.apache.kafka.common.serialization.StringSerializer;
-
-import java.util.Map;
 
 /**
  * Serializes a {@link Record} for consumption by Kafka.
@@ -32,6 +31,9 @@ import java.util.Map;
  * {@link StringSerializer}.
  */
 public class RecordSerializer implements Serializer<Record> {
+  // Will be formatted as partitionId-position
+  private static final String KEY_FORMAT = "%d-%d";
+
   private final StringSerializer serializer = new StringSerializer();
   private boolean isKeySerializer;
 
@@ -59,7 +61,7 @@ public class RecordSerializer implements Serializer<Record> {
   }
 
   private String serializeKey(Record record) {
-    return String.format("%d-%d", record.getMetadata().getPartitionId(), record.getPosition());
+    return String.format(KEY_FORMAT, record.getMetadata().getPartitionId(), record.getPosition());
   }
 
   private String serializeValue(Record record) {

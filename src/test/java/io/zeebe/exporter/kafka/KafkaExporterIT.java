@@ -24,7 +24,6 @@ import com.github.charithe.kafka.KafkaJunitRule;
 import com.github.charithe.kafka.StartupMode;
 import io.zeebe.client.ZeebeClient;
 import io.zeebe.client.api.subscription.JobWorker;
-import io.zeebe.exporter.kafka.configuration.ExporterConfiguration;
 import io.zeebe.exporter.record.Record;
 import io.zeebe.exporter.record.value.IncidentRecordValue;
 import io.zeebe.model.bpmn.Bpmn;
@@ -35,7 +34,6 @@ import io.zeebe.test.util.TestUtil;
 import io.zeebe.test.util.record.RecordingExporter;
 import java.time.Duration;
 import java.util.*;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
@@ -48,7 +46,7 @@ import org.junit.rules.RuleChain;
 
 public class KafkaExporterIT {
   private static final String TOPIC = "zeebe";
-  private ExporterConfiguration configuration = new ExporterConfiguration();
+  private KafkaExporterConfiguration configuration = new KafkaExporterConfiguration();
   private KafkaJunitRule kafkaRule =
       new KafkaJunitRule(EphemeralKafkaBroker.create(), StartupMode.WAIT_FOR_STARTUP);
   private ZeebeRule zeebeRule = new ZeebeRule(kafkaRule, configuration);
@@ -93,7 +91,7 @@ public class KafkaExporterIT {
   }
 
   @Test
-  public void shouldExportRecords() throws ExecutionException, InterruptedException {
+  public void shouldExportRecords() throws InterruptedException {
     final String orderId = "foo-bar-123";
 
     // deploy workflow

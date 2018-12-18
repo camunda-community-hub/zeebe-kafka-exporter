@@ -15,12 +15,15 @@
  */
 package io.zeebe.exporter.kafka;
 
-import io.zeebe.exporter.kafka.configuration.ExporterConfiguration;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.*;
+
 import io.zeebe.exporter.record.Record;
 import io.zeebe.exporter.record.RecordMetadata;
-import io.zeebe.exporter.test.MockConfiguration;
-import io.zeebe.exporter.test.MockContext;
-import io.zeebe.exporter.test.MockController;
+import io.zeebe.test.exporter.MockConfiguration;
+import io.zeebe.test.exporter.MockContext;
+import io.zeebe.test.exporter.MockController;
 import org.apache.kafka.clients.producer.MockProducer;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.junit.Before;
@@ -28,25 +31,21 @@ import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.Mockito.*;
-
 public class KafkaExporterTest {
 
   private final KafkaExporter exporter = new KafkaExporter();
-  private final ExporterConfiguration configuration = spy(new ExporterConfiguration());
+  private final KafkaExporterConfiguration configuration = spy(new KafkaExporterConfiguration());
 
   private final MockProducer<Record, Record> mockProducer = new MockProducer<>();
   private final MockContext mockContext = new MockContext();
-  private final MockConfiguration<ExporterConfiguration> mockConfiguration =
+  private final MockConfiguration<KafkaExporterConfiguration> mockConfiguration =
       new MockConfiguration<>(configuration);
   private final MockController mockController = new MockController();
   private final Logger logger = LoggerFactory.getLogger("io.zeebe.exporter.kafka");
 
   @Before
   public void setup() {
-    configuration.setTopic("topic");
+    configuration.topic = "topic";
     mockConfiguration.setId("kafka");
     doAnswer(i -> mockProducer).when(configuration).newProducer("kafka");
 
@@ -57,7 +56,7 @@ public class KafkaExporterTest {
   @Test
   public void shouldThrowExceptionIfNoTopicConfigured() {
     // given
-    configuration.setTopic("");
+    configuration.topic = "";
 
     // then
     assertThatThrownBy(() -> exporter.configure(mockContext))
@@ -80,7 +79,7 @@ public class KafkaExporterTest {
     // then
     assertThat(mockProducer.history())
         .hasSize(1)
-        .containsExactly(new ProducerRecord<>(configuration.getTopic(), record, record));
+        .containsExactly(new ProducerRecord<>(configuration.topic, record, record));
   }
 
   @Test
