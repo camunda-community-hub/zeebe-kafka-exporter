@@ -15,24 +15,26 @@
  */
 package io.zeebe.exporter.kafka;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.entry;
-
 import com.github.charithe.kafka.EphemeralKafkaBroker;
 import com.github.charithe.kafka.KafkaJunitRule;
 import com.github.charithe.kafka.StartupMode;
 import io.zeebe.exporter.record.Record;
 import io.zeebe.test.exporter.ExporterIntegrationRule;
-import java.time.Duration;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Properties;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.common.serialization.ByteArrayDeserializer;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
+
+import java.nio.ByteBuffer;
+import java.time.Duration;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Properties;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.entry;
 
 public class KafkaExporterIT {
   private static final String TOPIC = "zeebe";
@@ -60,23 +62,26 @@ public class KafkaExporterIT {
     exporterIntegrationRule.performSampleWorkload();
 
     // then
-    final Map<byte[], byte[]> records = consumeAllExportedRecords();
+    final Map<ByteBuffer, ByteBuffer> records = consumeAllExportedRecords();
     exporterIntegrationRule.visitExportedRecords(r -> assertRecordExported(records, r));
   }
 
-  private void assertRecordExported(Map<byte[], byte[]> producedRecords, Record<?> record) {
+  private void assertRecordExported(Map<ByteBuffer, ByteBuffer> producedRecords, Record<?> record) {
     assertThat(producedRecords)
         .contains(
             entry(
-                keySerializer.serialize(TOPIC, record), valueSerializer.serialize(TOPIC, record)));
+              ByteBuffer.wrap(keySerializer.serialize(TOPIC, record)),
+              ByteBuffer.wrap(valueSerializer.serialize(TOPIC, record))));
   }
 
-  private Map<byte[], byte[]> consumeAllExportedRecords() {
-    final Map<byte[], byte[]> records = new HashMap<>();
+  private Map<ByteBuffer, ByteBuffer> consumeAllExportedRecords() {
+    final Map<ByteBuffer, ByteBuffer> records = new HashMap<>();
     final Duration timeout = Duration.ofSeconds(5);
 
     try (final KafkaConsumer<byte[], byte[]> consumer = newConsumer()) {
-      consumer.poll(timeout).forEach(r -> records.put(r.key(), r.value()));
+      consumer
+        .poll(timeout)
+        .forEach(r -> records.put(ByteBuffer.wrap(r.key()), ByteBuffer.wrap(r.value())));
     }
 
     return records;
@@ -100,11 +105,10 @@ public class KafkaExporterIT {
 
   private KafkaExporterConfiguration newConfiguration() {
     final KafkaExporterConfiguration configuration = new KafkaExporterConfiguration();
-    configuration.maxInFlightRecords = 1;
+    configuration.maxInFlightRecords = 10;
     configuration.topic = TOPIC;
     configuration.servers =
         Collections.singletonList(String.format("localhost:%d", kafkaRule.helper().kafkaPort()));
-    configuration.producer.batchLinger = "1ms";
 
     return configuration;
   }
