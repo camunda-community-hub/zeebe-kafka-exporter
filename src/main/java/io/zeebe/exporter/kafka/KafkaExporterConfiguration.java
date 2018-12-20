@@ -18,14 +18,15 @@ package io.zeebe.exporter.kafka;
 import io.zeebe.exporter.record.Record;
 import io.zeebe.util.ByteValue;
 import io.zeebe.util.DurationUtil;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.Producer;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.common.record.CompressionType;
+
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 public class KafkaExporterConfiguration {
   private static final String CLIENT_ID_FORMAT = "zb-kafka-exporter-%s";
@@ -80,7 +81,11 @@ public class KafkaExporterConfiguration {
      * @return producer configuration
      */
     private Map<String, Object> newConfig() {
-      final Map<String, Object> config = new HashMap<>(extra);
+      final Map<String, Object> config = new HashMap<>();
+
+      if (extra != null) {
+        config.putAll(extra);
+      }
 
       config.put(ProducerConfig.BATCH_SIZE_CONFIG, (int) new ByteValue(batchSize).toBytes());
       config.put(ProducerConfig.LINGER_MS_CONFIG, (int) DurationUtil.parse(batchLinger).toMillis());
