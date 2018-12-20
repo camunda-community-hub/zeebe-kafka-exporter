@@ -53,6 +53,7 @@
       <groupId>com.github.charithe</groupId>
       <artifactId>kafka-junit</artifactId>
       <version>${version.kafka-junit}</version>
+      <scope>test</scope>
     </dependency>
 
     <dependency>
