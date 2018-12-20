@@ -20,12 +20,6 @@ import io.zeebe.exporter.context.Controller;
 import io.zeebe.exporter.record.Record;
 import io.zeebe.exporter.spi.Exporter;
 import io.zeebe.util.DurationUtil;
-import org.apache.kafka.clients.producer.Producer;
-import org.apache.kafka.clients.producer.ProducerRecord;
-import org.apache.kafka.clients.producer.RecordMetadata;
-import org.apache.kafka.common.errors.InterruptException;
-import org.slf4j.Logger;
-
 import java.time.Duration;
 import java.util.ArrayDeque;
 import java.util.Deque;
@@ -33,6 +27,11 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import org.apache.kafka.clients.producer.Producer;
+import org.apache.kafka.clients.producer.ProducerRecord;
+import org.apache.kafka.clients.producer.RecordMetadata;
+import org.apache.kafka.common.errors.InterruptException;
+import org.slf4j.Logger;
 
 /**
  * Implementation of a Zeebe exporter producing serialized records to a given Kafka topic.

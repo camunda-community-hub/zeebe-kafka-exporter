@@ -3,7 +3,7 @@ id = "kafka"
 className = "io.zeebe.exporter.kafka.KafkaExporter"
 
   [exporters.args]
-  topic = "zeebe"
+  default-topic = "zeebe"
   maxInFlightRecords = 1000
   servers = [ "kafka:9092" ]
 
@@ -12,3 +12,16 @@ className = "io.zeebe.exporter.kafka.KafkaExporter"
   batchLinger = "50ms"
   compressionType = "snappy"
   requestTimeout = "5s"
+
+  [exporters.args.records]
+  defaults = { type = "all", topic = "zeebe" }
+  deployment = { type = "all", topic = "zeebe-deployments" }
+  incident = { type = "all", topic = "zeebe-incidents" }
+  jobBatch = { type = "all", topic = "zeebe-incidents" }
+  job = { type = "all", topic = "zeebe-incidents" }
+  message = { type = "all", topic = "zeebe-incidents" }
+  messageSubscription = { type = "all", topic = "zeebe-incidents" }
+  raft = { type = "all", topic = "zeebe-incidents" }
+  timer = { type = "all", topic = "zeebe-incidents" }
+  workflowInstance = { type = "all", topic = "zeebe-incidents" }
+  workflowInstanceSubscription = { type = "all", topic = "zeebe-incidents" }

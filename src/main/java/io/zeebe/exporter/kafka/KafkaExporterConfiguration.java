@@ -15,17 +15,19 @@
  */
 package io.zeebe.exporter.kafka;
 
+import io.zeebe.exporter.kafka.config.RecordsConfiguration;
 import io.zeebe.exporter.record.Record;
 import io.zeebe.util.ByteValue;
 import io.zeebe.util.DurationUtil;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.Producer;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.common.record.CompressionType;
+
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 public class KafkaExporterConfiguration {
   private static final String CLIENT_ID_FORMAT = "zb-kafka-exporter-%s";
@@ -37,6 +39,7 @@ public class KafkaExporterConfiguration {
   public int maxInFlightRecords = 1_000;
   public String awaitInFlightRecordTimeout = "5s";
   public ProducerConfiguration producer = new ProducerConfiguration();
+  public RecordsConfiguration records = new RecordsConfiguration();
 
   public Producer<Record, Record> newProducer(String exporterId) {
     final Map<String, Object> configs = producer.getConfigs(exporterId);
