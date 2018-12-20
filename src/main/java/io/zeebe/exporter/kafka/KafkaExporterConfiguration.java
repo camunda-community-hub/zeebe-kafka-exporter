@@ -18,15 +18,14 @@ package io.zeebe.exporter.kafka;
 import io.zeebe.exporter.record.Record;
 import io.zeebe.util.ByteValue;
 import io.zeebe.util.DurationUtil;
-import org.apache.kafka.clients.producer.KafkaProducer;
-import org.apache.kafka.clients.producer.Producer;
-import org.apache.kafka.clients.producer.ProducerConfig;
-import org.apache.kafka.common.record.CompressionType;
-
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import org.apache.kafka.clients.producer.KafkaProducer;
+import org.apache.kafka.clients.producer.Producer;
+import org.apache.kafka.clients.producer.ProducerConfig;
+import org.apache.kafka.common.record.CompressionType;
 
 public class KafkaExporterConfiguration {
   private static final String CLIENT_ID_FORMAT = "zb-kafka-exporter-%s";
@@ -35,88 +34,60 @@ public class KafkaExporterConfiguration {
   private final RecordSerializer valueSerializer = new RecordSerializer();
 
   public String topic;
-  public List<String> servers = Collections.singletonList("localhost:9092");
   public int maxInFlightRecords = 1_000;
+  public String awaitInFlightRecordTimeout = "5s";
   public ProducerConfiguration producer = new ProducerConfiguration();
 
   public Producer<Record, Record> newProducer(String exporterId) {
-    final Map<String, Object> config = producer.newConfig();
-    config.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, servers);
-    config.put(ProducerConfig.CLIENT_ID_CONFIG, String.format(CLIENT_ID_FORMAT, exporterId));
+    final Map<String, Object> configs = producer.getConfigs(exporterId);
 
-    keySerializer.configure(config, true);
-    valueSerializer.configure(config, false);
+    keySerializer.configure(configs, true);
+    valueSerializer.configure(configs, false);
 
-    return new KafkaProducer<>(config, keySerializer, valueSerializer);
-  }
-
-  @Override
-  public String toString() {
-    return "ExporterConfiguration{"
-        + "servers="
-        + servers
-        + ", maxInFlightRecords="
-        + maxInFlightRecords
-        + ", producer="
-        + producer
-        + ", topic='"
-        + topic
-        + '\''
-        + '}';
+    return new KafkaProducer<>(configs, keySerializer, valueSerializer);
   }
 
   public class ProducerConfiguration {
     public String batchSize = "128K";
     public String batchLinger = "100ms";
+    public String clientId;
+    public String closeTimeout = "10s";
     public String compressionType = CompressionType.SNAPPY.name;
-    public String requestTimeout = "10s";
     public int maxConcurrentRequests = 3;
-    public Map<String, String> extra = new HashMap<>();
+    public String requestTimeout = "10s";
+    public List<String> servers = Collections.singletonList("localhost:9092");
 
-    /**
-     * Configures the producer to be idempotent and deliver messages in order. setting idempotence
-     * to true defaults retries to {@link Integer.MAX_VALUE} and acks to all. This also restricts
-     * the number of maximum in flight requests per connection to at most 5.
-     *
-     * @return producer configuration
-     */
-    private Map<String, Object> newConfig() {
-      final Map<String, Object> config = new HashMap<>();
+    public Map<String, String> config = new HashMap<>();
 
-      if (extra != null) {
-        config.putAll(extra);
+    private Map<String, Object> getConfigs(String exporterId) {
+      final Map<String, Object> configs = new HashMap<>();
+      String clientId = this.clientId;
+
+      if (config != null) {
+        configs.putAll(config);
       }
 
-      config.put(ProducerConfig.BATCH_SIZE_CONFIG, (int) new ByteValue(batchSize).toBytes());
-      config.put(ProducerConfig.LINGER_MS_CONFIG, (int) DurationUtil.parse(batchLinger).toMillis());
-      config.put(ProducerConfig.COMPRESSION_TYPE_CONFIG, compressionType);
-      config.put(
+      if (clientId == null) {
+        clientId = String.format(CLIENT_ID_FORMAT, exporterId);
+      }
+
+      configs.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, servers);
+      configs.put(ProducerConfig.BATCH_SIZE_CONFIG, (int) new ByteValue(batchSize).toBytes());
+      configs.put(ProducerConfig.CLIENT_ID_CONFIG, clientId);
+      configs.put(ProducerConfig.COMPRESSION_TYPE_CONFIG, compressionType);
+      configs.put(ProducerConfig.ENABLE_IDEMPOTENCE_CONFIG, true);
+      configs.put(
+          ProducerConfig.LINGER_MS_CONFIG, (int) DurationUtil.parse(batchLinger).toMillis());
+      configs.put(ProducerConfig.MAX_IN_FLIGHT_REQUESTS_PER_CONNECTION, maxConcurrentRequests);
+      configs.put(
           ProducerConfig.REQUEST_TIMEOUT_MS_CONFIG,
           (int) DurationUtil.parse(requestTimeout).toMillis());
-      config.put(ProducerConfig.ENABLE_IDEMPOTENCE_CONFIG, true);
-      config.put(ProducerConfig.MAX_IN_FLIGHT_REQUESTS_PER_CONNECTION, maxConcurrentRequests);
 
-      return config;
-    }
+      // configured such that we keep retrying a record "forever", even though single requests might
+      // timeout and be retried
+      configs.put(ProducerConfig.DELIVERY_TIMEOUT_MS_CONFIG, Integer.MAX_VALUE);
 
-    @Override
-    public String toString() {
-      return "ProducerConfiguration{"
-          + "batchSize='"
-          + batchSize
-          + '\''
-          + ", batchLinger='"
-          + batchLinger
-          + '\''
-          + ", compressionType='"
-          + compressionType
-          + '\''
-          + ", requestTimeout='"
-          + requestTimeout
-          + '\''
-          + ", extra="
-          + extra
-          + '}';
+      return configs;
     }
   }
 }

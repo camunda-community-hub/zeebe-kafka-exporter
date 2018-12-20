@@ -15,42 +15,32 @@
  */
 package io.zeebe.exporter.kafka;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.Mockito.*;
+import static org.assertj.core.api.Assertions.*;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.spy;
 
 import io.zeebe.exporter.record.Record;
-import io.zeebe.exporter.record.RecordMetadata;
-import io.zeebe.test.exporter.MockConfiguration;
-import io.zeebe.test.exporter.MockContext;
-import io.zeebe.test.exporter.MockController;
+import io.zeebe.test.exporter.ExporterTestHarness;
+import java.util.List;
+import java.util.stream.IntStream;
 import org.apache.kafka.clients.producer.MockProducer;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.junit.Before;
 import org.junit.Test;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 public class KafkaExporterTest {
+  private static final String EXPORTER_ID = "kafka";
 
   private final KafkaExporter exporter = new KafkaExporter();
   private final KafkaExporterConfiguration configuration = spy(new KafkaExporterConfiguration());
+  private final ExporterTestHarness testHarness = new ExporterTestHarness(exporter);
 
-  private final MockProducer<Record, Record> mockProducer = new MockProducer<>();
-  private final MockContext mockContext = new MockContext();
-  private final MockConfiguration<KafkaExporterConfiguration> mockConfiguration =
-      new MockConfiguration<>(configuration);
-  private final MockController mockController = new MockController();
-  private final Logger logger = LoggerFactory.getLogger("io.zeebe.exporter.kafka");
+  private MockProducer<Record, Record> mockProducer = new MockProducer<>(true, null, null);
 
   @Before
   public void setup() {
     configuration.topic = "topic";
-    mockConfiguration.setId("kafka");
-    doAnswer(i -> mockProducer).when(configuration).newProducer("kafka");
-
-    mockContext.setConfiguration(mockConfiguration);
-    mockContext.setLogger(logger);
+    doAnswer(i -> mockProducer).when(configuration).newProducer(EXPORTER_ID);
   }
 
   @Test
@@ -59,45 +49,147 @@ public class KafkaExporterTest {
     configuration.topic = "";
 
     // then
-    assertThatThrownBy(() -> exporter.configure(mockContext))
+    assertThatThrownBy(() -> testHarness.configure(EXPORTER_ID, configuration))
         .isInstanceOf(KafkaExporterException.class);
   }
 
   @Test
   public void shouldExportRecords() {
     // given
-    final long position = 2L;
-    final int partition = 1;
-    final String json = "{\"foo\": \"bar\" }";
-    final Record record = mockRecord(partition, position, json);
+    testHarness.configure(EXPORTER_ID, configuration);
+    testHarness.open();
 
     // when
-    exporter.configure(mockContext);
-    exporter.open(mockController);
-    exporter.export(record);
+    final Record record =
+        testHarness.export(
+            r -> {
+              r.setPosition(2L);
+              r.getMetadata().setPartitionId(1);
+              r.getValue().setJson("{\"foo\": \"bar\" }");
+            });
 
     // then
-    assertThat(mockProducer.history())
-        .hasSize(1)
-        .containsExactly(new ProducerRecord<>(configuration.topic, record, record));
+    final ProducerRecord<Record, Record> expected =
+        new ProducerRecord<>(configuration.topic, record, record);
+    assertThat(mockProducer.history()).hasSize(1).containsExactly(expected);
   }
 
   @Test
-  public void shouldUpdatePositionBasedOnCompletedRequests() {}
+  public void shouldUpdatePositionBasedOnCompletedRequests() {
+    // given
+    final int recordsCount = 4;
 
-  private void checkInFlightRequests() {
-    mockController.runScheduledTasks(KafkaExporter.IN_FLIGHT_RECORD_CHECKER_INTERVAL);
+    // control how many are completed
+    mockProducer = new MockProducer<>(false, null, null);
+
+    configuration.maxInFlightRecords = recordsCount; // prevent blocking awaiting completion
+    testHarness.configure(EXPORTER_ID, configuration);
+    testHarness.open();
+
+    // when
+    final List<Record> records = testHarness.stream().export(recordsCount);
+    final int lastCompleted = records.size() - 1;
+    completeNextRequests(lastCompleted);
+    checkInFlightRequests();
+
+    // then
+    assertThat(testHarness.getLastUpdatedPosition())
+        .isEqualTo(records.get(lastCompleted).getPosition());
   }
 
-  private Record mockRecord(int partitionId, long position, String json) {
-    final RecordMetadata metadata = mock(RecordMetadata.class);
-    when(metadata.getPartitionId()).thenReturn(partitionId);
+  @Test
+  public void shouldAwaitCompletionOfEarliestRecordIfMaxRecordsInFlightReached() {
+    // given
+    final int recordsCount = 2;
 
-    final Record record = mock(Record.class);
-    when(record.getPosition()).thenReturn(position);
-    when(record.getMetadata()).thenReturn(metadata);
-    when(record.toJson()).thenReturn(json);
+    // since maxInFlightRecords is less than recordsCount, it will force awaiting
+    // the completion of the next request and will update the position accordingly.
+    // there's no blocking here because the MockProducer is configured to autocomplete.
+    configuration.maxInFlightRecords = recordsCount - 1;
+    testHarness.configure(EXPORTER_ID, configuration);
+    testHarness.open();
 
-    return record;
+    // when
+    final List<Record> records = testHarness.stream().export(recordsCount);
+
+    // then
+    assertThat(testHarness.getLastUpdatedPosition()).isEqualTo(records.get(0).getPosition());
+  }
+
+  @Test
+  public void shouldFlushInFlightRecordsAndUpdatePositionOnClose() {
+    // given
+    final int recordsCount = 4;
+    configuration.maxInFlightRecords = recordsCount;
+    testHarness.configure(EXPORTER_ID, configuration);
+    testHarness.open();
+
+    // when
+    final List<Record> records = testHarness.stream().export(recordsCount);
+
+    // then
+    testHarness.close();
+    assertThat(testHarness.getLastUpdatedPosition())
+        .isEqualTo(records.get(recordsCount - 1).getPosition());
+  }
+
+  @Test
+  public void shouldDoNothingIfAlreadyClosed() {
+    // given
+    testHarness.configure(EXPORTER_ID, configuration);
+    testHarness.open();
+    testHarness.close();
+
+    // when
+    testHarness.export();
+    checkInFlightRequests();
+
+    // then
+    assertThat(testHarness.getLastUpdatedPosition()).isLessThan(testHarness.getPosition());
+    assertThatCode(testHarness::export).doesNotThrowAnyException();
+    assertThatCode(testHarness::close).doesNotThrowAnyException();
+  }
+
+  @Test
+  public void shouldThrowExceptionIfTimedOutWaitingForRecordCompletion() {
+    // given
+    mockProducer = new MockProducer<>(false, null, null);
+    configuration.awaitInFlightRecordTimeout = "1ms";
+    configuration.maxInFlightRecords = 1;
+    testHarness.configure(EXPORTER_ID, configuration);
+    testHarness.open();
+
+    // when
+    testHarness.export();
+
+    // then
+    assertThatThrownBy(testHarness::export).isInstanceOf(KafkaExporterException.class);
+  }
+
+  @Test
+  public void shouldUpdatePositionToLatestCompletedEventEvenIfOneRecordFails() {
+    // given
+    mockProducer = new MockProducer<>(false, null, null);
+    configuration.maxInFlightRecords = 2;
+    testHarness.configure(EXPORTER_ID, configuration);
+    testHarness.open();
+
+    // when
+    final Record successful = testHarness.export();
+    mockProducer.completeNext();
+    testHarness.export();
+    mockProducer.errorNext(new RuntimeException("failed"));
+
+    // then
+    assertThatThrownBy(this::checkInFlightRequests).isInstanceOf(KafkaExporterException.class);
+    assertThat(testHarness.getLastUpdatedPosition()).isEqualTo(successful.getPosition());
+  }
+
+  private void completeNextRequests(int requestCount) {
+    IntStream.rangeClosed(0, requestCount).forEach(i -> mockProducer.completeNext());
+  }
+
+  private void checkInFlightRequests() {
+    testHarness.runScheduledTasks(KafkaExporter.IN_FLIGHT_RECORD_CHECKER_INTERVAL);
   }
 }
