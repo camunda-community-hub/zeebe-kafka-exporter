@@ -16,29 +16,12 @@
 package io.zeebe.exporter.kafka.config;
 
 import io.zeebe.protocol.clientapi.RecordType;
+import java.util.EnumSet;
 
-public enum AllowedType {
-  COMMAND("command", RecordType.COMMAND),
-  EVENT("event", RecordType.EVENT),
-  REJECTION("rejection", RecordType.COMMAND_REJECTION);
+public class RecordConfig {
+  public static final String DEFAULT_TOPIC_NAME = "zeebe";
+  public static final EnumSet<RecordType> DEFAULT_ALLOWED_TYPES = EnumSet.allOf(RecordType.class);
 
-  public String name;
-  public RecordType recordType;
-
-  AllowedType(String name, RecordType recordType) {
-    this.name = name;
-    this.recordType = recordType;
-  }
-
-  public static AllowedType forName(String name) {
-    if (COMMAND.name.equals(name)) {
-      return COMMAND;
-    } else if (EVENT.name.equals(name)) {
-      return EVENT;
-    } else if (REJECTION.name.equals(name)) {
-      return REJECTION;
-    } else {
-      throw new IllegalArgumentException("Unknown record type name: " + name);
-    }
-  }
+  public EnumSet<RecordType> allowedTypes = DEFAULT_ALLOWED_TYPES;
+  public String topic = DEFAULT_TOPIC_NAME;
 }

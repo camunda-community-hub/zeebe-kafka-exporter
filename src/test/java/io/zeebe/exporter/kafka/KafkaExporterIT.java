@@ -21,6 +21,7 @@ import static org.assertj.core.api.Assertions.entry;
 import com.github.charithe.kafka.EphemeralKafkaBroker;
 import com.github.charithe.kafka.KafkaJunitRule;
 import com.github.charithe.kafka.StartupMode;
+import io.zeebe.exporter.kafka.config.raw.RawConfig;
 import io.zeebe.exporter.record.Record;
 import io.zeebe.test.exporter.ExporterIntegrationRule;
 import java.nio.ByteBuffer;
@@ -53,8 +54,7 @@ public class KafkaExporterIT {
   @Test
   public void shouldExportRecords() {
     // given
-    final KafkaExporterConfiguration configuration = newConfiguration();
-    exporterIntegrationRule.configure("kafka", KafkaExporter.class, configuration);
+    exporterIntegrationRule.configure("kafka", KafkaExporter.class, newConfiguration());
     exporterIntegrationRule.startBroker();
 
     // when
@@ -106,10 +106,8 @@ public class KafkaExporterIT {
     return consumer;
   }
 
-  private KafkaExporterConfiguration newConfiguration() {
-    final KafkaExporterConfiguration configuration = new KafkaExporterConfiguration();
-    configuration.maxInFlightRecords = 10;
-    configuration.topic = TOPIC;
+  private RawConfig newConfiguration() {
+    final RawConfig configuration = new RawConfig();
     configuration.producer.servers =
         Collections.singletonList(String.format("localhost:%d", kafkaRule.helper().kafkaPort()));
 

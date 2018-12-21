@@ -14,14 +14,14 @@ className = "io.zeebe.exporter.kafka.KafkaExporter"
   requestTimeout = "5s"
 
   [exporters.args.records]
-  defaults = { type = "all", topic = "zeebe" }
-  deployment = { type = "all", topic = "zeebe-deployments" }
-  incident = { type = "all", topic = "zeebe-incidents" }
-  jobBatch = { type = "all", topic = "zeebe-incidents" }
-  job = { type = "all", topic = "zeebe-incidents" }
-  message = { type = "all", topic = "zeebe-incidents" }
-  messageSubscription = { type = "all", topic = "zeebe-incidents" }
-  raft = { type = "all", topic = "zeebe-incidents" }
-  timer = { type = "all", topic = "zeebe-incidents" }
-  workflowInstance = { type = "all", topic = "zeebe-incidents" }
-  workflowInstanceSubscription = { type = "all", topic = "zeebe-incidents" }
+  defaults = { type = [ "event" ], topic = "zeebe" }
+  deployment = { topic = "zeebe-deployments" }
+  incident = { topic = "zeebe-incidents" }
+  jobBatch = { topic = "zeebe-incidents" }
+  job = { topic = "zeebe-incidents" }
+  message = { topic = "zeebe-incidents" }
+  messageSubscription = { topic = "zeebe-incidents" }
+  raft = { topic = "zeebe-incidents" }
+  timer = { topic = "zeebe-incidents" }
+  workflowInstance = { topic = "zeebe-incidents" }
+  workflowInstanceSubscription = { topic = "zeebe-incidents" }
