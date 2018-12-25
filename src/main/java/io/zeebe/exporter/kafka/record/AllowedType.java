@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.zeebe.exporter.kafka.config;
+package io.zeebe.exporter.kafka.record;
 
 import io.zeebe.protocol.clientapi.RecordType;
 

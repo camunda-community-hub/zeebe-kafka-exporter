@@ -17,11 +17,11 @@ className = "io.zeebe.exporter.kafka.KafkaExporter"
   defaults = { type = [ "event" ], topic = "zeebe" }
   deployment = { topic = "zeebe-deployments" }
   incident = { topic = "zeebe-incidents" }
-  jobBatch = { topic = "zeebe-incidents" }
-  job = { topic = "zeebe-incidents" }
-  message = { topic = "zeebe-incidents" }
-  messageSubscription = { topic = "zeebe-incidents" }
-  raft = { topic = "zeebe-incidents" }
-  timer = { topic = "zeebe-incidents" }
-  workflowInstance = { topic = "zeebe-incidents" }
-  workflowInstanceSubscription = { topic = "zeebe-incidents" }
+  jobBatch = { topic = "zeebe-job-batch" }
+  job = { topic = "zeebe-job" }
+  message = { topic = "zeebe-message" }
+  messageSubscription = { topic = "zeebe-message-subscription" }
+  raft = { topic = "zeebe-raft" }
+  timer = { topic = "zeebe-timer" }
+  workflowInstance = { topic = "zeebe-workflow" }
+  workflowInstanceSubscription = { topic = "zeebe-workflow-subscription" }

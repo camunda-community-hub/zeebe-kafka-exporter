@@ -13,17 +13,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.zeebe.exporter.kafka.config;
+package io.zeebe.exporter.kafka.config.toml;
 
-import io.zeebe.protocol.clientapi.ValueType;
-
-import java.util.EnumMap;
-
-public class RecordsConfig {
-  public RecordConfig defaults;
-  public final EnumMap<ValueType, RecordConfig> typeMap = new EnumMap<>(ValueType.class);
-
-  public RecordConfig forType(ValueType type) {
-    return typeMap.get(type);
-  }
+public class TomlRecordsConfig {
+  public TomlRecordConfig defaults;
+  public TomlRecordConfig deployment;
+  public TomlRecordConfig incident;
+  public TomlRecordConfig jobBatch;
+  public TomlRecordConfig job;
+  public TomlRecordConfig message;
+  public TomlRecordConfig messageSubscription;
+  public TomlRecordConfig raft;
+  public TomlRecordConfig timer;
+  public TomlRecordConfig workflowInstance;
+  public TomlRecordConfig workflowInstanceSubscription;
 }

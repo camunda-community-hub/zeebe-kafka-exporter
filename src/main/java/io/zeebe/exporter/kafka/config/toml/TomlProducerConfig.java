@@ -13,42 +13,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.zeebe.exporter.kafka.config.raw;
+package io.zeebe.exporter.kafka.config.toml;
 
-import io.zeebe.exporter.kafka.config.ClientConfig;
-import io.zeebe.util.DurationUtil;
 import java.util.List;
 import java.util.Map;
 
-public class RawClientConfig {
+public class TomlProducerConfig {
   public String clientId;
   public String closeTimeout;
   public Map<String, String> config;
   public int maxConcurrentRequests = 3;
   public String requestTimeout;
   public List<String> servers;
-
-  public ClientConfig parse() {
-    final ClientConfig parsed = new ClientConfig();
-    parsed.maxConcurrentRequests = maxConcurrentRequests;
-    parsed.servers = servers;
-
-    if (clientId != null) {
-      parsed.clientId = clientId;
-    }
-
-    if (closeTimeout != null) {
-      parsed.closeTimeout = DurationUtil.parse(closeTimeout);
-    }
-
-    if (requestTimeout != null) {
-      parsed.requestTimeout = DurationUtil.parse(requestTimeout);
-    }
-
-    if (config != null) {
-      parsed.config = config;
-    }
-
-    return parsed;
-  }
 }

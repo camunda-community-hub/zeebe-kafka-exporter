@@ -16,12 +16,10 @@
 package io.zeebe.exporter.kafka.config;
 
 import io.zeebe.protocol.clientapi.RecordType;
+
 import java.util.EnumSet;
 
 public class RecordConfig {
-  public static final String DEFAULT_TOPIC_NAME = "zeebe";
-  public static final EnumSet<RecordType> DEFAULT_ALLOWED_TYPES = EnumSet.allOf(RecordType.class);
-
-  public EnumSet<RecordType> allowedTypes = DEFAULT_ALLOWED_TYPES;
-  public String topic = DEFAULT_TOPIC_NAME;
+  public EnumSet<RecordType> allowedTypes;
+  public String topic;
 }

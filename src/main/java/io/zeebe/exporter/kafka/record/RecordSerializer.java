@@ -13,12 +13,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.zeebe.exporter.kafka;
+package io.zeebe.exporter.kafka.record;
 
 import io.zeebe.exporter.record.Record;
-import java.util.Map;
 import org.apache.kafka.common.serialization.Serializer;
 import org.apache.kafka.common.serialization.StringSerializer;
+
+import java.util.Map;
 
 /**
  * Serializes a {@link Record} for consumption by Kafka.

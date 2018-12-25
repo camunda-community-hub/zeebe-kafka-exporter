@@ -13,16 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.zeebe.exporter.kafka.config.raw;
+package io.zeebe.exporter.kafka.config.toml;
 
-import io.zeebe.exporter.kafka.KafkaExporterConfig;
+import java.util.List;
 
-public class RawConfig {
-  public RawAsyncConfig async = new RawAsyncConfig();
-  public RawClientConfig producer = new RawClientConfig();
-  public RawRecordsConfig records = new RawRecordsConfig();
-
-  public KafkaExporterConfig parse() {
-    return new KafkaExporterConfig(async.parse(), producer.parse(), records.parse());
-  }
+public class TomlRecordConfig {
+  public List<String> type;
+  public String topic;
 }

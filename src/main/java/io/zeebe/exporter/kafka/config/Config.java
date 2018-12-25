@@ -13,23 +13,23 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.zeebe.exporter.kafka.config.raw;
+package io.zeebe.exporter.kafka.config;
 
-import io.zeebe.exporter.kafka.config.AsyncConfig;
-import io.zeebe.util.DurationUtil;
+import java.time.Duration;
 
-public class RawAsyncConfig {
+public class Config {
+  public final ProducerConfig producer;
+  public final RecordsConfig records;
+
   public int maxInFlightRecords = 1_000;
-  public String awaitInFlightRecordTimeout;
+  public Duration awaitInFlightRecordTimeout = Duration.ofSeconds(5);
 
-  public AsyncConfig parse() {
-    final AsyncConfig parsed = new AsyncConfig();
-    parsed.maxInFlightRecords = maxInFlightRecords;
+  public Config() {
+    this(new ProducerConfig(), new RecordsConfig());
+  }
 
-    if (awaitInFlightRecordTimeout != null) {
-      parsed.awaitInFlightRecordTimeout = DurationUtil.parse(awaitInFlightRecordTimeout);
-    }
-
-    return parsed;
+  public Config(ProducerConfig producer, RecordsConfig records) {
+    this.producer = producer;
+    this.records = records;
   }
 }

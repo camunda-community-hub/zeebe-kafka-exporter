@@ -16,15 +16,14 @@
 package io.zeebe.exporter.kafka.config;
 
 import java.time.Duration;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
-public class ClientConfig {
-  public String clientId = "zeebe";
-  public Duration closeTimeout = Duration.ofSeconds(10);
+public class ProducerConfig {
+  public String clientId;
+  public Duration closeTimeout;
   public Map<String, String> config;
-  public int maxConcurrentRequests = 3;
-  public Duration requestTimeout = Duration.ofSeconds(10);
-  public List<String> servers = Collections.singletonList("localhost:9092");
+  public int maxConcurrentRequests;
+  public Duration requestTimeout;
+  public List<String> servers;
 }
