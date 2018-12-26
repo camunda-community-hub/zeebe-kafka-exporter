@@ -123,7 +123,7 @@ public class KafkaExporter implements Exporter {
       final ProducerRecord<Record, Record> kafkaRecord = recordHandler.transform(record);
       final Future<RecordMetadata> future = producer.send(kafkaRecord);
       inFlightRecords.add(new KafkaExporterFuture(record.getPosition(), future));
-      logger.debug(">>> Exported new record {}", record);
+      logger.debug("Exported new record {}", record);
     }
   }
 
