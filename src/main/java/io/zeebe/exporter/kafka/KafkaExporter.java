@@ -17,9 +17,15 @@ package io.zeebe.exporter.kafka;
 
 import io.zeebe.exporter.context.Context;
 import io.zeebe.exporter.context.Controller;
+import io.zeebe.exporter.kafka.config.Config;
+import io.zeebe.exporter.kafka.config.parser.Parser;
+import io.zeebe.exporter.kafka.config.parser.TomlConfigParser;
+import io.zeebe.exporter.kafka.config.toml.TomlConfig;
+import io.zeebe.exporter.kafka.producer.KafkaProducerFactory;
+import io.zeebe.exporter.kafka.producer.ProducerFactory;
+import io.zeebe.exporter.kafka.record.RecordHandler;
 import io.zeebe.exporter.record.Record;
 import io.zeebe.exporter.spi.Exporter;
-import io.zeebe.util.DurationUtil;
 import org.apache.kafka.clients.producer.Producer;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.clients.producer.RecordMetadata;
@@ -28,7 +34,7 @@ import org.slf4j.Logger;
 
 import java.time.Duration;
 import java.util.ArrayDeque;
-import java.util.Deque;
+import java.util.Queue;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
@@ -45,41 +51,49 @@ public class KafkaExporter implements Exporter {
   static final Duration IN_FLIGHT_RECORD_CHECKER_INTERVAL = Duration.ofSeconds(1);
   private static final int UNSET_POSITION = -1;
 
+  private final ProducerFactory producerFactory;
+  private final Parser<TomlConfig, Config> configParser;
+
+  private boolean isClosed = true;
   private String id;
   private Controller controller;
-  private KafkaExporterConfiguration configuration;
   private Logger logger;
-  private Producer<Record, Record> producer;
-  private Deque<KafkaExporterFuture> inFlightRecords;
-  private boolean isClosed = true;
 
-  private Duration awaitInFlightRecordTimeout;
-  private Duration closeProducerTimeout;
+  private Config config;
+  private RecordHandler recordHandler;
+  private Producer<Record, Record> producer;
+  private Queue<KafkaExporterFuture> inFlightRecords;
+
+  public KafkaExporter() {
+    this.producerFactory = new KafkaProducerFactory();
+    this.configParser = new TomlConfigParser();
+  }
+
+  public KafkaExporter(ProducerFactory producerFactory, Parser<TomlConfig, Config> configParser) {
+    this.producerFactory = producerFactory;
+    this.configParser = configParser;
+  }
 
   @Override
   public void configure(Context context) {
-    this.logger = context.getLogger();
-    this.configuration = context.getConfiguration().instantiate(KafkaExporterConfiguration.class);
-    this.inFlightRecords = new ArrayDeque<>(this.configuration.maxInFlightRecords);
-    this.id = context.getConfiguration().getId();
-    this.awaitInFlightRecordTimeout =
-        DurationUtil.parse(this.configuration.awaitInFlightRecordTimeout);
-    this.closeProducerTimeout = DurationUtil.parse(this.configuration.producer.closeTimeout);
+    logger = context.getLogger();
+    id = context.getConfiguration().getId();
 
-    if (this.configuration.topic == null || this.configuration.topic.isEmpty()) {
-      throw new KafkaExporterException("Must configure a topic");
-    }
+    final TomlConfig tomlConfig = context.getConfiguration().instantiate(TomlConfig.class);
+    this.config = this.configParser.parse(tomlConfig);
+    this.recordHandler = new RecordHandler(this.config.records);
 
-    logger.debug("Configured exporter {} with {}", this.id, this.configuration);
+    logger.debug("Configured exporter {}", id);
   }
 
   @Override
   public void open(Controller controller) {
     this.controller = controller;
+    this.isClosed = false;
+    this.inFlightRecords = new ArrayDeque<>(this.config.maxInFlightRecords);
     this.controller.scheduleTask(
         IN_FLIGHT_RECORD_CHECKER_INTERVAL, this::checkCompletedInFlightRecords);
-    this.producer = this.configuration.newProducer(this.id);
-    this.isClosed = false;
+    this.producer = this.producerFactory.newProducer(this.config);
 
     logger.debug("Opened exporter {}", this.id);
   }
@@ -100,22 +114,17 @@ public class KafkaExporter implements Exporter {
       return;
     }
 
-    if (inFlightRecords.size() >= this.configuration.maxInFlightRecords) {
+    if (inFlightRecords.size() >= config.maxInFlightRecords) {
       logger.debug("Too many in flight records, blocking until the next one completes...");
       awaitNextInFlightRecordCompletion();
     }
 
-    final ProducerRecord<Record, Record> producedRecord =
-        new ProducerRecord<>(configuration.topic, record, record);
-    final Future<RecordMetadata> future = producer.send(producedRecord);
-    inFlightRecords.add(new KafkaExporterFuture(record.getPosition(), future));
-    logger.debug(">>> Exported new record {}", record);
-  }
-
-  /** Blocks and waits until the next in-flight record is completed */
-  private void awaitNextInFlightRecordCompletion() {
-    final long latestPosition = getNextCompletedInFlightRecordPosition();
-    updatePosition(latestPosition);
+    if (recordHandler.test(record)) {
+      final ProducerRecord<Record, Record> kafkaRecord = recordHandler.transform(record);
+      final Future<RecordMetadata> future = producer.send(kafkaRecord);
+      inFlightRecords.add(new KafkaExporterFuture(record.getPosition(), future));
+      logger.debug("Exported new record {}", record);
+    }
   }
 
   private void closeInternal(boolean awaitInFlightRecords) {
@@ -140,11 +149,12 @@ public class KafkaExporter implements Exporter {
     }
   }
 
-  // flushes any remaining records and awaits their completion
-  private void closeProducer() {
-    logger.debug("Closing producer with timeout {}", closeProducerTimeout);
-    producer.close(closeProducerTimeout.toMillis(), TimeUnit.MILLISECONDS);
-    producer = null;
+  /**
+   * Blocks and waits until the next in-flight record is completed
+   */
+  private void awaitNextInFlightRecordCompletion() {
+    final long latestPosition = getNextCompletedInFlightRecordPosition();
+    updatePosition(latestPosition);
   }
 
   private void updatePositionBasedOnCompletedInFlightRecords(boolean blockForCompletion) {
@@ -192,14 +202,15 @@ public class KafkaExporter implements Exporter {
     if (inFlightRecord != null) {
       try {
         final long position =
-            inFlightRecord.get(awaitInFlightRecordTimeout.toMillis(), TimeUnit.MILLISECONDS);
+          inFlightRecord.get(config.awaitInFlightRecordTimeout.toMillis(), TimeUnit.MILLISECONDS);
         inFlightRecords.remove();
         logger.trace("Consumed in-flight record {}", position);
         return position;
       } catch (TimeoutException e) {
         throw new KafkaExporterException(
             String.format(
-                "Timed out after %s awaiting completion of record", awaitInFlightRecordTimeout),
+                "Timed out after %s awaiting completion of record",
+              config.awaitInFlightRecordTimeout),
             e);
       } catch (InterruptedException e) {
         onUnrecoverableError(
@@ -233,6 +244,13 @@ public class KafkaExporter implements Exporter {
     }
 
     logger.debug("Dropped {} in flight records", droppedCount);
+  }
+
+  // flushes any remaining records and awaits their completion
+  private void closeProducer() {
+    logger.debug("Closing producer with timeout {}", config.producer.closeTimeout);
+    producer.close(config.producer.closeTimeout.toMillis(), TimeUnit.MILLISECONDS);
+    producer = null;
   }
 
   private void onUnrecoverableError(String details, Exception e) {
