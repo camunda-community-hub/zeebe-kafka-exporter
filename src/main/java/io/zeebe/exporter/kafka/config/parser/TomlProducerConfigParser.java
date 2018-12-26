@@ -1,6 +1,5 @@
 package io.zeebe.exporter.kafka.config.parser;
 
-import io.zeebe.exporter.kafka.config.Parser;
 import io.zeebe.exporter.kafka.config.ProducerConfig;
 import io.zeebe.exporter.kafka.config.toml.TomlProducerConfig;
 import io.zeebe.util.DurationUtil;
@@ -20,16 +19,16 @@ public class TomlProducerConfigParser implements Parser<TomlProducerConfig, Prod
   public ProducerConfig parse(TomlProducerConfig config) {
     final ProducerConfig parsed = new ProducerConfig();
 
-    if (config.maxConcurrentRequests < 1) {
-      parsed.maxConcurrentRequests = DEFAULT_MAX_CONCURRENT_REQUESTS;
-    } else {
+    if (config.maxConcurrentRequests != null) {
       parsed.maxConcurrentRequests = config.maxConcurrentRequests;
+    } else {
+      parsed.maxConcurrentRequests = DEFAULT_MAX_CONCURRENT_REQUESTS;
     }
 
     if (config.servers != null) {
       parsed.servers = config.servers;
     } else {
-      config.servers = DEFAULT_SERVERS;
+      parsed.servers = DEFAULT_SERVERS;
     }
 
     if (config.clientId != null) {

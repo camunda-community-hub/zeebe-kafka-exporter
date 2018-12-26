@@ -22,7 +22,7 @@ public class TomlProducerConfig {
   public String clientId;
   public String closeTimeout;
   public Map<String, String> config;
-  public int maxConcurrentRequests = 3;
+  public Integer maxConcurrentRequests;
   public String requestTimeout;
   public List<String> servers;
 }

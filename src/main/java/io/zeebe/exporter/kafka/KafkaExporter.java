@@ -18,7 +18,7 @@ package io.zeebe.exporter.kafka;
 import io.zeebe.exporter.context.Context;
 import io.zeebe.exporter.context.Controller;
 import io.zeebe.exporter.kafka.config.Config;
-import io.zeebe.exporter.kafka.config.Parser;
+import io.zeebe.exporter.kafka.config.parser.Parser;
 import io.zeebe.exporter.kafka.config.parser.TomlConfigParser;
 import io.zeebe.exporter.kafka.config.toml.TomlConfig;
 import io.zeebe.exporter.kafka.producer.KafkaProducerFactory;

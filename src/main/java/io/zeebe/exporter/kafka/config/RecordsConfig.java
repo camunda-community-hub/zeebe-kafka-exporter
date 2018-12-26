@@ -18,12 +18,28 @@ package io.zeebe.exporter.kafka.config;
 import io.zeebe.protocol.clientapi.ValueType;
 
 import java.util.EnumMap;
+import java.util.Map;
+import java.util.Objects;
 
 public class RecordsConfig {
   public RecordConfig defaults;
-  public final EnumMap<ValueType, RecordConfig> typeMap = new EnumMap<>(ValueType.class);
+  public final Map<ValueType, RecordConfig> typeMap = new EnumMap<>(ValueType.class);
 
   public RecordConfig forType(ValueType type) {
     return typeMap.get(type);
+  }
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) return true;
+    if (!(o instanceof RecordsConfig)) return false;
+
+    final RecordsConfig that = (RecordsConfig) o;
+    return Objects.equals(defaults, that.defaults) && Objects.equals(typeMap, that.typeMap);
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(defaults, typeMap);
   }
 }

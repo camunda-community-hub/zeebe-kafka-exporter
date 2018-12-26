@@ -1,6 +1,5 @@
 package io.zeebe.exporter.kafka.config.parser;
 
-import io.zeebe.exporter.kafka.config.Parser;
 import io.zeebe.exporter.kafka.config.RecordConfig;
 import io.zeebe.exporter.kafka.config.toml.TomlRecordConfig;
 import io.zeebe.exporter.kafka.record.AllowedType;

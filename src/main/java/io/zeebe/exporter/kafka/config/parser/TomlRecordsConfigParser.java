@@ -1,6 +1,5 @@
 package io.zeebe.exporter.kafka.config.parser;
 
-import io.zeebe.exporter.kafka.config.Parser;
 import io.zeebe.exporter.kafka.config.RecordConfig;
 import io.zeebe.exporter.kafka.config.RecordsConfig;
 import io.zeebe.exporter.kafka.config.toml.TomlRecordConfig;
@@ -28,7 +27,7 @@ public class TomlRecordsConfigParser implements Parser<TomlRecordsConfig, Record
   public RecordsConfig parse(TomlRecordsConfig config) {
     final RecordsConfig parsed = new RecordsConfig();
 
-    parsed.defaults = recordConfigParser.parse(config.defaults, RecordConfig::new);
+    parsed.defaults = recordConfigParser.parse(config.defaults, TomlRecordConfig::new);
 
     if (parsed.defaults.topic == null) {
       parsed.defaults.topic = DEFAULT_TOPIC_NAME;
@@ -53,7 +52,7 @@ public class TomlRecordsConfigParser implements Parser<TomlRecordsConfig, Record
   }
 
   private RecordConfig parseOrDefault(RecordsConfig recordsConfig, TomlRecordConfig config) {
-    final RecordConfig parsed = recordConfigParser.parse(config, RecordConfig::new);
+    final RecordConfig parsed = recordConfigParser.parse(config, TomlRecordConfig::new);
 
     if (parsed.topic == null) {
       parsed.topic = recordsConfig.defaults.topic;

@@ -1,4 +1,4 @@
-package io.zeebe.exporter.kafka.config;
+package io.zeebe.exporter.kafka.config.parser;
 
 import java.util.function.Supplier;
 
@@ -6,9 +6,9 @@ import java.util.function.Supplier;
 public interface Parser<T, R> {
   R parse(T config);
 
-  default R parse(T config, Supplier<R> defaultValue) {
+  default R parse(T config, Supplier<T> defaultValue) {
     if (config == null) {
-      return defaultValue.get();
+      config = defaultValue.get();
     }
 
     return parse(config);

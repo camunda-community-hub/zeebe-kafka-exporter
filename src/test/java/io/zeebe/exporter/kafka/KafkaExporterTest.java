@@ -16,7 +16,8 @@
 package io.zeebe.exporter.kafka;
 
 import io.zeebe.exporter.kafka.config.Config;
-import io.zeebe.exporter.kafka.config.MockConfigParser;
+import io.zeebe.exporter.kafka.config.parser.MockParser;
+import io.zeebe.exporter.kafka.config.parser.TomlConfigParser;
 import io.zeebe.exporter.kafka.config.toml.TomlConfig;
 import io.zeebe.exporter.kafka.producer.MockProducerFactory;
 import io.zeebe.exporter.kafka.record.RecordSerializer;
@@ -40,7 +41,8 @@ public class KafkaExporterTest {
 
   private final TomlConfig tomlConfig = new TomlConfig();
   private final MockProducerFactory mockProducerFactory = new MockProducerFactory();
-  private final MockConfigParser mockConfigParser = new MockConfigParser();
+  private final MockParser<TomlConfig, Config> mockConfigParser =
+    new MockParser<>(new TomlConfigParser());
   private final KafkaExporter exporter = new KafkaExporter(mockProducerFactory, mockConfigParser);
   private final ExporterTestHarness testHarness = new ExporterTestHarness(exporter);
   private final Config configuration = mockConfigParser.parse(tomlConfig);
@@ -51,6 +53,7 @@ public class KafkaExporterTest {
     configuration.records.defaults.allowedTypes = EnumSet.allOf(RecordType.class);
     mockProducerFactory.mockProducer =
       new MockProducer<>(true, new RecordSerializer(), new RecordSerializer());
+    mockConfigParser.config = configuration;
   }
 
   @Test
@@ -186,7 +189,8 @@ public class KafkaExporterTest {
   }
 
   private void completeNextRequests(int requestCount) {
-    IntStream.rangeClosed(0, requestCount).forEach(i -> mockProducerFactory.mockProducer.completeNext());
+    IntStream.rangeClosed(0, requestCount)
+      .forEach(i -> mockProducerFactory.mockProducer.completeNext());
   }
 
   private void checkInFlightRequests() {

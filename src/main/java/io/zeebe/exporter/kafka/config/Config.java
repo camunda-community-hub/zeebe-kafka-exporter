@@ -16,6 +16,7 @@
 package io.zeebe.exporter.kafka.config;
 
 import java.time.Duration;
+import java.util.Objects;
 
 public class Config {
   public final ProducerConfig producer;
@@ -31,5 +32,22 @@ public class Config {
   public Config(ProducerConfig producer, RecordsConfig records) {
     this.producer = producer;
     this.records = records;
+  }
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) return true;
+    if (!(o instanceof Config)) return false;
+
+    final Config config = (Config) o;
+    return maxInFlightRecords == config.maxInFlightRecords
+      && Objects.equals(producer, config.producer)
+      && Objects.equals(records, config.records)
+      && Objects.equals(awaitInFlightRecordTimeout, config.awaitInFlightRecordTimeout);
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(producer, records, maxInFlightRecords, awaitInFlightRecordTimeout);
   }
 }
