@@ -3,15 +3,13 @@ id = "kafka"
 className = "io.zeebe.exporter.kafka.KafkaExporter"
 
   [exporters.args]
-  default-topic = "zeebe"
   maxInFlightRecords = 1000
-  servers = [ "kafka:9092" ]
+  awaitInFlightRecordTimeout = "5s"
 
   [exporters.args.producer]
-  batchSize = "128K"
-  batchLinger = "50ms"
-  compressionType = "snappy"
+  servers = [ "kafka:9092" ]
   requestTimeout = "5s"
+  config = { "batch.size" = 131072, "batch.linger" = 50 }
 
   [exporters.args.records]
   defaults = { type = [ "event" ], topic = "zeebe" }
