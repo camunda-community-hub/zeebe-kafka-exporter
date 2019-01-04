@@ -3,10 +3,8 @@ version: '3.3'
 services:
   zeebe:
     build:
-      context: .
+      context: ./exporter
       dockerfile: Dockerfile
-      args:
-        version: 0.15.0-SNAPSHOT-fat
       labels:
         io.zeebe.exporter.kafka: "Zeebe Kafka Exporter"
     container_name: zeebe
