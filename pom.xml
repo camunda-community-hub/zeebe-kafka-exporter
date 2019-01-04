@@ -5,10 +5,10 @@
 
   <modelVersion>4.0.0</modelVersion>
   <name>Zeebe Kafka Exporter</name>
-  <artifactId>zb-kafka-exporter</artifactId>
+  <artifactId>zeebe-kafka-exporter</artifactId>
   <version>0.15.0-SNAPSHOT</version>
   <packaging>jar</packaging>
-  <url>https://github.com/npepinpe/zb-kafka-exporter</url>
+  <url>https://github.com/zeebe-io/zeebe-kafka-exporter</url>
 
   <parent>
     <artifactId>zb-parent</artifactId>
