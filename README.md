@@ -7,9 +7,11 @@ If you have any problems please open an issue, write in the forum or on slack.
 
 For more information about the exporters please read the [Exporter documentation](https://docs.zeebe.io/basics/exporters.html).
 
-## Note
+> This is a work in progress; you're welcome to contribute code or ideas, but no guarantees are made about the exporter itself. Use at your own risks.
 
-This is a work in progress; you're welcome to contribute code or ideas, but no guarantees are made about the exporter itself. Use at your own risks.
+> There is a docker compose and some docker files around, in theory these work, but doing a `docker-compose up` is currently broken until the next Zeebe release,
+> since it relies on Zeebe 0.15.0 which is not yet released. But doing a `docker-compose up kafka zookeeper consumer` should work, and you'd need to configure the broker
+> manually to point to Kafka on port 9093.
 
 ## Installation
 
