@@ -45,13 +45,17 @@ fi
 def githubRelease = '''\
 #!/bin/bash
 
-cd target
+cd exporter/target
 
 JAR="zeebe-kafka-exporter-${RELEASE_VERSION}.jar"
 CHECKSUM="${JAR}.sha1sum"
 
+UBER_JAR="zeebe-kafka-exporter-${RELEASE_VERSION}-uber.jar"
+UBER_CHECKSUM="${UBER_JAR}.sha1sum"
+
 # create checksum files
 sha1sum ${JAR} > ${CHECKSUM}
+sha1sum ${UBER_JAR} > ${UBER_CHECKSUM}
 
 # do github release
 curl -sL https://github.com/aktau/github-release/releases/download/v0.7.2/linux-amd64-github-release.tar.bz2 | tar xjvf - --strip 3
@@ -59,6 +63,8 @@ curl -sL https://github.com/aktau/github-release/releases/download/v0.7.2/linux-
 ./github-release release --user zeebe-io --repo zeebe-kafka-exporter --tag ${RELEASE_VERSION} --name "Zeebe Kafka Exporter ${RELEASE_VERSION}" --description ""
 ./github-release upload --user zeebe-io --repo zeebe-kafka-exporter --tag ${RELEASE_VERSION} --name "${JAR}" --file "${JAR}"
 ./github-release upload --user zeebe-io --repo zeebe-kafka-exporter --tag ${RELEASE_VERSION} --name "${CHECKSUM}" --file "${CHECKSUM}"
+./github-release upload --user zeebe-io --repo zeebe-kafka-exporter --tag ${RELEASE_VERSION} --name "${UBER_JAR}" --file "${UBER_JAR}"
+./github-release upload --user zeebe-io --repo zeebe-kafka-exporter --tag ${RELEASE_VERSION} --name "${UBER_CHECKSUM}" --file "${UBER_CHECKSUM}"
 '''
 
 // properties used by the release build
