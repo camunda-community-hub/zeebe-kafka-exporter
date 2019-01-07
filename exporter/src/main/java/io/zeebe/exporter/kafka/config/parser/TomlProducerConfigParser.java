@@ -20,7 +20,9 @@ import io.zeebe.exporter.kafka.config.toml.TomlProducerConfig;
 import io.zeebe.util.DurationUtil;
 import java.time.Duration;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class TomlProducerConfigParser implements Parser<TomlProducerConfig, ProducerConfig> {
   public static final List<String> DEFAULT_SERVERS = Collections.singletonList("localhost:9092");
@@ -64,7 +66,28 @@ public class TomlProducerConfigParser implements Parser<TomlProducerConfig, Prod
     }
 
     if (config.config != null) {
-      parsed.config = config.config;
+      parsed.config = parseConfig(config.config);
+    }
+
+    return parsed;
+  }
+
+  /**
+   * The TOML parser used by the Zeebe broker returns quoted keys with their original quotes, which
+   * must be stripped in order for the {@link ProducerConfig} to accept them.
+   *
+   * @param original the original map provided by the TOML parser
+   * @return map of properties ProducerConfig can accept
+   */
+  private Map<String, Object> parseConfig(Map<String, Object> original) {
+    final Map<String, Object> parsed = new HashMap<>(original.size());
+    for (Map.Entry<String, Object> entry : original.entrySet()) {
+      String key = entry.getKey();
+      if (key.startsWith("\"") && key.endsWith("\"")) {
+        key = key.substring(1, key.length() - 1);
+      }
+
+      parsed.put(key, entry.getValue());
     }
 
     return parsed;

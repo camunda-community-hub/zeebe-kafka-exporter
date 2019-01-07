@@ -58,6 +58,9 @@ public class TomlRecordsConfigParser implements Parser<TomlRecordsConfig, Record
     parsed.typeMap.put(ValueType.MESSAGE, parseOrDefault(parsed, config.message));
     parsed.typeMap.put(
         ValueType.MESSAGE_SUBSCRIPTION, parseOrDefault(parsed, config.messageSubscription));
+    parsed.typeMap.put(
+        ValueType.MESSAGE_START_EVENT_SUBSCRIPTION,
+        parseOrDefault(parsed, config.messageStartEventSubscription));
     parsed.typeMap.put(ValueType.RAFT, parseOrDefault(parsed, config.raft));
     parsed.typeMap.put(ValueType.TIMER, parseOrDefault(parsed, config.timer));
     parsed.typeMap.put(

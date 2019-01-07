@@ -13,19 +13,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.zeebe.exporter.kafka.config.toml;
+package io.zeebe.exporter.kafka.samples;
 
-public class TomlRecordsConfig {
-  public TomlRecordConfig defaults;
-  public TomlRecordConfig deployment;
-  public TomlRecordConfig incident;
-  public TomlRecordConfig jobBatch;
-  public TomlRecordConfig job;
-  public TomlRecordConfig message;
-  public TomlRecordConfig messageSubscription;
-  public TomlRecordConfig messageStartEventSubscription;
-  public TomlRecordConfig raft;
-  public TomlRecordConfig timer;
-  public TomlRecordConfig workflowInstance;
-  public TomlRecordConfig workflowInstanceSubscription;
+public class RecordKey {
+  private final int partitionId;
+  private final long position;
+
+  RecordKey(int partitionId, long position) {
+    this.partitionId = partitionId;
+    this.position = position;
+  }
+
+  public int getPartitionId() {
+    return partitionId;
+  }
+
+  public long getPosition() {
+    return position;
+  }
 }

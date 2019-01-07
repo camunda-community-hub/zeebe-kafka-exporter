@@ -23,7 +23,7 @@ import java.util.Objects;
 public class ProducerConfig {
   public String clientId;
   public Duration closeTimeout;
-  public Map<String, String> config;
+  public Map<String, Object> config;
   public int maxConcurrentRequests;
   public Duration requestTimeout;
   public List<String> servers;

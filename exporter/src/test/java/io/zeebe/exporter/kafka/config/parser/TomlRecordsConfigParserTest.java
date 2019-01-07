@@ -60,6 +60,8 @@ public class TomlRecordsConfigParserTest {
     config.jobBatch = newConfigFromType(ValueType.JOB_BATCH);
     config.message = newConfigFromType(ValueType.MESSAGE);
     config.messageSubscription = newConfigFromType(ValueType.MESSAGE_SUBSCRIPTION);
+    config.messageStartEventSubscription =
+        newConfigFromType(ValueType.MESSAGE_START_EVENT_SUBSCRIPTION);
     config.raft = newConfigFromType(ValueType.RAFT);
     config.timer = newConfigFromType(ValueType.TIMER);
     config.workflowInstance = newConfigFromType(ValueType.WORKFLOW_INSTANCE);

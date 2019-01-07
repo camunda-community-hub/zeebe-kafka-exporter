@@ -21,7 +21,7 @@ import java.util.Map;
 public class TomlProducerConfig {
   public String clientId;
   public String closeTimeout;
-  public Map<String, String> config;
+  public Map<String, Object> config;
   public Integer maxConcurrentRequests;
   public String requestTimeout;
   public List<String> servers;

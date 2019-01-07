@@ -9,12 +9,27 @@ services:
         io.zeebe.exporter.kafka: "Zeebe Kafka Exporter"
     container_name: zeebe
     hostname: zeebe
+    depends_on:
+      - kafka
     ports:
       - "26500:26500"
     restart: always
 
+  consumer:
+    build:
+      context: ./samples
+      dockerfile: Dockerfile
+      labels:
+        io.zeebe.exporter.kafka: "Zeebe Kafka Consumer"
+    container_name: consumer
+    hostname: consumer
+    depends_on:
+      - kafka
+    restart: always
+    command: "kafka:9092"
+
   zookeeper:
-    image: confluentinc/cp-zookeeper:3.2.0
+    image: confluentinc/cp-zookeeper:latest
     container_name: zookeeper
     hostname: zookeeper
     ports:
@@ -24,26 +39,21 @@ services:
       ZOOKEEPER_TICK_TIME: 2000
     restart: always
 
-  kafka-broker:
-    image: confluentinc/cp-kafka:3.2.0
+  kafka:
+    image: confluentinc/cp-kafka:latest
     hostname: kafka
-    container_name: kafka-broker
+    container_name: kafka
     depends_on:
       - zookeeper
     ports:
       - '9092:9092'
+      - '9093:9093'
     environment:
       KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: 'zookeeper:2181'
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://0.0.0.0:9092
-      LISTENERS: PLAINTEXT://0.0.0.0:9092
+      KAFKA_ADVERTISED_LISTENERS: INSIDE://kafka:9092,OUTSIDE://localhost:9093
+      KAFKA_LISTENERS: INSIDE://0.0.0.0:9092,OUTSIDE://0.0.0.0:9093
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INSIDE:PLAINTEXT,OUTSIDE:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: INSIDE
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
     restart: always
-
-  kafka-consumer:
-    image: confluentinc/cp-kafka:3.2.0
-    container_name: kafka-consumer
-    depends_on:
-      - kafka-broker
-    command: kafka-console-consumer --bootstrap-server 0.0.0.0:9092 --topic foo --new-consumer --from-beginning
-    restart: always
-

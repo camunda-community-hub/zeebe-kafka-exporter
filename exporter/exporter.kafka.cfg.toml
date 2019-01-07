@@ -2,24 +2,75 @@
 id = "kafka"
 className = "io.zeebe.exporter.kafka.KafkaExporter"
 
+  # Top level exporter arguments
   [exporters.args]
+  # Controls how many records can have been sent to the Kafka broker without
+  # any acknowledgment Once the limit is reached the exporter will block and
+  # wait until either one record is acknowledged or awaitInFlightRecordTimeout
+  # time is elapsed, at which point an error is produced and the record is
+  # retried at a later time
   maxInFlightRecords = 1000
+  # Controls how long we should block and await a record to be acknowledged
+  # by the Kafka broker when the maximum number of in-flight records is reached
+  # Format is the same as standard Zeebe configuration timeouts/durations
   awaitInFlightRecordTimeout = "5s"
 
+  # Producer specific configuration
   [exporters.args.producer]
+  # The list of initial Kafka broker contact points. The format should be the same
+  # one as the ProducerConfig expects, i.e. "host:port"
+  # Maps to ProducerConfig.BOOTSTRAP_SERVERS_CONFIG
   servers = [ "kafka:9092" ]
+  # Controls how long the producer will wait for a request to be acknowledged by
+  # the Kafka broker before retrying it
+  # Maps to ProducerConfig.REQUEST_TIMEOUT_MS_CONFIG
+  # Format is the same as standard Zeebe configuration timeouts/durations
   requestTimeout = "5s"
-  config = { "batch.size" = 131072, "batch.linger" = 50 }
 
+  # Any setting under the following section will be passed verbatim to
+  # ProducerConfig; you can use this to configure authentication, compression,
+  # etc. Note that you can overwrite some important settings, so avoid changing
+  # idempotency, delivery timeout, and retries, unless you know what you're doing
+  [exporters.args.producer.config]
+  "batch.size" = 131072
+  "linger.ms" = 50
+
+  # Controls which records are pushed to Kafka and to which topic
+  # Each entry is a sub-map which can contain two entries:
+  #     type => [string]
+  #     topic => string
+  #
+  # Topic is the topic to which the record with the given value type
+  # should be sent to, e.g. for a deployment record below we would
+  # send the record to "zeebe-deployment" topic.
+  #
+  # Type is a list of accepted record types, allowing you to filter
+  # if you want nothing ([]), commands (["command"]), events (["events"]),
+  # or rejections (["rejection"]), or a combination of the three, e.g.
+  # ["command", "event"].
   [exporters.args.records]
+  # If a record value type is omitted in your configuration file,
+  # it will fall back to whatever is configured in the defaults
   defaults = { type = [ "event" ], topic = "zeebe" }
-  deployment = { topic = "zeebe-deployments" }
-  incident = { topic = "zeebe-incidents" }
+  # For records with a value of type DEPLOYMENT
+  deployment = { topic = "zeebe-deployment" }
+  # For records with a value of type INCIDENT
+  incident = { topic = "zeebe-incident" }
+  # For records with a value of type JOB_BATCH
   jobBatch = { topic = "zeebe-job-batch" }
+  # For records with a value of type JOB
   job = { topic = "zeebe-job" }
+  # For records with a value of type MESSAGE
   message = { topic = "zeebe-message" }
+  # For records with a value of type MESSAGE_SUBSCRIPTION
   messageSubscription = { topic = "zeebe-message-subscription" }
+  # For records with a value of type MESSAGE_START_EVENT_SUBSCRIPTION
+  messageStartEventSubscription = { topic = "zeebe-message-subscription-start-event" }
+  # For records with a value of type RAFT
   raft = { topic = "zeebe-raft" }
+  # For records with a value of type TIMER
   timer = { topic = "zeebe-timer" }
+  # For records with a value of type WORKFLOW_INSTANCE
   workflowInstance = { topic = "zeebe-workflow" }
+  # For records with a value of type WORKFLOW_INSTANCE_SUBSCRIPTION
   workflowInstanceSubscription = { topic = "zeebe-workflow-subscription" }

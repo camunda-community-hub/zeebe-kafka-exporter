@@ -16,6 +16,7 @@
 package io.zeebe.exporter.kafka.config.parser;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.entry;
 
 import io.zeebe.exporter.kafka.config.ProducerConfig;
 import io.zeebe.exporter.kafka.config.toml.TomlProducerConfig;
@@ -83,5 +84,20 @@ public class TomlProducerConfigParserTest {
             Duration.ofSeconds(3),
             Duration.ofSeconds(3),
             config.config);
+  }
+
+  @Test
+  public void shouldUnquoteConfigEntries() {
+    // given
+    final TomlProducerConfig config = new TomlProducerConfig();
+    config.config = new HashMap<>();
+    config.config.put("\"batch.size\"", 132000L);
+    config.config.put("timeout", 5000);
+
+    // when
+    final ProducerConfig parsed = parser.parse(config);
+
+    // then
+    assertThat(parsed.config).containsOnly(entry("batch.size", 132000L), entry("timeout", 5000));
   }
 }
