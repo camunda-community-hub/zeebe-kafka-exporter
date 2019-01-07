@@ -32,8 +32,6 @@ className = "io.zeebe.exporter.kafka.KafkaExporter"
   # etc. Note that you can overwrite some important settings, so avoid changing
   # idempotency, delivery timeout, and retries, unless you know what you're doing
   [exporters.args.producer.config]
-  "batch.size" = 131072
-  "linger.ms" = 50
 
   # Controls which records are pushed to Kafka and to which topic
   # Each entry is a sub-map which can contain two entries:
