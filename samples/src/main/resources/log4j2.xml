@@ -8,7 +8,7 @@
   </Appenders>
 
   <Loggers>
-    <Logger name="io.zeebe.exporter.kafka.samples.consumer" level="info"/>
+    <Logger name="io.zeebe.exporters.kafka.samples.consumer" level="info"/>
 
     <Root level="warn">
       <AppenderRef ref="Console"/>
