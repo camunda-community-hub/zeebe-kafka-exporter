@@ -24,8 +24,9 @@
     </dependency>
 
     <dependency>
-      <groupId>com.fasterxml.jackson.core</groupId>
-      <artifactId>jackson-databind</artifactId>
+      <groupId>io.zeebe</groupId>
+      <artifactId>zeebe-kafka-exporter-serde</artifactId>
+      <version>${project.version}</version>
     </dependency>
 
     <dependency>
@@ -57,24 +58,10 @@
         <configuration>
           <archive>
             <manifest>
-              <mainClass>io.zeebe.exporter.kafka.samples.App</mainClass>
+              <mainClass>io.zeebe.exporters.kafka.samples.GenericConsumer</mainClass>
             </manifest>
           </archive>
-          <descriptorRefs>
-            <descriptorRef>jar-with-dependencies</descriptorRef>
-          </descriptorRefs>
-          <finalName>${project.artifactId}-${project.version}-uber</finalName>
-          <appendAssemblyId>false</appendAssemblyId>
         </configuration>
-        <executions>
-          <execution>
-            <id>make-assembly</id>
-            <phase>package</phase>
-            <goals>
-              <goal>single</goal>
-            </goals>
-          </execution>
-        </executions>
       </plugin>
     </plugins>
   </build>

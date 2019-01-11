@@ -1,4 +1,4 @@
-FROM camunda/zeebe:latest
+FROM camunda/zeebe:0.15.0
 
 # Copy sample Kafka Exporter configuration to config folder
 COPY exporter.kafka.cfg.toml ${ZB_HOME}/conf/

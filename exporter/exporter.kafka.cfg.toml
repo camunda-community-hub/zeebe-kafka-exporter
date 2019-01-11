@@ -1,6 +1,6 @@
 [[exporters]]
 id = "kafka"
-className = "io.zeebe.exporter.kafka.KafkaExporter"
+className = "io.zeebe.exporters.kafka.KafkaExporter"
 
   # Top level exporter arguments
   [exporters.args]
@@ -68,6 +68,8 @@ className = "io.zeebe.exporter.kafka.KafkaExporter"
   raft = { topic = "zeebe-raft" }
   # For records with a value of type TIMER
   timer = { topic = "zeebe-timer" }
+  # For records with a value of type VARIABLE
+  variable = { topic = "zeebe-variable" }
   # For records with a value of type WORKFLOW_INSTANCE
   workflowInstance = { topic = "zeebe-workflow" }
   # For records with a value of type WORKFLOW_INSTANCE_SUBSCRIPTION
