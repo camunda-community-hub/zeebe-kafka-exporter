@@ -7,11 +7,8 @@ If you have any problems please open an issue, write in the forum or on slack.
 
 For more information about the exporters please read the [Exporter documentation](https://docs.zeebe.io/basics/exporters.html).
 
-> This is a work in progress; you're welcome to contribute code or ideas, but no guarantees are made about the exporter itself. Use at your own risks.
-
-> There is a docker compose and some docker files around, in theory these work, but doing a `docker-compose up` is currently broken until the next Zeebe release,
-> since it relies on Zeebe 0.15.0 which is not yet released. But doing a `docker-compose up kafka zookeeper consumer` should work, and you'd need to configure the broker
-> manually to point to Kafka on port 9093.
+> This is a work in progress; you're welcome to contribute code or ideas, but no guarantees are made about the exporter itself.
+Use at your own risks.
 
 ## Installation
 
@@ -24,18 +21,83 @@ The quickest way to get started is:
 
 The next time you start your Zeebe cluster, all event-type records will be exported to their respective Kafka topics.
 
-## Consuming
+> There is currently an issue which prevents using this exporter in an isolated way, since it relies on
+[zeebe-exporter-protobuf](https://github.com/zeebe-io/zeebe-exporter-protobuf) which is packaged under
+`io.zeebe.exporter` (see [zeebe-io/zeebe#2018](https://github.com/zeebe-io/zeebe/issues/2018))
 
-> NOTE: it's planned to offer baked-in `Deserializer` to ease writing consumers, but I'm not sure what's the best approach yet. One attempt is using Flatbuffers to offer fast, consistent, language agnostic serialization/deserialization, but it's not yet sure.
+## Usage
 
-The exporter serializes records to their respective topics using the following format:
+The exporter is set up to stream records from Zeebe to Kafka as they are processed by the exporter stream processor.
+While this is done asynchronously, to ensure that the position is updated correctly, it keeps buffers in flight requests
+and processes their results in the order they were sent, not necessarily in the order the Kafka cluster answered.
 
-- **key**: `string` => <partitionId>-<position> e.g. 0-8589984192, 1-8589979304
-- **value**: `string` => the record JSON representation as obtained through `io.zeebe.exporter.record.Record#toJson()`
 
-Basic deserializer examples are included in the samples project.
+Records are serialized to Kafka using
+[a common protobuf schema](https://github.com/zeebe-io/zeebe-exporter-protobuf/blob/master/src/main/proto/schema.proto),
+where there is one message per record kind (e.g. deployment, job, variable).
 
-The topic to which a record is pushed to is configured under the `[exporter.args.records]` section.
+## Examples
+
+In the [zeebe-kafka-exporter-samples](https://github.com/zeebe-io/zeebe-kafka-exporter/tree/master/samples) module, you
+can find examples of different consumers.
+
+### Generic record consumer
+
+Although records are serialized using a different Protobuf message per topic, it is possible to read from multiple
+topics by using a `GenericRecordDeserializer`. It relies on the fact that the producer in the exporter uses a
+`GenericRecordSerializer` by default, which will serialize a record as a normal `SchemaSerializer<?>` would, but will
+additionally write the schema descriptor type in the record headers. This allows the consumer to then deserialize the
+message to its correct type, be it `Schema.DeploymentRecord` or `Schema.VariableRecord`.
+
+> This has the unfortunate side effect that you must write code to unpack the message to a concrete type should you need
+to; any improvements here would welcome.
+
+An example of a consumer reading from all `zeebe-*` prefixed topics:
+
+```java
+final Consumer<Schema.RecordId, GenericRecord> consumer =
+    new KafkaConsumer<>(config, new RecordIdDeserializer(), new GenericRecordDeserializer());
+consumer.subscribe(Pattern.compile("^zeebe-.*$"));
+while (true) {
+  final ConsumerRecords<Schema.RecordId, GenericRecord> consumed =
+      consumer.poll(Duration.ofSeconds(2));
+  for (ConsumerRecord<Schema.RecordId, GenericRecord> record : consumed) {
+    logger.info(
+        "================[{}] {}-{} ================",
+        record.topic(),
+        record.key().getPartitionId(),
+        record.key().getPosition());
+    logger.info("{}", record.value().getMessage().toString());
+  }
+}
+```
+
+### Single topic consumer
+
+Since records are serialized using the same Protobuf message for a single topic, it's possible to consume them and
+handle the concrete type directly by using a `SchemaDeserializer<?>` for that type. For example, the following will
+consume only workflow instance records, and in the inner loop, the record value is simply the Protobuf message.
+
+```java
+final Consumer<Schema.RecordId, Schema.WorkflowInstanceRecord> consumer =
+    new KafkaConsumer<>(
+        config,
+        new RecordIdDeserializer(),
+        new SchemaDeserializer<>(Schema.WorkflowInstanceRecord.parser()));
+consumer.subscribe(Collections.singleton("zeebe-workflow"));
+
+while (true) {
+  final ConsumerRecords<Schema.RecordId, Schema.WorkflowInstanceRecord> consumed =
+      consumer.poll(Duration.ofSeconds(2));
+  for (ConsumerRecord<Schema.RecordId, Schema.WorkflowInstanceRecord> record : consumed) {
+    logger.info(
+        "================[{}] {}-{} ================",
+        record.topic(),
+        record.key().getPartitionId(),
+        record.key().getPosition());
+    logger.info("{}", record.value().toString());
+}
+```
 
 ## Reference
 
@@ -94,8 +156,6 @@ className = "io.zeebe.exporter.kafka.KafkaExporter"
   # etc. Note that you can overwrite some important settings, so avoid changing
   # idempotency, delivery timeout, and retries, unless you know what you're doing
   [exporters.args.producer.config]
-  "batch.size" = 131072
-  "linger.ms" = 50
 
   # Controls which records are pushed to Kafka and to which topic
   # Each entry is a sub-map which can contain two entries:
@@ -132,6 +192,8 @@ className = "io.zeebe.exporter.kafka.KafkaExporter"
   raft = { topic = "zeebe-raft" }
   # For records with a value of type TIMER
   timer = { topic = "zeebe-timer" }
+  # For records with a value of type VARIABLE
+  variable = { topic = "zeebe-variable" }
   # For records with a value of type WORKFLOW_INSTANCE
   workflowInstance = { topic = "zeebe-workflow" }
   # For records with a value of type WORKFLOW_INSTANCE_SUBSCRIPTION
