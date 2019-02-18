@@ -36,6 +36,9 @@ Records are serialized to Kafka using
 [a common protobuf schema](https://github.com/zeebe-io/zeebe-exporter-protobuf/blob/master/src/main/proto/schema.proto),
 where there is one message per record kind (e.g. deployment, job, variable).
 
+The [configuration file](https://github.com/zeebe-io/zeebe-kafka-exporter/blob/master/exporter/exporter.kafka.cfg.toml)
+is a good starting point to learn more about how the exporter works.
+
 ## Examples
 
 In the [zeebe-kafka-exporter-samples](https://github.com/zeebe-io/zeebe-kafka-exporter/tree/master/samples) module, you
@@ -99,6 +102,17 @@ while (true) {
 }
 ```
 
+## Docker
+
+The [exporter](https://github.com/zeebe-io/zeebe-kafka-exporter/tree/master/exporter) and
+[samples](https://github.com/zeebe-io/zeebe-kafka-exporter/tree/master/samples) modules both come with their own
+`Dockerfile`; the exporter's will spawn a standard `zeebe` container with a pre-configured exporter, and the samples'
+will spawn an OpenJDK container running the `GenericConsumer` example in a loop.
+
+From the root of the project, you can use `docker-compose up -d` to start a `zookeeper`/`kafka` pair (with ports `2181`
+and `29092` exposed respectively), a `zeebe` broker/gateway (client port `25600`), and a generic consumer which will
+output all records being exported. This is meant primarily to get a feel of how the whole thing works together.
+
 ## Reference
 
 The exporter uses a Kafka producer to push records out to different topics based on the incoming record value type (e.g. deployment, raft, etc.)
@@ -121,10 +135,14 @@ the exporter never blocks.
 
 A sample configuration file is included in the project under `exporter.kafka.cfg.toml`.
 
+> NOTE: there is currently a bug where the TOML parser used in Zeebe parses all numbers as doubles, which if passed
+directly as `ProducerConfig` may cause errors. It's recommended for now to use the extra config arguments for
+non-numerial values until that's fixed.
+
 ```toml
 [[exporters]]
 id = "kafka"
-className = "io.zeebe.exporter.kafka.KafkaExporter"
+className = "io.zeebe.exporters.kafka.KafkaExporter"
 
   # Top level exporter arguments
   [exporters.args]
