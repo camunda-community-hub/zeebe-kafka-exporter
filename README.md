@@ -1,7 +1,10 @@
 Zeebe Kafka Exporter
 =====================
 
-An easy to use exporter which will export Zeebe records to a configured Kafka topic.
+An easy to use exporter which will export Zeebe records to a configured Kafka topic, compatible with
+[zeebe](https://github.com/zeebe-io/zeebe) versions:
+
+- [0.15.0](https://github.com/zeebe-io/zeebe/releases/tag/0.15.0)
 
 If you have any problems please open an issue, write in the forum or on slack.
 
