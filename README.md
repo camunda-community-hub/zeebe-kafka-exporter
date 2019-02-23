@@ -40,6 +40,25 @@ where there is one message per record kind (e.g. deployment, job, variable).
 The [configuration file](https://github.com/zeebe-io/zeebe-kafka-exporter/blob/master/exporter/exporter.kafka.cfg.toml)
 is a good starting point to learn more about how the exporter works.
 
+### Advanced configuration
+
+You can configure the producer for more advanced use cases by using the `[exporters.args.producer]` table, in which you
+can define abritrary Kafka producer settings. So for example, to configure two way SSL handshake:
+
+```toml
+# ...
+
+[exporter.args.producer]
+"security.protocol" = "SSL"
+"ssl.truststore.location" = "/var/private/ssl/kafka.client.truststore.jks"
+"ssl.truststore.password" = "test1234"
+"ssl.keystore.location" = "/var/private/ssl/kafka.client.keystore.jks"
+"ssl.keystore.password" = "test1234"
+"ssl.key.password" = "test1234"
+
+# ...
+```
+
 ## Examples
 
 In the [zeebe-kafka-exporter-samples](https://github.com/zeebe-io/zeebe-kafka-exporter/tree/master/samples) module, you

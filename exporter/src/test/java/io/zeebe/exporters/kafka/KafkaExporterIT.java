@@ -15,12 +15,12 @@
  */
 package io.zeebe.exporters.kafka;
 
+import static com.github.charithe.kafka.KafkaJunitExtensionConfig.ALLOCATE_RANDOM_PORT;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.entry;
 
 import com.github.charithe.kafka.EphemeralKafkaBroker;
-import com.github.charithe.kafka.KafkaJunitRule;
-import com.github.charithe.kafka.StartupMode;
+import com.github.charithe.kafka.KafkaHelper;
 import com.google.protobuf.Message;
 import io.zeebe.exporter.proto.RecordTransformer;
 import io.zeebe.exporter.proto.Schema;
@@ -29,40 +29,80 @@ import io.zeebe.exporters.kafka.config.toml.TomlConfig;
 import io.zeebe.exporters.kafka.serde.RecordIdDeserializer;
 import io.zeebe.exporters.kafka.serde.generic.GenericRecord;
 import io.zeebe.exporters.kafka.serde.generic.GenericRecordDeserializer;
-import io.zeebe.exporters.kafka.serde.generic.GenericRecordSerializer;
 import io.zeebe.test.exporter.ExporterIntegrationRule;
+import io.zeebe.test.util.record.RecordingExporterTestWatcher;
 import java.time.Duration;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
+import java.util.concurrent.ExecutionException;
+import java.util.function.BiConsumer;
+import java.util.function.Consumer;
+import org.apache.curator.test.InstanceSpec;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
-import org.junit.Before;
+import org.junit.After;
 import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.RuleChain;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
+@RunWith(Parameterized.class)
 public class KafkaExporterIT {
+  private static final String KEYSTORE_LOCATION =
+      System.getProperty("io.zeebe.exporters.kafka.keyStore", "src/test/resources/keystore.jks");
   private static final String TOPIC = "zeebe";
-  private final GenericRecordSerializer keySerializer = new GenericRecordSerializer();
-  private final GenericRecordSerializer valueSerializer = new GenericRecordSerializer();
 
-  private final ExporterIntegrationRule exporterIntegrationRule = new ExporterIntegrationRule();
-  private final KafkaJunitRule kafkaRule =
-      new KafkaJunitRule(EphemeralKafkaBroker.create(), StartupMode.WAIT_FOR_STARTUP);
+  @Rule public RecordingExporterTestWatcher testWatcher = new RecordingExporterTestWatcher();
 
-  @Rule
-  public final RuleChain chain = RuleChain.outerRule(kafkaRule).around(exporterIntegrationRule);
+  private TomlConfig exporterConfiguration;
+  private ExporterIntegrationRule exporterIntegrationRule;
+  private EphemeralKafkaBroker kafkaBroker;
+  private KafkaHelper kafkaHelper;
 
-  @Before
-  public void setUp() {
-    keySerializer.configure(new HashMap<>(), true);
-    exporterIntegrationRule.configure("kafka", KafkaExporter.class, newConfiguration());
-    exporterIntegrationRule.start();
+  @After
+  public void tearDown() throws ExecutionException, InterruptedException {
+    if (exporterIntegrationRule != null) {
+      exporterIntegrationRule.stop();
+      exporterIntegrationRule = null;
+    }
+
+    if (kafkaBroker != null) {
+      kafkaBroker.stop();
+      kafkaBroker = null;
+    }
+
+    kafkaHelper = null;
+    exporterConfiguration = null;
+  }
+
+  @Parameterized.Parameter(0)
+  public String name;
+
+  @Parameterized.Parameter(1)
+  public Consumer<TomlConfig> exporterConfigurator;
+
+  @Parameterized.Parameter(2)
+  public BiConsumer<Properties, Integer> kafkaConfigurator;
+
+  @Parameterized.Parameters(name = "{0}")
+  public static Object[][] data() {
+    return new Object[][] {
+      new Object[] {"defaults", exporter(c -> {}), kafka((p, port) -> {})},
+      new Object[] {
+        "ssl",
+        exporter(c -> c.producer.config = newSslConfiguration()),
+        kafka((p, port) -> p.putAll(newBrokerSslConfiguration(port)))
+      }
+    };
   }
 
   @Test
-  public void shouldExportRecords() {
+  public void shouldExportRecords() throws Exception {
+    // given
+    startKafkaBroker();
+    startZeebeBroker();
+
     // when
     exporterIntegrationRule.performSampleWorkload();
 
@@ -101,11 +141,13 @@ public class KafkaExporterIT {
     properties.put("auto.commit.interval.ms", "100");
     properties.put("max.poll.records", String.valueOf(Integer.MAX_VALUE));
 
+    if (exporterConfiguration.producer.config != null) {
+      properties.putAll(exporterConfiguration.producer.config);
+    }
+
     final KafkaConsumer<Schema.RecordId, GenericRecord> consumer =
-        kafkaRule
-            .helper()
-            .createConsumer(
-                new RecordIdDeserializer(), new GenericRecordDeserializer(), properties);
+        kafkaHelper.createConsumer(
+            new RecordIdDeserializer(), new GenericRecordDeserializer(), properties);
     consumer.subscribe(Collections.singletonList(TOPIC));
 
     return consumer;
@@ -114,8 +156,55 @@ public class KafkaExporterIT {
   private TomlConfig newConfiguration() {
     final TomlConfig configuration = new TomlConfig();
     configuration.producer.servers =
-        Collections.singletonList(String.format("localhost:%d", kafkaRule.helper().kafkaPort()));
+        Collections.singletonList(String.format("localhost:%d", kafkaHelper.kafkaPort()));
 
     return configuration;
+  }
+
+  private void startKafkaBroker() throws Exception {
+    final int port = InstanceSpec.getRandomPort();
+    final Properties properties = new Properties();
+    kafkaConfigurator.accept(properties, port);
+    kafkaBroker = EphemeralKafkaBroker.create(port, ALLOCATE_RANDOM_PORT, properties);
+    kafkaHelper = KafkaHelper.createFor(kafkaBroker);
+    kafkaBroker.start().join();
+  }
+
+  private void startZeebeBroker() {
+    exporterConfiguration = newConfiguration();
+    exporterConfigurator.accept(exporterConfiguration);
+    exporterIntegrationRule = new ExporterIntegrationRule();
+    exporterIntegrationRule.configure("kafka", KafkaExporter.class, exporterConfiguration);
+    exporterIntegrationRule.start();
+  }
+
+  private static Map<String, Object> newBrokerSslConfiguration(int port) {
+    final Map<String, Object> config = newSslConfiguration();
+    config.put("listeners", "SSL://localhost:" + port);
+    config.put("advertised.listeners", "SSL://localhost:" + port);
+    config.put("security.inter.broker.protocol", "SSL");
+
+    return config;
+  }
+
+  private static Map<String, Object> newSslConfiguration() {
+    final Map<String, Object> config = new HashMap<>();
+    config.put("security.protocol", "SSL");
+    config.put("ssl.truststore.location", KEYSTORE_LOCATION);
+    config.put("ssl.truststore.password", "test1234");
+    config.put("ssl.keystore.location", KEYSTORE_LOCATION);
+    config.put("ssl.keystore.password", "test1234");
+    config.put("ssl.key.password", "test1234");
+
+    return config;
+  }
+
+  private static Consumer<TomlConfig> exporter(Consumer<TomlConfig> configurator) {
+    return configurator;
+  }
+
+  private static BiConsumer<Properties, Integer> kafka(
+      BiConsumer<Properties, Integer> configurator) {
+    return configurator;
   }
 }
