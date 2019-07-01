@@ -15,7 +15,7 @@
  */
 package io.zeebe.exporters.kafka.record;
 
-import io.zeebe.exporter.record.Record;
+import io.zeebe.exporter.api.record.Record;
 
 @FunctionalInterface
 public interface RecordTransformer<T> {

@@ -15,7 +15,7 @@
  */
 package io.zeebe.exporters.kafka.config;
 
-import io.zeebe.protocol.clientapi.ValueType;
+import io.zeebe.protocol.ValueType;
 import java.util.EnumMap;
 import java.util.Map;
 import java.util.Objects;

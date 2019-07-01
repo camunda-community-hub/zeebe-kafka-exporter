@@ -15,9 +15,9 @@
  */
 package io.zeebe.exporters.kafka.serde;
 
+import io.zeebe.exporter.api.record.Record;
 import io.zeebe.exporter.proto.RecordTransformer;
 import io.zeebe.exporter.proto.Schema;
-import io.zeebe.exporter.record.Record;
 
 /** Convenience class to serialize {@link Schema.RecordId} messages. */
 public class RecordIdSerializer extends SchemaSerializer<Record, Schema.RecordId> {

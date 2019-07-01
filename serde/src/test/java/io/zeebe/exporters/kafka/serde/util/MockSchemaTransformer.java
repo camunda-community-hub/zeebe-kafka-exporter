@@ -16,7 +16,7 @@
 package io.zeebe.exporters.kafka.serde.util;
 
 import com.google.protobuf.Message;
-import io.zeebe.exporter.record.Record;
+import io.zeebe.exporter.api.record.Record;
 import io.zeebe.exporters.kafka.serde.SchemaTransformer;
 
 public class MockSchemaTransformer implements SchemaTransformer<Record, Message> {

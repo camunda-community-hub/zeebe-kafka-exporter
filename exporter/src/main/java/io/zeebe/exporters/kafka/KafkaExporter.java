@@ -15,10 +15,10 @@
  */
 package io.zeebe.exporters.kafka;
 
-import io.zeebe.exporter.context.Context;
-import io.zeebe.exporter.context.Controller;
-import io.zeebe.exporter.record.Record;
-import io.zeebe.exporter.spi.Exporter;
+import io.zeebe.exporter.api.Exporter;
+import io.zeebe.exporter.api.context.Context;
+import io.zeebe.exporter.api.context.Controller;
+import io.zeebe.exporter.api.record.Record;
 import io.zeebe.exporters.kafka.config.Config;
 import io.zeebe.exporters.kafka.config.parser.Parser;
 import io.zeebe.exporters.kafka.config.parser.TomlConfigParser;

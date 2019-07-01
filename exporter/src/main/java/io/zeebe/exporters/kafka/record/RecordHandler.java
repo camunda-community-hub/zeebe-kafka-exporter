@@ -15,7 +15,7 @@
  */
 package io.zeebe.exporters.kafka.record;
 
-import io.zeebe.exporter.record.Record;
+import io.zeebe.exporter.api.record.Record;
 import io.zeebe.exporters.kafka.config.RecordConfig;
 import io.zeebe.exporters.kafka.config.RecordsConfig;
 import org.apache.kafka.clients.producer.ProducerRecord;

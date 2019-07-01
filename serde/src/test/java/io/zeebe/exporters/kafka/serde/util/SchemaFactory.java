@@ -15,14 +15,31 @@
  */
 package io.zeebe.exporters.kafka.serde.util;
 
-import com.google.protobuf.*;
+import com.google.protobuf.ByteString;
+import com.google.protobuf.Message;
+import com.google.protobuf.Struct;
+import com.google.protobuf.Timestamp;
+import com.google.protobuf.Value;
+import io.zeebe.exporter.api.record.value.deployment.ResourceType;
 import io.zeebe.exporter.proto.Schema;
-import io.zeebe.protocol.clientapi.RecordType;
-import io.zeebe.protocol.clientapi.RejectionType;
-import io.zeebe.protocol.clientapi.ValueType;
-import io.zeebe.protocol.impl.record.value.deployment.ResourceType;
-import io.zeebe.protocol.impl.record.value.incident.ErrorType;
-import io.zeebe.protocol.intent.*;
+import io.zeebe.protocol.ErrorType;
+import io.zeebe.protocol.RecordType;
+import io.zeebe.protocol.RejectionType;
+import io.zeebe.protocol.ValueType;
+import io.zeebe.protocol.VariableDocumentUpdateSemantic;
+import io.zeebe.protocol.intent.DeploymentIntent;
+import io.zeebe.protocol.intent.IncidentIntent;
+import io.zeebe.protocol.intent.JobBatchIntent;
+import io.zeebe.protocol.intent.JobIntent;
+import io.zeebe.protocol.intent.MessageIntent;
+import io.zeebe.protocol.intent.MessageStartEventSubscriptionIntent;
+import io.zeebe.protocol.intent.MessageSubscriptionIntent;
+import io.zeebe.protocol.intent.TimerIntent;
+import io.zeebe.protocol.intent.VariableDocumentIntent;
+import io.zeebe.protocol.intent.VariableIntent;
+import io.zeebe.protocol.intent.WorkflowInstanceCreationIntent;
+import io.zeebe.protocol.intent.WorkflowInstanceIntent;
+import io.zeebe.protocol.intent.WorkflowInstanceSubscriptionIntent;
 import java.util.Arrays;
 import java.util.List;
 
@@ -37,19 +54,18 @@ public class SchemaFactory {
         message().build(),
         messageSubscription().build(),
         messageStartEventSubscription().build(),
-        raft().build(),
         timer().build(),
         variable().build(),
+        variableDocument().build(),
         workflowInstance().build(),
         workflowInstanceSubscription().build());
   }
 
-  public Schema.RecordMetadata.Builder metadata() {
+  private Schema.RecordMetadata.Builder metadata() {
     return Schema.RecordMetadata.newBuilder()
         .setKey(1L)
         .setPosition(1L)
         .setPartitionId(3)
-        .setRaftTerm(1)
         .setProducerId(1)
         .setSourceRecordPosition(1L)
         .setTimestamp(timestamp())
@@ -60,14 +76,14 @@ public class SchemaFactory {
         .setRejectionType(RejectionType.INVALID_ARGUMENT.name());
   }
 
-  public Schema.DeploymentRecord.Resource.Builder deploymentResource() {
+  private Schema.DeploymentRecord.Resource.Builder deploymentResource() {
     return Schema.DeploymentRecord.Resource.newBuilder()
         .setResource(ByteString.copyFromUtf8("I am a deployment resource"))
         .setResourceName("resource.bpmn")
         .setResourceType(ResourceType.BPMN_XML.name());
   }
 
-  public Schema.DeploymentRecord.Workflow.Builder deploymentWorkflow() {
+  private Schema.DeploymentRecord.Workflow.Builder deploymentWorkflow() {
     return Schema.DeploymentRecord.Workflow.newBuilder()
         .setBpmnProcessId("process")
         .setResourceName("resource.bpmn")
@@ -75,7 +91,7 @@ public class SchemaFactory {
         .setWorkflowKey(1L);
   }
 
-  public Schema.DeploymentRecord.Builder deployment() {
+  private Schema.DeploymentRecord.Builder deployment() {
     return Schema.DeploymentRecord.newBuilder()
         .setMetadata(
             metadata()
@@ -85,7 +101,7 @@ public class SchemaFactory {
         .addWorkflows(deploymentWorkflow());
   }
 
-  public Schema.IncidentRecord.Builder incident() {
+  private Schema.IncidentRecord.Builder incident() {
     return Schema.IncidentRecord.newBuilder()
         .setBpmnProcessId("process")
         .setElementId("element")
@@ -99,7 +115,7 @@ public class SchemaFactory {
                 .setValueType(ValueType.INCIDENT.name()));
   }
 
-  public Schema.JobRecord.Builder job() {
+  private Schema.JobRecord.Builder job() {
     return Schema.JobRecord.newBuilder()
         .setDeadline(timestamp())
         .setErrorMessage("error")
@@ -107,15 +123,15 @@ public class SchemaFactory {
         .setType("type")
         .setWorker("worker")
         .setCustomHeaders(struct())
-        .setPayload(struct())
+        .setVariables(struct())
         .setMetadata(
             metadata().setValueType(ValueType.JOB.name()).setIntent(JobIntent.ACTIVATED.name()));
   }
 
-  public Schema.JobBatchRecord.Builder jobBatch() {
+  private Schema.JobBatchRecord.Builder jobBatch() {
     final Schema.JobRecord.Builder job = job();
     return Schema.JobBatchRecord.newBuilder()
-        .setAmount(1)
+        .setMaxJobsToActivate(1)
         .setTimeout(1000L)
         .setType(job.getType())
         .setWorker(job.getWorker())
@@ -133,14 +149,14 @@ public class SchemaFactory {
         .setMessageId("id")
         .setName("name")
         .setTimeToLive(1000L)
-        .setPayload(struct())
+        .setVariables(struct())
         .setMetadata(
             metadata()
                 .setIntent(MessageIntent.PUBLISH.name())
                 .setValueType(ValueType.MESSAGE.name()));
   }
 
-  public Schema.MessageSubscriptionRecord.Builder messageSubscription() {
+  private Schema.MessageSubscriptionRecord.Builder messageSubscription() {
     return Schema.MessageSubscriptionRecord.newBuilder()
         .setCorrelationKey("1")
         .setElementInstanceKey(1L)
@@ -152,7 +168,7 @@ public class SchemaFactory {
                 .setIntent(MessageSubscriptionIntent.CLOSE.name()));
   }
 
-  public Schema.MessageStartEventSubscriptionRecord.Builder messageStartEventSubscription() {
+  private Schema.MessageStartEventSubscriptionRecord.Builder messageStartEventSubscription() {
     return Schema.MessageStartEventSubscriptionRecord.newBuilder()
         .setStartEventId("start")
         .setMessageName("name")
@@ -163,19 +179,7 @@ public class SchemaFactory {
                 .setValueType(ValueType.MESSAGE_START_EVENT_SUBSCRIPTION.name()));
   }
 
-  public Schema.RaftRecord.Member.Builder raftMember() {
-    return Schema.RaftRecord.Member.newBuilder().setNodeId(1);
-  }
-
-  public Schema.RaftRecord.Builder raft() {
-    return Schema.RaftRecord.newBuilder().addMembers(raftMember());
-  }
-
-  public Schema.RecordId.Builder recordId() {
-    return Schema.RecordId.newBuilder().setPartitionId(3).setPosition(1L);
-  }
-
-  public Schema.TimerRecord.Builder timer() {
+  private Schema.TimerRecord.Builder timer() {
     return Schema.TimerRecord.newBuilder()
         .setDueDate(1000L)
         .setElementInstanceKey(1L)
@@ -184,7 +188,7 @@ public class SchemaFactory {
             metadata().setValueType(ValueType.TIMER.name()).setIntent(TimerIntent.CREATE.name()));
   }
 
-  public Schema.VariableRecord.Builder variable() {
+  private Schema.VariableRecord.Builder variable() {
     return Schema.VariableRecord.newBuilder()
         .setScopeKey(1L)
         .setWorkflowInstanceKey(1L)
@@ -196,6 +200,17 @@ public class SchemaFactory {
                 .setValueType(ValueType.VARIABLE.name()));
   }
 
+  private Schema.VariableDocumentRecord.Builder variableDocument() {
+    return Schema.VariableDocumentRecord.newBuilder()
+        .setScopeKey(1L)
+        .setDocument(struct())
+        .setUpdateSemantics(VariableDocumentUpdateSemantic.LOCAL.name())
+        .setMetadata(
+            metadata()
+                .setIntent(VariableDocumentIntent.UPDATED.name())
+                .setValueType(ValueType.VARIABLE_DOCUMENT.name()));
+  }
+
   public Schema.WorkflowInstanceRecord.Builder workflowInstance() {
     return Schema.WorkflowInstanceRecord.newBuilder()
         .setFlowScopeKey(1L)
@@ -204,19 +219,31 @@ public class SchemaFactory {
         .setVersion(1)
         .setWorkflowInstanceKey(1L)
         .setWorkflowKey(1L)
-        .setPayload(struct())
         .setMetadata(
             metadata()
                 .setIntent(WorkflowInstanceIntent.ELEMENT_ACTIVATING.name())
                 .setValueType(ValueType.WORKFLOW_INSTANCE.name()));
   }
 
-  public Schema.WorkflowInstanceSubscriptionRecord.Builder workflowInstanceSubscription() {
+  private Schema.WorkflowInstanceCreationRecord.Builder workflowInstanceCreation() {
+    return Schema.WorkflowInstanceCreationRecord.newBuilder()
+        .setBpmnProcessId("process")
+        .setVariables(struct())
+        .setVersion(1)
+        .setWorkflowInstanceKey(1)
+        .setWorkflowKey(1)
+        .setMetadata(
+            metadata()
+                .setIntent(WorkflowInstanceCreationIntent.CREATED.name())
+                .setValueType(ValueType.WORKFLOW_INSTANCE_CREATION.name()));
+  }
+
+  private Schema.WorkflowInstanceSubscriptionRecord.Builder workflowInstanceSubscription() {
     return Schema.WorkflowInstanceSubscriptionRecord.newBuilder()
         .setElementInstanceKey(1L)
         .setMessageName("name")
         .setWorkflowInstanceKey(1L)
-        .setPayload(struct())
+        .setVariables(struct())
         .setMetadata(
             metadata()
                 .setIntent(WorkflowInstanceSubscriptionIntent.CORRELATE.name())

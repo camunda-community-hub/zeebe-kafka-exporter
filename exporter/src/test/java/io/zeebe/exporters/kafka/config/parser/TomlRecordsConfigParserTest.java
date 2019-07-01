@@ -21,8 +21,8 @@ import io.zeebe.exporters.kafka.config.RecordsConfig;
 import io.zeebe.exporters.kafka.config.toml.TomlRecordConfig;
 import io.zeebe.exporters.kafka.config.toml.TomlRecordsConfig;
 import io.zeebe.exporters.kafka.record.AllowedType;
-import io.zeebe.protocol.clientapi.RecordType;
-import io.zeebe.protocol.clientapi.ValueType;
+import io.zeebe.protocol.RecordType;
+import io.zeebe.protocol.ValueType;
 import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.Set;
@@ -32,7 +32,11 @@ public class TomlRecordsConfigParserTest {
   private static final Set<ValueType> EXPECTED_VALUE_TYPES =
       EnumSet.complementOf(
           EnumSet.of(
-              ValueType.EXPORTER, ValueType.NOOP, ValueType.NULL_VAL, ValueType.SBE_UNKNOWN));
+              ValueType.EXPORTER,
+              ValueType.ERROR,
+              ValueType.NOOP,
+              ValueType.NULL_VAL,
+              ValueType.SBE_UNKNOWN));
 
   private final TomlRecordsConfigParser parser = new TomlRecordsConfigParser();
 
@@ -62,10 +66,11 @@ public class TomlRecordsConfigParserTest {
     config.messageSubscription = newConfigFromType(ValueType.MESSAGE_SUBSCRIPTION);
     config.messageStartEventSubscription =
         newConfigFromType(ValueType.MESSAGE_START_EVENT_SUBSCRIPTION);
-    config.raft = newConfigFromType(ValueType.RAFT);
     config.timer = newConfigFromType(ValueType.TIMER);
     config.variable = newConfigFromType(ValueType.VARIABLE);
+    config.variableDocument = newConfigFromType(ValueType.VARIABLE_DOCUMENT);
     config.workflowInstance = newConfigFromType(ValueType.WORKFLOW_INSTANCE);
+    config.workflowInstanceCreation = newConfigFromType(ValueType.WORKFLOW_INSTANCE_CREATION);
     config.workflowInstanceSubscription =
         newConfigFromType(ValueType.WORKFLOW_INSTANCE_SUBSCRIPTION);
 

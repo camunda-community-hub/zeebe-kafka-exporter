@@ -15,9 +15,11 @@
  */
 package io.zeebe.exporters.kafka;
 
-import static org.assertj.core.api.Assertions.*;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import io.zeebe.exporter.record.Record;
+import io.zeebe.exporter.api.record.Record;
 import io.zeebe.exporters.kafka.config.Config;
 import io.zeebe.exporters.kafka.config.parser.MockParser;
 import io.zeebe.exporters.kafka.config.parser.TomlConfigParser;
@@ -25,7 +27,7 @@ import io.zeebe.exporters.kafka.config.toml.TomlConfig;
 import io.zeebe.exporters.kafka.producer.MockKafkaProducerFactory;
 import io.zeebe.exporters.kafka.serde.RecordIdSerializer;
 import io.zeebe.exporters.kafka.serde.generic.GenericRecordSerializer;
-import io.zeebe.protocol.clientapi.RecordType;
+import io.zeebe.protocol.RecordType;
 import io.zeebe.test.exporter.ExporterTestHarness;
 import java.time.Duration;
 import java.util.EnumSet;
@@ -57,7 +59,7 @@ public class KafkaExporterTest {
   }
 
   @Test
-  public void shouldExportRecords() {
+  public void shouldExportRecords() throws Exception {
     // given
     testHarness.configure(EXPORTER_ID, tomlConfig);
     testHarness.open();
@@ -78,7 +80,7 @@ public class KafkaExporterTest {
   }
 
   @Test
-  public void shouldUpdatePositionBasedOnCompletedRequests() {
+  public void shouldUpdatePositionBasedOnCompletedRequests() throws Exception {
     // given
     final int recordsCount = 4;
 
@@ -101,7 +103,7 @@ public class KafkaExporterTest {
   }
 
   @Test
-  public void shouldAwaitCompletionOfEarliestRecordIfMaxRecordsInFlightReached() {
+  public void shouldAwaitCompletionOfEarliestRecordIfMaxRecordsInFlightReached() throws Exception {
     // given
     final int recordsCount = 2;
 
@@ -120,7 +122,7 @@ public class KafkaExporterTest {
   }
 
   @Test
-  public void shouldFlushInFlightRecordsAndUpdatePositionOnClose() {
+  public void shouldFlushInFlightRecordsAndUpdatePositionOnClose() throws Exception {
     // given
     final int recordsCount = 4;
     configuration.maxInFlightRecords = recordsCount;
@@ -137,7 +139,7 @@ public class KafkaExporterTest {
   }
 
   @Test
-  public void shouldDoNothingIfAlreadyClosed() {
+  public void shouldDoNothingIfAlreadyClosed() throws Exception {
     // given
     testHarness.configure(EXPORTER_ID, tomlConfig);
     testHarness.open();
@@ -154,7 +156,7 @@ public class KafkaExporterTest {
   }
 
   @Test
-  public void shouldThrowExceptionIfTimedOutWaitingForRecordCompletion() {
+  public void shouldThrowExceptionIfTimedOutWaitingForRecordCompletion() throws Exception {
     // given
     mockProducerFactory.mockProducer = new MockProducer<>(false, null, null);
     configuration.awaitInFlightRecordTimeout = Duration.ofMillis(1);
@@ -170,7 +172,7 @@ public class KafkaExporterTest {
   }
 
   @Test
-  public void shouldUpdatePositionToLatestCompletedEventEvenIfOneRecordFails() {
+  public void shouldUpdatePositionToLatestCompletedEventEvenIfOneRecordFails() throws Exception {
     // given
     mockProducerFactory.mockProducer = new MockProducer<>(false, null, null);
     configuration.maxInFlightRecords = 2;

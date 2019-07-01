@@ -15,7 +15,7 @@
  */
 package io.zeebe.exporters.kafka.config;
 
-import io.zeebe.protocol.clientapi.RecordType;
+import io.zeebe.protocol.RecordType;
 import java.util.EnumSet;
 import java.util.Objects;
 

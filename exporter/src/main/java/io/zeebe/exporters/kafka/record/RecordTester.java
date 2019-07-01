@@ -15,7 +15,7 @@
  */
 package io.zeebe.exporters.kafka.record;
 
-import io.zeebe.exporter.record.Record;
+import io.zeebe.exporter.api.record.Record;
 import java.util.function.Predicate;
 
 @FunctionalInterface

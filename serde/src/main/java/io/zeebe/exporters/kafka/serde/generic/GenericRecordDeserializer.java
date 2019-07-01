@@ -17,8 +17,8 @@ package io.zeebe.exporters.kafka.serde.generic;
 
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.Message;
+import io.zeebe.exporter.api.record.Record;
 import io.zeebe.exporter.proto.Schema;
-import io.zeebe.exporter.record.Record;
 import io.zeebe.exporters.kafka.serde.SchemaDeserializationException;
 import java.util.HashMap;
 import java.util.Map;
@@ -55,10 +55,11 @@ public class GenericRecordDeserializer implements Deserializer<GenericRecord> {
     addType(Schema.MessageRecord.getDefaultInstance());
     addType(Schema.MessageStartEventSubscriptionRecord.getDefaultInstance());
     addType(Schema.MessageSubscriptionRecord.getDefaultInstance());
-    addType(Schema.RaftRecord.getDefaultInstance());
     addType(Schema.TimerRecord.getDefaultInstance());
     addType(Schema.VariableRecord.getDefaultInstance());
+    addType(Schema.VariableDocumentRecord.getDefaultInstance());
     addType(Schema.WorkflowInstanceRecord.getDefaultInstance());
+    addType(Schema.WorkflowInstanceCreationRecord.getDefaultInstance());
     addType(Schema.WorkflowInstanceSubscriptionRecord.getDefaultInstance());
   }
 

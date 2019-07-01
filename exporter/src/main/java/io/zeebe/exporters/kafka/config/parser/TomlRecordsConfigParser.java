@@ -19,17 +19,17 @@ import io.zeebe.exporters.kafka.config.RecordConfig;
 import io.zeebe.exporters.kafka.config.RecordsConfig;
 import io.zeebe.exporters.kafka.config.toml.TomlRecordConfig;
 import io.zeebe.exporters.kafka.config.toml.TomlRecordsConfig;
-import io.zeebe.protocol.clientapi.RecordType;
-import io.zeebe.protocol.clientapi.ValueType;
+import io.zeebe.protocol.RecordType;
+import io.zeebe.protocol.ValueType;
 import java.util.EnumSet;
 
 public class TomlRecordsConfigParser implements Parser<TomlRecordsConfig, RecordsConfig> {
-  public static final String DEFAULT_TOPIC_NAME = "zeebe";
-  public static final EnumSet<RecordType> DEFAULT_ALLOWED_TYPES = EnumSet.allOf(RecordType.class);
+  static final String DEFAULT_TOPIC_NAME = "zeebe";
+  static final EnumSet<RecordType> DEFAULT_ALLOWED_TYPES = EnumSet.allOf(RecordType.class);
 
   private final Parser<TomlRecordConfig, RecordConfig> recordConfigParser;
 
-  public TomlRecordsConfigParser() {
+  TomlRecordsConfigParser() {
     this.recordConfigParser = new TomlRecordConfigParser();
   }
 
@@ -61,11 +61,15 @@ public class TomlRecordsConfigParser implements Parser<TomlRecordsConfig, Record
     parsed.typeMap.put(
         ValueType.MESSAGE_START_EVENT_SUBSCRIPTION,
         parseOrDefault(parsed, config.messageStartEventSubscription));
-    parsed.typeMap.put(ValueType.RAFT, parseOrDefault(parsed, config.raft));
     parsed.typeMap.put(ValueType.TIMER, parseOrDefault(parsed, config.timer));
     parsed.typeMap.put(ValueType.VARIABLE, parseOrDefault(parsed, config.variable));
     parsed.typeMap.put(
+        ValueType.VARIABLE_DOCUMENT, parseOrDefault(parsed, config.variableDocument));
+    parsed.typeMap.put(
         ValueType.WORKFLOW_INSTANCE, parseOrDefault(parsed, config.workflowInstance));
+    parsed.typeMap.put(
+        ValueType.WORKFLOW_INSTANCE_CREATION,
+        parseOrDefault(parsed, config.workflowInstanceCreation));
     parsed.typeMap.put(
         ValueType.WORKFLOW_INSTANCE_SUBSCRIPTION,
         parseOrDefault(parsed, config.workflowInstanceSubscription));

@@ -16,8 +16,8 @@
 package io.zeebe.exporters.kafka.serde.generic;
 
 import com.google.protobuf.Message;
+import io.zeebe.exporter.api.record.Record;
 import io.zeebe.exporter.proto.RecordTransformer;
-import io.zeebe.exporter.record.Record;
 import io.zeebe.exporters.kafka.serde.SchemaDeserializer;
 import io.zeebe.exporters.kafka.serde.SchemaSerializer;
 import io.zeebe.exporters.kafka.serde.SchemaTransformer;

@@ -16,7 +16,7 @@
 package io.zeebe.exporters.kafka.serde;
 
 import com.google.protobuf.Message;
-import io.zeebe.exporter.record.Record;
+import io.zeebe.exporter.api.record.Record;
 import java.util.Map;
 import org.apache.kafka.common.serialization.Serializer;
 

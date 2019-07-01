@@ -24,9 +24,10 @@ public class TomlRecordsConfig {
   public TomlRecordConfig message;
   public TomlRecordConfig messageSubscription;
   public TomlRecordConfig messageStartEventSubscription;
-  public TomlRecordConfig raft;
   public TomlRecordConfig timer;
   public TomlRecordConfig variable;
+  public TomlRecordConfig variableDocument;
   public TomlRecordConfig workflowInstance;
+  public TomlRecordConfig workflowInstanceCreation;
   public TomlRecordConfig workflowInstanceSubscription;
 }

@@ -25,11 +25,11 @@ import java.util.List;
 import java.util.Map;
 
 public class TomlProducerConfigParser implements Parser<TomlProducerConfig, ProducerConfig> {
-  public static final List<String> DEFAULT_SERVERS = Collections.singletonList("localhost:9092");
-  public static final String DEFAULT_CLIENT_ID = "zeebe";
-  public static final Duration DEFAULT_CLOSE_TIMEOUT = Duration.ofSeconds(20);
-  public static final Duration DEFAULT_REQUEST_TIMEOUT = Duration.ofSeconds(5);
-  public static final int DEFAULT_MAX_CONCURRENT_REQUESTS = 3;
+  static final List<String> DEFAULT_SERVERS = Collections.singletonList("localhost:9092");
+  static final String DEFAULT_CLIENT_ID = "zeebe";
+  static final Duration DEFAULT_CLOSE_TIMEOUT = Duration.ofSeconds(20);
+  static final Duration DEFAULT_REQUEST_TIMEOUT = Duration.ofSeconds(5);
+  static final int DEFAULT_MAX_CONCURRENT_REQUESTS = 3;
 
   @Override
   public ProducerConfig parse(TomlProducerConfig config) {

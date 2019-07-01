@@ -25,8 +25,8 @@ import io.zeebe.util.DurationUtil;
 import java.time.Duration;
 
 public class TomlConfigParser implements Parser<TomlConfig, Config> {
-  public static final int DEFAULT_MAX_IN_FLIGHT_RECORDS = 3;
-  public static final Duration DEFAULT_AWAIT_IN_FLIGHT_RECORD_TIMEOUT = Duration.ofSeconds(5);
+  static final int DEFAULT_MAX_IN_FLIGHT_RECORDS = 3;
+  static final Duration DEFAULT_AWAIT_IN_FLIGHT_RECORD_TIMEOUT = Duration.ofSeconds(5);
 
   private final Parser<TomlRecordsConfig, RecordsConfig> recordsConfigParser;
   private final Parser<TomlProducerConfig, ProducerConfig> producerConfigParser;
@@ -36,7 +36,7 @@ public class TomlConfigParser implements Parser<TomlConfig, Config> {
     this.producerConfigParser = new TomlProducerConfigParser();
   }
 
-  public TomlConfigParser(
+  TomlConfigParser(
       Parser<TomlRecordsConfig, RecordsConfig> recordsConfigParser,
       Parser<TomlProducerConfig, ProducerConfig> producerConfigParser) {
     this.recordsConfigParser = recordsConfigParser;
