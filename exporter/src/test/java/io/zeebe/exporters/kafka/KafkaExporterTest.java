@@ -19,7 +19,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import io.zeebe.exporter.api.record.Record;
 import io.zeebe.exporters.kafka.config.Config;
 import io.zeebe.exporters.kafka.config.parser.MockParser;
 import io.zeebe.exporters.kafka.config.parser.TomlConfigParser;
@@ -27,7 +26,8 @@ import io.zeebe.exporters.kafka.config.toml.TomlConfig;
 import io.zeebe.exporters.kafka.producer.MockKafkaProducerFactory;
 import io.zeebe.exporters.kafka.serde.RecordIdSerializer;
 import io.zeebe.exporters.kafka.serde.generic.GenericRecordSerializer;
-import io.zeebe.protocol.RecordType;
+import io.zeebe.protocol.record.Record;
+import io.zeebe.protocol.record.RecordType;
 import io.zeebe.test.exporter.ExporterTestHarness;
 import java.time.Duration;
 import java.util.EnumSet;

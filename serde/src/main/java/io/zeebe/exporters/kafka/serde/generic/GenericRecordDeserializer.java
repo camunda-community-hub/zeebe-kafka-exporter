@@ -17,9 +17,9 @@ package io.zeebe.exporters.kafka.serde.generic;
 
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.Message;
-import io.zeebe.exporter.api.record.Record;
 import io.zeebe.exporter.proto.Schema;
 import io.zeebe.exporters.kafka.serde.SchemaDeserializationException;
+import io.zeebe.protocol.record.Record;
 import java.util.HashMap;
 import java.util.Map;
 import org.apache.kafka.common.header.Header;
@@ -45,7 +45,8 @@ import org.apache.kafka.common.serialization.StringDeserializer;
  * </pre>
  */
 public class GenericRecordDeserializer implements Deserializer<GenericRecord> {
-  static final Map<String, Message> TYPE_MAP = new HashMap<>();
+
+  private static final Map<String, Message> TYPE_MAP = new HashMap<>();
 
   static {
     addType(Schema.DeploymentRecord.getDefaultInstance());

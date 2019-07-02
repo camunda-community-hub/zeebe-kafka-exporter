@@ -15,10 +15,10 @@
  */
 package io.zeebe.exporters.kafka.producer;
 
-import io.zeebe.exporter.api.record.Record;
 import io.zeebe.exporters.kafka.config.Config;
 import io.zeebe.exporters.kafka.serde.RecordIdSerializer;
 import io.zeebe.exporters.kafka.serde.generic.GenericRecordSerializer;
+import io.zeebe.protocol.record.Record;
 import java.util.HashMap;
 import java.util.Map;
 import org.apache.kafka.clients.producer.KafkaProducer;

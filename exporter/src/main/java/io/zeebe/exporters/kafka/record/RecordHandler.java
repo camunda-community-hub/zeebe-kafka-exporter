@@ -15,9 +15,9 @@
  */
 package io.zeebe.exporters.kafka.record;
 
-import io.zeebe.exporter.api.record.Record;
 import io.zeebe.exporters.kafka.config.RecordConfig;
 import io.zeebe.exporters.kafka.config.RecordsConfig;
+import io.zeebe.protocol.record.Record;
 import org.apache.kafka.clients.producer.ProducerRecord;
 
 public class RecordHandler
@@ -37,10 +37,10 @@ public class RecordHandler
   @Override
   public boolean test(Record record) {
     final RecordConfig config = getRecordConfig(record);
-    return config.allowedTypes.contains(record.getMetadata().getRecordType());
+    return config.allowedTypes.contains(record.getRecordType());
   }
 
   private <T extends Record> RecordConfig getRecordConfig(T record) {
-    return configuration.forType(record.getMetadata().getValueType());
+    return configuration.forType(record.getValueType());
   }
 }

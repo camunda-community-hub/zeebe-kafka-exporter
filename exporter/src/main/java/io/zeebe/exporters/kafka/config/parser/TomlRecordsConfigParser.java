@@ -19,8 +19,8 @@ import io.zeebe.exporters.kafka.config.RecordConfig;
 import io.zeebe.exporters.kafka.config.RecordsConfig;
 import io.zeebe.exporters.kafka.config.toml.TomlRecordConfig;
 import io.zeebe.exporters.kafka.config.toml.TomlRecordsConfig;
-import io.zeebe.protocol.RecordType;
-import io.zeebe.protocol.ValueType;
+import io.zeebe.protocol.record.RecordType;
+import io.zeebe.protocol.record.ValueType;
 import java.util.EnumSet;
 
 public class TomlRecordsConfigParser implements Parser<TomlRecordsConfig, RecordsConfig> {
@@ -52,6 +52,7 @@ public class TomlRecordsConfigParser implements Parser<TomlRecordsConfig, Record
     }
 
     parsed.typeMap.put(ValueType.DEPLOYMENT, parseOrDefault(parsed, config.deployment));
+    parsed.typeMap.put(ValueType.ERROR, parseOrDefault(parsed, config.error));
     parsed.typeMap.put(ValueType.INCIDENT, parseOrDefault(parsed, config.incident));
     parsed.typeMap.put(ValueType.JOB, parseOrDefault(parsed, config.job));
     parsed.typeMap.put(ValueType.JOB_BATCH, parseOrDefault(parsed, config.jobBatch));

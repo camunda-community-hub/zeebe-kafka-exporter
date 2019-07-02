@@ -16,7 +16,7 @@
 package io.zeebe.exporters.kafka.serde;
 
 import com.google.protobuf.Message;
-import io.zeebe.exporter.api.record.Record;
+import io.zeebe.protocol.record.Record;
 
 /**
  * Describes a transform function between a record and a message.

@@ -15,7 +15,7 @@
  */
 package io.zeebe.exporters.kafka.record;
 
-import io.zeebe.protocol.RecordType;
+import io.zeebe.protocol.record.RecordType;
 
 public enum AllowedType {
   COMMAND("command", RecordType.COMMAND),

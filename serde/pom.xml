@@ -24,6 +24,12 @@
     </dependency>
 
     <dependency>
+      <groupId>io.zeebe</groupId>
+      <artifactId>zeebe-protocol</artifactId>
+      <scope>provided</scope>
+    </dependency>
+
+    <dependency>
       <groupId>com.google.protobuf</groupId>
       <artifactId>protobuf-java</artifactId>
     </dependency>

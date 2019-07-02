@@ -18,7 +18,7 @@ package io.zeebe.exporters.kafka.config.parser;
 import io.zeebe.exporters.kafka.config.RecordConfig;
 import io.zeebe.exporters.kafka.config.toml.TomlRecordConfig;
 import io.zeebe.exporters.kafka.record.AllowedType;
-import io.zeebe.protocol.RecordType;
+import io.zeebe.protocol.record.RecordType;
 import java.util.EnumSet;
 
 public class TomlRecordConfigParser implements Parser<TomlRecordConfig, RecordConfig> {
