@@ -51,7 +51,7 @@ public class TomlProducerConfigParserTest {
             TomlProducerConfigParser.DEFAULT_CLIENT_ID,
             TomlProducerConfigParser.DEFAULT_CLOSE_TIMEOUT,
             TomlProducerConfigParser.DEFAULT_REQUEST_TIMEOUT,
-            null);
+            new HashMap<>());
   }
 
   @Test
@@ -61,8 +61,8 @@ public class TomlProducerConfigParserTest {
     config.maxConcurrentRequests = 1;
     config.servers = Collections.singletonList("localhost:3000");
     config.clientId = "client";
-    config.closeTimeout = "3s";
-    config.requestTimeout = "3s";
+    config.closeTimeoutMs = 3000L;
+    config.requestTimeoutMs = 3000L;
     config.config = new HashMap<>();
 
     // when
@@ -98,6 +98,7 @@ public class TomlProducerConfigParserTest {
     final ProducerConfig parsed = parser.parse(config);
 
     // then
-    assertThat(parsed.config).containsOnly(entry("batch.size", 132000L), entry("timeout", 5000));
+    assertThat(parsed.getConfig())
+        .containsOnly(entry("batch.size", 132000L), entry("timeout", 5000));
   }
 }

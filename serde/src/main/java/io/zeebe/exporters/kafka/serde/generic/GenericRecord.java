@@ -18,11 +18,14 @@ package io.zeebe.exporters.kafka.serde.generic;
 import com.google.protobuf.Descriptors;
 import com.google.protobuf.Message;
 import io.zeebe.exporter.proto.Schema;
+import io.zeebe.exporters.kafka.serde.SchemaDeserializationException;
 
 /**
  * Knows how to unpack a given message to a more concrete schema type based on the given type name.
  */
 public class GenericRecord {
+  private static final String NO_RECORD_METADATA_ERROR =
+      "No RecordMetadata field on Protobuf message with type '%s', but all record types should have it";
   private final Descriptors.Descriptor descriptor;
   private final Message message;
   private final String typeName;
@@ -64,6 +67,6 @@ public class GenericRecord {
       }
     }
 
-    throw new MissingRecordMetadataException(typeName);
+    throw new SchemaDeserializationException(String.format(NO_RECORD_METADATA_ERROR, typeName));
   }
 }

@@ -21,22 +21,23 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import com.google.protobuf.Any;
 import com.google.protobuf.Message;
 import io.zeebe.exporter.proto.Schema;
-import io.zeebe.exporters.kafka.serde.util.SchemaFactory;
+import io.zeebe.exporters.kafka.serde.SchemaDeserializationException;
 import org.junit.Test;
 
 public class GenericRecordTest {
-  private final SchemaFactory factory = new SchemaFactory();
-
   @Test
   public void shouldGetRecordMetadata() {
     // given
-    final GenericRecord record = newRecord(factory.workflowInstance().build());
+    final Schema.RecordMetadata metadata =
+        Schema.RecordMetadata.newBuilder().setPosition(1L).build();
+    final Schema.ErrorRecord record = Schema.ErrorRecord.newBuilder().setMetadata(metadata).build();
+    final GenericRecord genericRecord = newRecord(record);
 
     // when
-    final Schema.RecordMetadata metadata = record.getMetadata();
+    final Schema.RecordMetadata reflectedMetadata = genericRecord.getMetadata();
 
     // then
-    assertThat(metadata.getPosition()).isEqualTo(1L);
+    assertThat(reflectedMetadata.getPosition()).isEqualTo(1L);
   }
 
   @Test
@@ -46,13 +47,13 @@ public class GenericRecordTest {
     final GenericRecord record = new GenericRecord(message, Any.getDescriptor().getFullName());
 
     // then
-    assertThatThrownBy(record::getMetadata).isInstanceOf(MissingRecordMetadataException.class);
+    assertThatThrownBy(record::getMetadata).isInstanceOf(SchemaDeserializationException.class);
   }
 
   @Test
   public void shouldGetMessageAsConcreteClass() {
     // given
-    final Schema.MessageRecord messageRecord = factory.message().build();
+    final Schema.MessageRecord messageRecord = Schema.MessageRecord.newBuilder().build();
     final GenericRecord record = newRecord(messageRecord);
 
     // when

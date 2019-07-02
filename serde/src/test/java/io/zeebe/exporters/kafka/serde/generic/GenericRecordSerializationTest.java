@@ -19,7 +19,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.google.protobuf.Message;
 import io.zeebe.exporters.kafka.serde.util.MockSchemaTransformer;
-import io.zeebe.exporters.kafka.serde.util.SchemaFactory;
 import io.zeebe.test.exporter.record.MockRecord;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -49,9 +48,9 @@ public class GenericRecordSerializationTest {
   @Parameterized.Parameters(name = "{0}")
   public static Collection<Object[]> data() {
     final List<Object[]> parameters = new ArrayList<>();
-    final SchemaFactory factory = new SchemaFactory();
-    for (final Message message : factory.records()) {
-      parameters.add(new Object[] {message.getDescriptorForType().getName(), message});
+    for (final SchemaType type : SchemaType.values()) {
+      parameters.add(
+          new Object[] {type.getTypeName(), type.getInstance().newBuilderForType().build()});
     }
 
     return parameters;

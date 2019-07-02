@@ -21,18 +21,19 @@ import io.zeebe.exporters.kafka.record.AllowedType;
 import io.zeebe.protocol.record.RecordType;
 import java.util.EnumSet;
 
-public class TomlRecordConfigParser implements Parser<TomlRecordConfig, RecordConfig> {
+public class TomlRecordConfigParser implements ConfigParser<TomlRecordConfig, RecordConfig> {
   @Override
   public RecordConfig parse(TomlRecordConfig config) {
     final RecordConfig parsed = new RecordConfig();
 
     if (config.type != null) {
-      parsed.allowedTypes = EnumSet.noneOf(RecordType.class);
-      config.type.forEach(t -> parsed.allowedTypes.add(AllowedType.forName(t).recordType));
+      parsed.setAllowedTypes(EnumSet.noneOf(RecordType.class));
+      config.type.forEach(
+          t -> parsed.getAllowedTypes().add(AllowedType.forName(t).getRecordType()));
     }
 
     if (config.topic != null) {
-      parsed.topic = config.topic;
+      parsed.setTopic(config.topic);
     }
 
     return parsed;

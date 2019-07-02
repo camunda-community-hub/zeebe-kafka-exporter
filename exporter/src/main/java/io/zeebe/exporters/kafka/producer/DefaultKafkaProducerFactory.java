@@ -33,16 +33,17 @@ public class DefaultKafkaProducerFactory implements KafkaProducerFactory {
     options.put(ProducerConfig.ENABLE_IDEMPOTENCE_CONFIG, true);
     options.put(
         ProducerConfig.MAX_IN_FLIGHT_REQUESTS_PER_CONNECTION,
-        config.producer.maxConcurrentRequests);
+        config.getProducer().getMaxConcurrentRequests());
     options.put(ProducerConfig.DELIVERY_TIMEOUT_MS_CONFIG, Integer.MAX_VALUE);
     options.put(
-        ProducerConfig.REQUEST_TIMEOUT_MS_CONFIG, (int) config.producer.requestTimeout.toMillis());
-    options.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, config.producer.servers);
-    options.put(ProducerConfig.CLIENT_ID_CONFIG, config.producer.clientId);
+        ProducerConfig.REQUEST_TIMEOUT_MS_CONFIG,
+        (int) config.getProducer().getRequestTimeout().toMillis());
+    options.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, config.getProducer().getServers());
+    options.put(ProducerConfig.CLIENT_ID_CONFIG, config.getProducer().getClientId());
 
     // allow user configuration to override producer options
-    if (config.producer.config != null) {
-      options.putAll(config.producer.config);
+    if (config.getProducer().getConfig() != null) {
+      options.putAll(config.getProducer().getConfig());
     }
 
     options.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, RecordIdSerializer.class);

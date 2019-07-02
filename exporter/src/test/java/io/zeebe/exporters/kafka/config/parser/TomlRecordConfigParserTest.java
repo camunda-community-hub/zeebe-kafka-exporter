@@ -33,13 +33,14 @@ public class TomlRecordConfigParserTest {
   public void shouldParseAllowedTypes() {
     // given
     final TomlRecordConfig config = new TomlRecordConfig();
-    config.type = Arrays.asList(AllowedType.COMMAND.name, AllowedType.EVENT.name);
+    config.type = Arrays.asList(AllowedType.COMMAND.getTypeName(), AllowedType.EVENT.getTypeName());
 
     // when
     final RecordConfig parsed = parser.parse(config);
 
     // then
-    assertThat(parsed.allowedTypes).containsExactlyInAnyOrder(RecordType.COMMAND, RecordType.EVENT);
+    assertThat(parsed.getAllowedTypes())
+        .containsExactlyInAnyOrder(RecordType.COMMAND, RecordType.EVENT);
   }
 
   @Test
@@ -52,7 +53,7 @@ public class TomlRecordConfigParserTest {
     final RecordConfig parsed = parser.parse(config);
 
     // then
-    assertThat(parsed.topic).isEqualTo("something");
+    assertThat(parsed.getTopic()).isEqualTo("something");
   }
 
   @Test
@@ -64,8 +65,8 @@ public class TomlRecordConfigParserTest {
     final RecordConfig parsed = parser.parse(config);
 
     // then
-    assertThat(parsed.topic).isNull();
-    assertThat(parsed.allowedTypes).isNull();
+    assertThat(parsed.getTopic()).isNull();
+    assertThat(parsed.getAllowedTypes()).isNull();
   }
 
   @Test

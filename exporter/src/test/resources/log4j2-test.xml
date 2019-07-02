@@ -8,10 +8,10 @@
   </Appenders>
 
   <Loggers>
-    <Logger name="io.zeebe.exporter.kafka" level="debug"/>
-    <Logger name="io.zeebe.broker.exporter" level="debug"/>
-    <Logger name="org.apache" level="warn"/>
-    <Logger name="kafka" level="warn"/>
+    <Logger level="debug" name="io.zeebe.exporter.kafka"/>
+    <Logger level="debug" name="io.zeebe.broker.exporter"/>
+    <Logger level="warn" name="org.apache"/>
+    <Logger level="warn" name="kafka"/>
 
     <Root level="info">
       <AppenderRef ref="Console"/>

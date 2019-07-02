@@ -19,11 +19,11 @@ import java.time.Duration;
 import java.util.Objects;
 
 public class Config {
-  public final ProducerConfig producer;
-  public final RecordsConfig records;
+  private final ProducerConfig producer;
+  private final RecordsConfig records;
 
-  public int maxInFlightRecords = 1_000;
-  public Duration awaitInFlightRecordTimeout = Duration.ofSeconds(5);
+  private int maxInFlightRecords;
+  private Duration inFlightRecordCheckInterval;
 
   public Config() {
     this(new ProducerConfig(), new RecordsConfig());
@@ -32,6 +32,35 @@ public class Config {
   public Config(ProducerConfig producer, RecordsConfig records) {
     this.producer = producer;
     this.records = records;
+  }
+
+  public ProducerConfig getProducer() {
+    return producer;
+  }
+
+  public RecordsConfig getRecords() {
+    return records;
+  }
+
+  public int getMaxInFlightRecords() {
+    return maxInFlightRecords;
+  }
+
+  public void setMaxInFlightRecords(int maxInFlightRecords) {
+    this.maxInFlightRecords = maxInFlightRecords;
+  }
+
+  public Duration getInFlightRecordCheckInterval() {
+    return inFlightRecordCheckInterval;
+  }
+
+  public void setInFlightRecordCheckInterval(Duration inFlightRecordCheckInterval) {
+    this.inFlightRecordCheckInterval = inFlightRecordCheckInterval;
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(producer, records, maxInFlightRecords, inFlightRecordCheckInterval);
   }
 
   @Override
@@ -46,13 +75,8 @@ public class Config {
 
     final Config config = (Config) o;
     return maxInFlightRecords == config.maxInFlightRecords
+        && Objects.equals(inFlightRecordCheckInterval, config.inFlightRecordCheckInterval)
         && Objects.equals(producer, config.producer)
-        && Objects.equals(records, config.records)
-        && Objects.equals(awaitInFlightRecordTimeout, config.awaitInFlightRecordTimeout);
-  }
-
-  @Override
-  public int hashCode() {
-    return Objects.hash(producer, records, maxInFlightRecords, awaitInFlightRecordTimeout);
+        && Objects.equals(records, config.records);
   }
 }

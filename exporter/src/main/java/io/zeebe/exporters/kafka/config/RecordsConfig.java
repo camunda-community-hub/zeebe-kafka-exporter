@@ -21,11 +21,28 @@ import java.util.Map;
 import java.util.Objects;
 
 public class RecordsConfig {
-  public RecordConfig defaults;
-  public final Map<ValueType, RecordConfig> typeMap = new EnumMap<>(ValueType.class);
+  private final Map<ValueType, RecordConfig> typeMap = new EnumMap<>(ValueType.class);
+  private RecordConfig defaults;
+
+  public Map<ValueType, RecordConfig> getTypeMap() {
+    return typeMap;
+  }
+
+  public RecordConfig getDefaults() {
+    return defaults;
+  }
+
+  public void setDefaults(RecordConfig defaults) {
+    this.defaults = defaults;
+  }
 
   public RecordConfig forType(ValueType type) {
     return typeMap.get(type);
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(defaults, typeMap);
   }
 
   @Override
@@ -40,10 +57,5 @@ public class RecordsConfig {
 
     final RecordsConfig that = (RecordsConfig) o;
     return Objects.equals(defaults, that.defaults) && Objects.equals(typeMap, that.typeMap);
-  }
-
-  @Override
-  public int hashCode() {
-    return Objects.hash(defaults, typeMap);
   }
 }

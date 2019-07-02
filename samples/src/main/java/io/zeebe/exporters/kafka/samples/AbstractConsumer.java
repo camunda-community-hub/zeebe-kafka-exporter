@@ -22,12 +22,11 @@ import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public abstract class AbstractConsumer {
-  protected final Logger logger =
-      LoggerFactory.getLogger("io.zeebe.exporters.kafka.samples.consumer");
-  protected final Map<String, Object> config = new HashMap<>();
+abstract class AbstractConsumer {
+  final Logger logger = LoggerFactory.getLogger("io.zeebe.exporters.kafka.samples.consumer");
+  final Map<String, Object> config = new HashMap<>();
 
-  protected void readConfig() {
+  void readConfig() {
     final String servers =
         System.getProperty(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:9092");
     config.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, Arrays.asList(servers.split(",")));
@@ -35,9 +34,11 @@ public abstract class AbstractConsumer {
         ConsumerConfig.GROUP_ID_CONFIG,
         System.getProperty(ConsumerConfig.GROUP_ID_CONFIG, "zeebe"));
     config.put(ConsumerConfig.CLIENT_ID_CONFIG, this.getClass().getName());
+    config.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
     config.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, true);
     config.put(ConsumerConfig.HEARTBEAT_INTERVAL_MS_CONFIG, 100);
     config.put(ConsumerConfig.SESSION_TIMEOUT_MS_CONFIG, 10000);
+    config.put(ConsumerConfig.METADATA_MAX_AGE_CONFIG, 5000);
   }
 
   abstract void run();

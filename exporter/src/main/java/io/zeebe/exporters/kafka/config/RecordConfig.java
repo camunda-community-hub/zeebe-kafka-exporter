@@ -16,12 +16,33 @@
 package io.zeebe.exporters.kafka.config;
 
 import io.zeebe.protocol.record.RecordType;
-import java.util.EnumSet;
 import java.util.Objects;
+import java.util.Set;
 
 public class RecordConfig {
-  public EnumSet<RecordType> allowedTypes;
-  public String topic;
+  private Set<RecordType> allowedTypes;
+  private String topic;
+
+  public Set<RecordType> getAllowedTypes() {
+    return allowedTypes;
+  }
+
+  public void setAllowedTypes(Set<RecordType> allowedTypes) {
+    this.allowedTypes = allowedTypes;
+  }
+
+  public String getTopic() {
+    return topic;
+  }
+
+  public void setTopic(String topic) {
+    this.topic = topic;
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(allowedTypes, topic);
+  }
 
   @Override
   public boolean equals(Object o) {
@@ -35,10 +56,5 @@ public class RecordConfig {
 
     final RecordConfig that = (RecordConfig) o;
     return Objects.equals(allowedTypes, that.allowedTypes) && Objects.equals(topic, that.topic);
-  }
-
-  @Override
-  public int hashCode() {
-    return Objects.hash(allowedTypes, topic);
   }
 }

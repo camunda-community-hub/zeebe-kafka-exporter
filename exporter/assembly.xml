@@ -1,19 +1,19 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<assembly xmlns="http://maven.apache.org/ASSEMBLY/2.0.0"
-          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-          xsi:schemaLocation="http://maven.apache.org/ASSEMBLY/2.0.0 http://maven.apache.org/xsd/assembly-2.0.0.xsd">
-  <id>distribution</id>
-  <formats>
-    <format>jar</format>
-  </formats>
-  <includeBaseDirectory>false</includeBaseDirectory>
+<assembly xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xmlns="http://maven.apache.org/ASSEMBLY/2.0.0"
+  xsi:schemaLocation="http://maven.apache.org/ASSEMBLY/2.0.0 http://maven.apache.org/xsd/assembly-2.0.0.xsd">
   <dependencySets>
     <dependencySet>
       <outputDirectory>/</outputDirectory>
+      <scope>runtime</scope>
+      <unpack>true</unpack>
       <useProjectArtifact>true</useProjectArtifact>
       <useProjectAttachments>false</useProjectAttachments>
-      <unpack>true</unpack>
-      <scope>runtime</scope>
     </dependencySet>
   </dependencySets>
+  <formats>
+    <format>jar</format>
+  </formats>
+  <id>distribution</id>
+  <includeBaseDirectory>false</includeBaseDirectory>
 </assembly>

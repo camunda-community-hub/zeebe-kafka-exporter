@@ -39,6 +39,8 @@ import org.apache.kafka.common.serialization.StringSerializer;
  * Schema.IncidentRecord}) using the record headers.
  */
 public class GenericRecordSerializer extends SchemaSerializer<Record, Message> {
+  private static final String MISSING_HEADER_DESCRIPTOR_ERROR =
+      "Cannot serialize GenericRecord instances without specifying the descriptor header";
   private final StringSerializer schemaDescriptorSerializer;
 
   public GenericRecordSerializer() {
@@ -74,7 +76,7 @@ public class GenericRecordSerializer extends SchemaSerializer<Record, Message> {
 
   @Override
   public byte[] serialize(String topic, Record data) {
-    throw new UnsupportedOperationWithoutHeadersException();
+    throw new UnsupportedOperationException(MISSING_HEADER_DESCRIPTOR_ERROR);
   }
 
   @Override

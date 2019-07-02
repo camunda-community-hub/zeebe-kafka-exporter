@@ -20,7 +20,6 @@ import com.google.protobuf.Message;
 import io.zeebe.exporter.proto.Schema;
 import io.zeebe.exporters.kafka.serde.SchemaDeserializationException;
 import io.zeebe.protocol.record.Record;
-import java.util.HashMap;
 import java.util.Map;
 import org.apache.kafka.common.header.Header;
 import org.apache.kafka.common.header.Headers;
@@ -45,24 +44,8 @@ import org.apache.kafka.common.serialization.StringDeserializer;
  * </pre>
  */
 public class GenericRecordDeserializer implements Deserializer<GenericRecord> {
-
-  private static final Map<String, Message> TYPE_MAP = new HashMap<>();
-
-  static {
-    addType(Schema.DeploymentRecord.getDefaultInstance());
-    addType(Schema.IncidentRecord.getDefaultInstance());
-    addType(Schema.JobRecord.getDefaultInstance());
-    addType(Schema.JobBatchRecord.getDefaultInstance());
-    addType(Schema.MessageRecord.getDefaultInstance());
-    addType(Schema.MessageStartEventSubscriptionRecord.getDefaultInstance());
-    addType(Schema.MessageSubscriptionRecord.getDefaultInstance());
-    addType(Schema.TimerRecord.getDefaultInstance());
-    addType(Schema.VariableRecord.getDefaultInstance());
-    addType(Schema.VariableDocumentRecord.getDefaultInstance());
-    addType(Schema.WorkflowInstanceRecord.getDefaultInstance());
-    addType(Schema.WorkflowInstanceCreationRecord.getDefaultInstance());
-    addType(Schema.WorkflowInstanceSubscriptionRecord.getDefaultInstance());
-  }
+  private static final String MISSING_DESCRIPTOR_HEADER_ERROR =
+      "Cannot deserialize GenericRecord instances without specifying the descriptor header";
 
   private final String schemaDescriptorHeaderKey;
   private final StringDeserializer schemaDescriptorDeserializer;
@@ -90,12 +73,8 @@ public class GenericRecordDeserializer implements Deserializer<GenericRecord> {
   public GenericRecord deserialize(String topic, Headers headers, byte[] data) {
     final Header header = headers.lastHeader(schemaDescriptorHeaderKey);
     final String descriptorName = schemaDescriptorDeserializer.deserialize(topic, header.value());
-    final Message type = TYPE_MAP.get(descriptorName);
+    final Message type = SchemaType.forType(descriptorName);
     final Message message;
-
-    if (type == null) {
-      throw new UnknownSchemaDescriptorException(descriptorName);
-    }
 
     try {
       message = type.getParserForType().parseFrom(data);
@@ -108,15 +87,11 @@ public class GenericRecordDeserializer implements Deserializer<GenericRecord> {
 
   @Override
   public GenericRecord deserialize(String topic, byte[] data) {
-    throw new UnsupportedOperationWithoutHeadersException();
+    throw new UnsupportedOperationException(MISSING_DESCRIPTOR_HEADER_ERROR);
   }
 
   @Override
   public void close() {
     schemaDescriptorDeserializer.close();
-  }
-
-  private static <T extends Message> void addType(T type) {
-    TYPE_MAP.put(type.getDescriptorForType().getName(), type);
   }
 }

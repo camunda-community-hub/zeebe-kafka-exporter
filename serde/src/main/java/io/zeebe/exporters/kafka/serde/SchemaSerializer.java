@@ -34,7 +34,9 @@ public class SchemaSerializer<R extends Record, M extends Message> implements Se
   }
 
   @Override
-  public void configure(Map<String, ?> configs, boolean isKey) {}
+  public void configure(Map<String, ?> configs, boolean isKey) {
+    // nothing to configure
+  }
 
   @Override
   public byte[] serialize(String topic, R data) {
@@ -42,5 +44,7 @@ public class SchemaSerializer<R extends Record, M extends Message> implements Se
   }
 
   @Override
-  public void close() {}
+  public void close() {
+    // nothing to close
+  }
 }

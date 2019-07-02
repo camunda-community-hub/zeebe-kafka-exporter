@@ -22,20 +22,28 @@ public enum AllowedType {
   EVENT("event", RecordType.EVENT),
   REJECTION("rejection", RecordType.COMMAND_REJECTION);
 
-  public String name;
-  public RecordType recordType;
+  private final String typeName;
+  private final RecordType recordType;
 
-  AllowedType(String name, RecordType recordType) {
-    this.name = name;
+  AllowedType(String typeName, RecordType recordType) {
+    this.typeName = typeName;
     this.recordType = recordType;
   }
 
+  public String getTypeName() {
+    return typeName;
+  }
+
+  public RecordType getRecordType() {
+    return recordType;
+  }
+
   public static AllowedType forName(String name) {
-    if (COMMAND.name.equals(name)) {
+    if (COMMAND.typeName.equals(name)) {
       return COMMAND;
-    } else if (EVENT.name.equals(name)) {
+    } else if (EVENT.typeName.equals(name)) {
       return EVENT;
-    } else if (REJECTION.name.equals(name)) {
+    } else if (REJECTION.typeName.equals(name)) {
       return REJECTION;
     } else {
       throw new IllegalArgumentException("Unknown record type name: " + name);

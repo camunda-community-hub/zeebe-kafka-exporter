@@ -22,71 +22,72 @@ import io.zeebe.exporters.kafka.config.toml.TomlRecordsConfig;
 import io.zeebe.protocol.record.RecordType;
 import io.zeebe.protocol.record.ValueType;
 import java.util.EnumSet;
+import java.util.Map;
 
-public class TomlRecordsConfigParser implements Parser<TomlRecordsConfig, RecordsConfig> {
+public class TomlRecordsConfigParser implements ConfigParser<TomlRecordsConfig, RecordsConfig> {
   static final String DEFAULT_TOPIC_NAME = "zeebe";
-  static final EnumSet<RecordType> DEFAULT_ALLOWED_TYPES = EnumSet.allOf(RecordType.class);
+  static final EnumSet<RecordType> DEFAULT_ALLOWED_TYPES =
+      EnumSet.complementOf(EnumSet.of(RecordType.NULL_VAL, RecordType.SBE_UNKNOWN));
 
-  private final Parser<TomlRecordConfig, RecordConfig> recordConfigParser;
+  private final ConfigParser<TomlRecordConfig, RecordConfig> recordConfigParser;
 
   TomlRecordsConfigParser() {
     this.recordConfigParser = new TomlRecordConfigParser();
   }
 
-  public TomlRecordsConfigParser(Parser<TomlRecordConfig, RecordConfig> recordConfigParser) {
+  public TomlRecordsConfigParser(ConfigParser<TomlRecordConfig, RecordConfig> recordConfigParser) {
     this.recordConfigParser = recordConfigParser;
   }
 
   @Override
   public RecordsConfig parse(TomlRecordsConfig config) {
     final RecordsConfig parsed = new RecordsConfig();
+    final RecordConfig defaults = recordConfigParser.parse(config.defaults, TomlRecordConfig::new);
+    final Map<ValueType, RecordConfig> typeMap = parsed.getTypeMap();
 
-    parsed.defaults = recordConfigParser.parse(config.defaults, TomlRecordConfig::new);
-
-    if (parsed.defaults.topic == null) {
-      parsed.defaults.topic = DEFAULT_TOPIC_NAME;
+    parsed.setDefaults(defaults);
+    if (defaults.getTopic() == null) {
+      defaults.setTopic(DEFAULT_TOPIC_NAME);
     }
 
-    if (parsed.defaults.allowedTypes == null) {
-      parsed.defaults.allowedTypes = DEFAULT_ALLOWED_TYPES;
+    if (defaults.getAllowedTypes() == null) {
+      defaults.setAllowedTypes(DEFAULT_ALLOWED_TYPES);
     }
 
-    parsed.typeMap.put(ValueType.DEPLOYMENT, parseOrDefault(parsed, config.deployment));
-    parsed.typeMap.put(ValueType.ERROR, parseOrDefault(parsed, config.error));
-    parsed.typeMap.put(ValueType.INCIDENT, parseOrDefault(parsed, config.incident));
-    parsed.typeMap.put(ValueType.JOB, parseOrDefault(parsed, config.job));
-    parsed.typeMap.put(ValueType.JOB_BATCH, parseOrDefault(parsed, config.jobBatch));
-    parsed.typeMap.put(ValueType.MESSAGE, parseOrDefault(parsed, config.message));
-    parsed.typeMap.put(
-        ValueType.MESSAGE_SUBSCRIPTION, parseOrDefault(parsed, config.messageSubscription));
-    parsed.typeMap.put(
+    typeMap.put(ValueType.DEPLOYMENT, parseOrDefault(defaults, config.deployment));
+    typeMap.put(ValueType.ERROR, parseOrDefault(defaults, config.error));
+    typeMap.put(ValueType.INCIDENT, parseOrDefault(defaults, config.incident));
+    typeMap.put(ValueType.JOB, parseOrDefault(defaults, config.job));
+    typeMap.put(ValueType.JOB_BATCH, parseOrDefault(defaults, config.jobBatch));
+    typeMap.put(ValueType.MESSAGE, parseOrDefault(defaults, config.message));
+    typeMap.put(
+        ValueType.MESSAGE_SUBSCRIPTION, parseOrDefault(defaults, config.messageSubscription));
+    typeMap.put(
         ValueType.MESSAGE_START_EVENT_SUBSCRIPTION,
-        parseOrDefault(parsed, config.messageStartEventSubscription));
-    parsed.typeMap.put(ValueType.TIMER, parseOrDefault(parsed, config.timer));
-    parsed.typeMap.put(ValueType.VARIABLE, parseOrDefault(parsed, config.variable));
-    parsed.typeMap.put(
-        ValueType.VARIABLE_DOCUMENT, parseOrDefault(parsed, config.variableDocument));
-    parsed.typeMap.put(
-        ValueType.WORKFLOW_INSTANCE, parseOrDefault(parsed, config.workflowInstance));
-    parsed.typeMap.put(
+        parseOrDefault(defaults, config.messageStartEventSubscription));
+    typeMap.put(ValueType.TIMER, parseOrDefault(defaults, config.timer));
+    typeMap.put(ValueType.VARIABLE, parseOrDefault(defaults, config.variable));
+    typeMap.put(ValueType.VARIABLE_DOCUMENT, parseOrDefault(defaults, config.variableDocument));
+    typeMap.put(ValueType.WORKFLOW_INSTANCE, parseOrDefault(defaults, config.workflowInstance));
+    typeMap.put(
         ValueType.WORKFLOW_INSTANCE_CREATION,
-        parseOrDefault(parsed, config.workflowInstanceCreation));
-    parsed.typeMap.put(
+        parseOrDefault(defaults, config.workflowInstanceCreation));
+    typeMap.put(
         ValueType.WORKFLOW_INSTANCE_SUBSCRIPTION,
-        parseOrDefault(parsed, config.workflowInstanceSubscription));
+        parseOrDefault(defaults, config.workflowInstanceSubscription));
 
     return parsed;
   }
 
-  private RecordConfig parseOrDefault(RecordsConfig recordsConfig, TomlRecordConfig config) {
+  private RecordConfig parseOrDefault(RecordConfig defaults, TomlRecordConfig config) {
     final RecordConfig parsed = recordConfigParser.parse(config, TomlRecordConfig::new);
 
-    if (parsed.topic == null) {
-      parsed.topic = recordsConfig.defaults.topic;
+    if (parsed.getTopic() == null) {
+      parsed.setTopic(defaults.getTopic());
     }
 
-    if (parsed.allowedTypes == null) {
-      parsed.allowedTypes = recordsConfig.defaults.allowedTypes;
+    if (parsed.getAllowedTypes() == null) {
+      parsed.setAllowedTypes(defaults.getAllowedTypes());
     }
 
     return parsed;

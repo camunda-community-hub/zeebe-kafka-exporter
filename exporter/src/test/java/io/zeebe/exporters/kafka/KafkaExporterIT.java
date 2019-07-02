@@ -24,6 +24,7 @@ import io.zeebe.exporter.proto.RecordTransformer;
 import io.zeebe.exporter.proto.Schema;
 import io.zeebe.exporter.proto.Schema.RecordId;
 import io.zeebe.exporters.kafka.config.toml.TomlConfig;
+import io.zeebe.exporters.kafka.config.toml.TomlProducerConfig;
 import io.zeebe.exporters.kafka.serde.RecordIdDeserializer;
 import io.zeebe.exporters.kafka.serde.generic.GenericRecord;
 import io.zeebe.exporters.kafka.serde.generic.GenericRecordDeserializer;
@@ -47,8 +48,7 @@ public class KafkaExporterIT {
   private static final String TOPIC = "zeebe";
 
   @Rule public RecordingExporterTestWatcher testWatcher = new RecordingExporterTestWatcher();
-  @Rule
-  public KafkaContainer kafkaContainer = new KafkaContainer().withEmbeddedZookeeper();
+  @Rule public KafkaContainer kafkaContainer = new KafkaContainer().withEmbeddedZookeeper();
 
   private TomlConfig exporterConfiguration;
   private ExporterIntegrationRule exporterIntegrationRule;
@@ -72,7 +72,9 @@ public class KafkaExporterIT {
     exporterIntegrationRule.performSampleWorkload();
 
     // then
+    exporterIntegrationRule.stop();
     assertRecordsExported();
+    exporterIntegrationRule = null;
   }
 
   private void assertRecordsExported() {
@@ -107,7 +109,7 @@ public class KafkaExporterIT {
     keyDeserializer.configure(Maps.fromProperties(properties), true);
     valueDeserializer.configure(Maps.fromProperties(properties), false);
     final Consumer<RecordId, GenericRecord> consumer =
-      new KafkaConsumer<>(properties, keyDeserializer, valueDeserializer);
+        new KafkaConsumer<>(properties, keyDeserializer, valueDeserializer);
     consumer.subscribe(Collections.singletonList(TOPIC));
 
     return consumer;
@@ -115,6 +117,8 @@ public class KafkaExporterIT {
 
   private TomlConfig newConfiguration() {
     final TomlConfig configuration = new TomlConfig();
+    configuration.maxInFlightRecords = 30;
+    configuration.producer = new TomlProducerConfig();
     configuration.producer.servers = Collections.singletonList(getKafkaServer());
 
     return configuration;
@@ -128,7 +132,7 @@ public class KafkaExporterIT {
   }
 
   private Properties consumerConfig() {
-    Properties properties = new Properties();
+    final Properties properties = new Properties();
     properties.put("auto.commit.interval.ms", "100");
     properties.put("auto.offset.reset", "earliest");
     properties.put("bootstrap.servers", getKafkaServer());
@@ -147,6 +151,9 @@ public class KafkaExporterIT {
   }
 
   private String getKafkaServer() {
-    return String.format("localhost:%d", kafkaContainer.getMappedPort(KafkaContainer.KAFKA_PORT));
+    return String.format(
+        "%s:%d",
+        kafkaContainer.getContainerIpAddress(),
+        kafkaContainer.getMappedPort(KafkaContainer.KAFKA_PORT));
   }
 }

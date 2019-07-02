@@ -19,20 +19,20 @@ import io.zeebe.exporter.api.Exporter;
 import io.zeebe.exporter.api.context.Context;
 import io.zeebe.exporter.api.context.Controller;
 import io.zeebe.exporters.kafka.config.Config;
-import io.zeebe.exporters.kafka.config.parser.Parser;
+import io.zeebe.exporters.kafka.config.parser.ConfigParser;
 import io.zeebe.exporters.kafka.config.parser.TomlConfigParser;
 import io.zeebe.exporters.kafka.config.toml.TomlConfig;
 import io.zeebe.exporters.kafka.producer.DefaultKafkaProducerFactory;
 import io.zeebe.exporters.kafka.producer.KafkaProducerFactory;
+import io.zeebe.exporters.kafka.record.KafkaRecordFilter;
 import io.zeebe.exporters.kafka.record.RecordHandler;
+import io.zeebe.exporters.kafka.util.Request;
+import io.zeebe.exporters.kafka.util.RequestQueue;
 import io.zeebe.protocol.record.Record;
 import java.time.Duration;
-import java.util.ArrayDeque;
-import java.util.Queue;
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 import org.apache.kafka.clients.producer.Producer;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.clients.producer.RecordMetadata;
@@ -43,15 +43,13 @@ import org.slf4j.Logger;
  * Implementation of a Zeebe exporter producing serialized records to a given Kafka topic.
  *
  * <p>TODO: implement another transmission strategy using transactions and see which is better
- *
- * <p>TODO: when exporter closed unexpectedly, what should happen?
  */
 public class KafkaExporter implements Exporter {
   static final Duration IN_FLIGHT_RECORD_CHECKER_INTERVAL = Duration.ofSeconds(1);
   private static final int UNSET_POSITION = -1;
 
   private final KafkaProducerFactory producerFactory;
-  private final Parser<TomlConfig, Config> configParser;
+  private final ConfigParser<TomlConfig, Config> configParser;
 
   private boolean isClosed = true;
   private String id;
@@ -61,7 +59,8 @@ public class KafkaExporter implements Exporter {
   private Config config;
   private RecordHandler recordHandler;
   private Producer<Record, Record> producer;
-  private Queue<KafkaExporterFuture> inFlightRecords;
+  private RequestQueue requests;
+  private long latestExportedPosition = UNSET_POSITION;
 
   public KafkaExporter() {
     this.producerFactory = new DefaultKafkaProducerFactory();
@@ -69,39 +68,43 @@ public class KafkaExporter implements Exporter {
   }
 
   public KafkaExporter(
-      KafkaProducerFactory producerFactory, Parser<TomlConfig, Config> configParser) {
+      KafkaProducerFactory producerFactory, ConfigParser<TomlConfig, Config> configParser) {
     this.producerFactory = producerFactory;
     this.configParser = configParser;
   }
 
   @Override
   public void configure(Context context) {
-    logger = context.getLogger();
-    id = context.getConfiguration().getId();
+    this.logger = context.getLogger();
+    this.id = context.getConfiguration().getId();
 
     final TomlConfig tomlConfig = context.getConfiguration().instantiate(TomlConfig.class);
     this.config = this.configParser.parse(tomlConfig);
-    this.recordHandler = new RecordHandler(this.config.records);
+    this.recordHandler = new RecordHandler(this.config.getRecords());
 
-    logger.debug("Configured exporter {}", id);
+    context.setFilter(new KafkaRecordFilter(this.config.getRecords()));
+    this.logger.debug("Configured exporter {}", this.id);
   }
 
   @Override
   public void open(Controller controller) {
     this.controller = controller;
     this.isClosed = false;
-    this.inFlightRecords = new ArrayDeque<>(this.config.maxInFlightRecords);
-    this.controller.scheduleTask(
-        IN_FLIGHT_RECORD_CHECKER_INTERVAL, this::checkCompletedInFlightRecords);
+    this.requests = new RequestQueue(this.config.getMaxInFlightRecords());
     this.producer = this.producerFactory.newProducer(this.config);
+    this.controller.scheduleTask(
+        this.config.getInFlightRecordCheckInterval(), this::checkCompletedInFlightRequests);
 
-    logger.debug("Opened exporter {}", this.id);
+    this.logger.debug("Opened exporter {}", this.id);
   }
 
   @Override
   public void close() {
-    logger.debug("Exporter close requested");
-    closeInternal(true);
+    closeInternal();
+    checkCompletedInFlightRequests();
+    requests.cancelAll();
+
+    logger.debug("Closed exporter {}", id);
   }
 
   @Override
@@ -110,153 +113,66 @@ public class KafkaExporter implements Exporter {
     // we ignore any further records; this way we do not block the exporter processor, and on
     // restart will reprocess all other records that we "missed" here.
     if (producer == null) {
-      logger.trace("Already closed internally, probably due to error, skipping record {}", record);
+      requests.cancelAll();
+      logger.debug("Exporter {} was prematurely closed earlier; skipping record {}", id, record);
       return;
-    }
-
-    if (inFlightRecords.size() >= config.maxInFlightRecords) {
-      logger.trace("Too many in flight records, blocking until the next one completes...");
-      awaitNextInFlightRecordCompletion();
     }
 
     if (recordHandler.test(record)) {
       final ProducerRecord<Record, Record> kafkaRecord = recordHandler.transform(record);
       final Future<RecordMetadata> future = producer.send(kafkaRecord);
-      inFlightRecords.add(new KafkaExporterFuture(record.getPosition(), future));
-      logger.debug("Exported new record {}", record);
-    }
-  }
+      final Request request = new Request(record.getPosition(), future);
 
-  private void closeInternal(boolean awaitInFlightRecords) {
-    if (!isClosed) {
-      logger.debug(
-          "Closing exporter, waiting for in flight records to complete: {}", awaitInFlightRecords);
-      isClosed = true;
-
-      if (producer != null) {
-        try {
-          closeProducer();
-        } catch (InterruptException e) {
-          // thread interrupted, most likely shutting down, so don't block later down the line
-          awaitInFlightRecords = false;
-        }
+      while (!requests.offer(request)) {
+        logger.trace("Too many in flight records, blocking until at least one completes...");
+        requests.consume(this::updatePosition);
       }
 
-      if (inFlightRecords != null && !inFlightRecords.isEmpty()) {
-        updatePositionBasedOnCompletedInFlightRecords(awaitInFlightRecords);
-        dropInFlightRecords();
-      }
-    }
-  }
-
-  /** Blocks and waits until the next in-flight record is completed */
-  private void awaitNextInFlightRecordCompletion() {
-    final long latestPosition = getNextCompletedInFlightRecordPosition();
-    updatePosition(latestPosition);
-  }
-
-  private void updatePositionBasedOnCompletedInFlightRecords(boolean blockForCompletion) {
-    long position = UNSET_POSITION;
-
-    try {
-      while (!inFlightRecords.isEmpty()) {
-        if (!inFlightRecords.peek().isDone() && !blockForCompletion) {
-          break;
-        }
-
-        final long latestPosition = getNextCompletedInFlightRecordPosition();
-        if (latestPosition != UNSET_POSITION) {
-          position = latestPosition;
-        } else {
-          break;
-        }
-      }
-    } finally {
-      // try updating with whatever position we managed to get
-      updatePosition(position);
-    }
-  }
-
-  private void updatePosition(long position) {
-    if (position != UNSET_POSITION) {
-      logger.debug("Updating new controller position to {}", position);
-      controller.updateLastExportedRecordPosition(position);
+      logger.debug("Exported record {}", record);
     }
   }
 
   /* assumes it is called strictly as a scheduled task */
-  private void checkCompletedInFlightRecords() {
-    updatePositionBasedOnCompletedInFlightRecords(false);
+  private void checkCompletedInFlightRequests() {
+    requests.consumeCompleted(this::updatePosition);
+    if (latestExportedPosition != UNSET_POSITION) {
+      controller.updateLastExportedRecordPosition(latestExportedPosition);
+    }
 
     if (!isClosed) {
       controller.scheduleTask(
-          IN_FLIGHT_RECORD_CHECKER_INTERVAL, this::checkCompletedInFlightRecords);
+          IN_FLIGHT_RECORD_CHECKER_INTERVAL, this::checkCompletedInFlightRequests);
     }
   }
 
-  private long getNextCompletedInFlightRecordPosition() {
-    final KafkaExporterFuture inFlightRecord = inFlightRecords.peek(); // in case of error
+  private void updatePosition(Request request) {
+    try {
+      latestExportedPosition = request.get();
+    } catch (CancellationException e) {
+      logger.error(
+          "In flight record was cancelled prematurely, will stop exporting to prevent missing records");
+      closeInternal();
+    } catch (ExecutionException e) {
+      logger.error(
+          "Failed to ensure record was sent to Kafka, will stop exporting to prevent missing records",
+          e);
+      closeInternal();
+    } catch (InterruptedException e) {
+      closeInternal();
+      throw new InterruptException(e); // will mark the thread as interrupted again
+    }
+  }
 
-    if (inFlightRecord != null) {
-      try {
-        final long position =
-            inFlightRecord.get(config.awaitInFlightRecordTimeout.toMillis(), TimeUnit.MILLISECONDS);
-        inFlightRecords.remove();
-        logger.trace("Consumed in-flight record {}", position);
-        return position;
-      } catch (TimeoutException e) {
-        throw new KafkaExporterException(
-            String.format(
-                "Timed out after %s awaiting completion of record",
-                config.awaitInFlightRecordTimeout),
-            e);
-      } catch (InterruptedException e) {
-        onUnrecoverableError(
-            "Kafka producer thread was interrupted, most likely indicating the producer is closing",
-            e);
-      } catch (ExecutionException e) {
-        /* Kafka reports the most likely reason for this error is that the record was
-         * dropped (so not retried?), at which point the exporter is broken and can never
-         * recover since we lost the initial record (except by restarting the broker).
-         * At the moment, the chosen strategy is too block and loop forever, but that means
-         * blocking the stream processor forever and ever...
-         */
-        throw new KafkaExporterException(
-            "An error occurred while sending a record ot Kafka, most likely indicating the record was dropped",
-            e);
+  private void closeInternal() {
+    if (!isClosed) {
+      isClosed = true;
+
+      if (producer != null) {
+        final Duration closeTimeout = config.getProducer().getCloseTimeout();
+        logger.debug("Closing producer with timeout {}", closeTimeout);
+        producer.close(closeTimeout);
+        producer = null;
       }
     }
-
-    return UNSET_POSITION;
-  }
-
-  private void dropInFlightRecords() {
-    int droppedCount = 0;
-
-    while (!inFlightRecords.isEmpty()) {
-      final Future inFlightRecord = inFlightRecords.poll();
-      if (inFlightRecord != null) {
-        inFlightRecord.cancel(true);
-        droppedCount++;
-      }
-    }
-
-    logger.debug("Dropped {} in flight records", droppedCount);
-  }
-
-  // flushes any remaining records and awaits their completion
-  private void closeProducer() {
-    logger.debug("Closing producer with timeout {}", config.producer.closeTimeout);
-    producer.close(config.producer.closeTimeout.toMillis(), TimeUnit.MILLISECONDS);
-    producer = null;
-  }
-
-  private void onUnrecoverableError(String details, Exception e) {
-    final String message =
-        String.format(
-            "Unrecoverable error occurred: %s; closing producer, all subsequent records will be ignored.",
-            details);
-    logger.error(message, e);
-    closeInternal(false);
   }
 }
