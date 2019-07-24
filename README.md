@@ -13,14 +13,10 @@ Use at your own risks.
 
 ## Installation
 
-The quickest way to get started is:
-
-1. Download the latest release (`zeebe-kafka-exporter-*-uber.jar`).
-1. Copy it to the `lib/` folder of your Zeebe brokers.
-1. Copy the configuration from `exporter.kafka.cfg.toml` into each broker's `zeebe.cfg.toml` (e.g. append it at the end).
-1. Update the configuration's list of servers to point to your Kafka instances.
-
-The next time you start your Zeebe cluster, all event-type records will be exported to their respective Kafka topics.
+```
+$ mvn clean install
+$ docker-compose up -d
+```
 
 > There is currently an issue which prevents using this exporter in an isolated way, since it relies on
 [zeebe-exporter-protobuf](https://github.com/zeebe-io/zeebe-exporter-protobuf) which is packaged under
