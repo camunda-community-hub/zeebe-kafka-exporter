@@ -23,14 +23,13 @@ spec:
       image: maven:3.6.0-jdk-8
       command: ["cat"]
       tty: true
-      volumeMounts:
-        - name: dockersock
-          mountPath: "/var/run/docker.sock"
       env:
         - name: JAVA_TOOL_OPTIONS
           value: |
             -XX:+UnlockExperimentalVMOptions
             -XX:+UseCGroupMemoryLimitForHeap
+        - name: DOCKER_HOST
+          value: tcp://localhost:2375
       resources:
         limits:
           cpu: 1
@@ -38,10 +37,16 @@ spec:
         requests:
           cpu: 1
           memory: 2Gi
+    - name: dind
+      image: docker:18.09-dind
+      securityContext:
+        privileged: true
+      volumeMounts:
+        - name: dind-storage
+          mountPath: /var/lib/docker
   volumes:
-    - name: dockersock
-      hostPath:
-        path: /var/run/docker.sock
+    - name: dind-storage
+      emptyDir: {}
 '''
     }
   }
