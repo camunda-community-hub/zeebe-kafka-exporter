@@ -32,10 +32,10 @@ cd ../..
 
 cd samples/target
 
-export ARTIFACT=zeebe-kafka-samples-${RELEASE_VERSION}.jar
+export ARTIFACT=zeebe-kafka-exporter-samples-${RELEASE_VERSION}.jar
 export CHECKSUM=${ARTIFACT}.sha1sum
 
-export ARTIFACT_UBER=zeebe-kafka-samples-${RELEASE_VERSION}-uber.jar
+export ARTIFACT_UBER=zeebe-kafka-exporter-samples-${RELEASE_VERSION}-uber.jar
 export CHECKSUM_UBER=${ARTIFACT_UBER}.sha1sum
 
 # create checksum files
@@ -52,7 +52,7 @@ cd ../..
 # upload serde
 cd serde/target
 
-export ARTIFACT=zeebe-kafka-serde-${RELEASE_VERSION}.jar
+export ARTIFACT=zeebe-kafka-exporter-serde-${RELEASE_VERSION}.jar
 export CHECKSUM=${ARTIFACT}.sha1sum
 
 # create checksum files
