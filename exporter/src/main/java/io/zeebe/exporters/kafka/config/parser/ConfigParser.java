@@ -18,7 +18,7 @@ package io.zeebe.exporters.kafka.config.parser;
 import java.util.function.Supplier;
 
 @FunctionalInterface
-public interface Parser<T, R> {
+public interface ConfigParser<T, R> {
   R parse(T config);
 
   default R parse(T config, Supplier<T> defaultValue) {

@@ -15,32 +15,29 @@
  */
 package io.zeebe.exporters.kafka.record;
 
-import io.zeebe.exporter.api.record.Record;
 import io.zeebe.exporters.kafka.config.RecordConfig;
 import io.zeebe.exporters.kafka.config.RecordsConfig;
+import io.zeebe.protocol.record.Record;
 import org.apache.kafka.clients.producer.ProducerRecord;
 
-public class RecordHandler
-    implements RecordTester, RecordTransformer<ProducerRecord<Record, Record>> {
+public class RecordHandler {
   private final RecordsConfig configuration;
 
   public RecordHandler(RecordsConfig configuration) {
     this.configuration = configuration;
   }
 
-  @Override
   public ProducerRecord<Record, Record> transform(Record record) {
     final RecordConfig config = getRecordConfig(record);
-    return new ProducerRecord<>(config.topic, record, record);
+    return new ProducerRecord<>(config.getTopic(), record, record);
   }
 
-  @Override
   public boolean test(Record record) {
     final RecordConfig config = getRecordConfig(record);
-    return config.allowedTypes.contains(record.getMetadata().getRecordType());
+    return config.getAllowedTypes().contains(record.getRecordType());
   }
 
   private <T extends Record> RecordConfig getRecordConfig(T record) {
-    return configuration.forType(record.getMetadata().getValueType());
+    return configuration.forType(record.getValueType());
   }
 }

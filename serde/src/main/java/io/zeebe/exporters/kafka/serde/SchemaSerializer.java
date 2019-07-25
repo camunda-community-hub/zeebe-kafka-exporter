@@ -16,7 +16,7 @@
 package io.zeebe.exporters.kafka.serde;
 
 import com.google.protobuf.Message;
-import io.zeebe.exporter.api.record.Record;
+import io.zeebe.protocol.record.Record;
 import java.util.Map;
 import org.apache.kafka.common.serialization.Serializer;
 
@@ -34,7 +34,9 @@ public class SchemaSerializer<R extends Record, M extends Message> implements Se
   }
 
   @Override
-  public void configure(Map<String, ?> configs, boolean isKey) {}
+  public void configure(Map<String, ?> configs, boolean isKey) {
+    // nothing to configure
+  }
 
   @Override
   public byte[] serialize(String topic, R data) {
@@ -42,5 +44,7 @@ public class SchemaSerializer<R extends Record, M extends Message> implements Se
   }
 
   @Override
-  public void close() {}
+  public void close() {
+    // nothing to close
+  }
 }

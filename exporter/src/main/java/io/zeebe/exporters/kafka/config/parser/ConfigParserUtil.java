@@ -13,11 +13,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.zeebe.exporters.kafka.record;
+package io.zeebe.exporters.kafka.config.parser;
 
-import io.zeebe.exporter.api.record.Record;
+import java.util.Optional;
+import java.util.function.Function;
 
-@FunctionalInterface
-public interface RecordTransformer<T> {
-  T transform(Record<?> record);
+final class ConfigParserUtil {
+  private ConfigParserUtil() {}
+
+  static <T> T get(T property, T fallback) {
+    return Optional.ofNullable(property).orElse(fallback);
+  }
+
+  static <T, R> R get(T property, R fallback, Function<T, R> transformer) {
+    return Optional.ofNullable(property).map(transformer).orElse(fallback);
+  }
 }

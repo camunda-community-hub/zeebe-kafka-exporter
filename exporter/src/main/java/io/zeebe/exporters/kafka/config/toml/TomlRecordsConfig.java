@@ -18,6 +18,7 @@ package io.zeebe.exporters.kafka.config.toml;
 public class TomlRecordsConfig {
   public TomlRecordConfig defaults;
   public TomlRecordConfig deployment;
+  public TomlRecordConfig error;
   public TomlRecordConfig incident;
   public TomlRecordConfig jobBatch;
   public TomlRecordConfig job;

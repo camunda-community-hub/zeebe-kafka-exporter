@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.zeebe.exporters.kafka;
+package io.zeebe.exporters.kafka.util;
 
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
@@ -21,11 +21,11 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import org.apache.kafka.clients.producer.RecordMetadata;
 
-public class KafkaExporterFuture implements Future<Long> {
+public class Request implements Future<Long> {
   private final Future<RecordMetadata> wrappedFuture;
   private final long position;
 
-  public KafkaExporterFuture(long position, Future<RecordMetadata> wrappedFuture) {
+  public Request(long position, Future<RecordMetadata> wrappedFuture) {
     this.position = position;
     this.wrappedFuture = wrappedFuture;
   }

@@ -34,7 +34,9 @@ public class SchemaDeserializer<T extends Message> implements Deserializer<T> {
   }
 
   @Override
-  public void configure(Map<String, ?> configs, boolean isKey) {}
+  public void configure(Map<String, ?> configs, boolean isKey) {
+    // nothing to configure
+  }
 
   @Override
   public T deserialize(String topic, byte[] data) {
@@ -46,5 +48,7 @@ public class SchemaDeserializer<T extends Message> implements Deserializer<T> {
   }
 
   @Override
-  public void close() {}
+  public void close() {
+    // nothing to close
+  }
 }

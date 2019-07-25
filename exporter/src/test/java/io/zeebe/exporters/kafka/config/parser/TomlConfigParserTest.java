@@ -27,10 +27,10 @@ import java.time.Duration;
 import org.junit.Test;
 
 public class TomlConfigParserTest {
-  private final MockParser<TomlRecordsConfig, RecordsConfig> recordsConfigParser =
-      new MockParser<>(new TomlRecordsConfigParser());
-  private final MockParser<TomlProducerConfig, ProducerConfig> producerConfigParser =
-      new MockParser<>(new TomlProducerConfigParser());
+  private final MockConfigParser<TomlRecordsConfig, RecordsConfig> recordsConfigParser =
+      new MockConfigParser<>(new TomlRecordsConfigParser());
+  private final MockConfigParser<TomlProducerConfig, ProducerConfig> producerConfigParser =
+      new MockConfigParser<>(new TomlProducerConfigParser());
   private final TomlConfigParser parser =
       new TomlConfigParser(recordsConfigParser, producerConfigParser);
 
@@ -43,11 +43,13 @@ public class TomlConfigParserTest {
     final Config parsed = parser.parse(config);
 
     // then
-    assertThat(parsed.records).isEqualTo(recordsConfigParser.parse(new TomlRecordsConfig()));
-    assertThat(parsed.producer).isEqualTo(producerConfigParser.parse(new TomlProducerConfig()));
-    assertThat(parsed.maxInFlightRecords).isEqualTo(TomlConfigParser.DEFAULT_MAX_IN_FLIGHT_RECORDS);
-    assertThat(parsed.awaitInFlightRecordTimeout)
-        .isEqualTo(TomlConfigParser.DEFAULT_AWAIT_IN_FLIGHT_RECORD_TIMEOUT);
+    assertThat(parsed.getRecords()).isEqualTo(recordsConfigParser.parse(new TomlRecordsConfig()));
+    assertThat(parsed.getProducer())
+        .isEqualTo(producerConfigParser.parse(new TomlProducerConfig()));
+    assertThat(parsed.getMaxInFlightRecords())
+        .isEqualTo(TomlConfigParser.DEFAULT_MAX_IN_FLIGHT_RECORDS);
+    assertThat(parsed.getInFlightRecordCheckInterval())
+        .isEqualTo(TomlConfigParser.DEFAULT_IN_FLIGHT_RECORD_CHECK_INTERVAL);
   }
 
   @Test
@@ -58,16 +60,16 @@ public class TomlConfigParserTest {
     final RecordsConfig recordsConfig = new RecordsConfig();
     producerConfigParser.config = producerConfig;
     recordsConfigParser.config = recordsConfig;
-    config.awaitInFlightRecordTimeout = "1s";
     config.maxInFlightRecords = 2;
+    config.inFlightRecordCheckIntervalMs = 500L;
 
     // when
     final Config parsed = parser.parse(config);
 
     // then
-    assertThat(parsed.producer).isSameAs(producerConfig);
-    assertThat(parsed.records).isSameAs(recordsConfig);
-    assertThat(parsed.awaitInFlightRecordTimeout).isEqualTo(Duration.ofSeconds(1));
-    assertThat(parsed.maxInFlightRecords).isEqualTo(2);
+    assertThat(parsed.getProducer()).isSameAs(producerConfig);
+    assertThat(parsed.getRecords()).isSameAs(recordsConfig);
+    assertThat(parsed.getMaxInFlightRecords()).isEqualTo(2);
+    assertThat(parsed.getInFlightRecordCheckInterval()).isEqualTo(Duration.ofMillis(500));
   }
 }

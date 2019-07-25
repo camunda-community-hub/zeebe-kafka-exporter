@@ -28,7 +28,7 @@ services:
       - zookeeper
     restart: always
     environment:
-      JAVA_OPTS: "-Dbootstrap.servers=kafka:9092"
+      KAFKA_HOST: "kafka:9092"
 
   zookeeper:
     image: confluentinc/cp-zookeeper:latest

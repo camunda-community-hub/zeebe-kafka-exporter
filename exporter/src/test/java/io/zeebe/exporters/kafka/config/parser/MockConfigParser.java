@@ -13,13 +13,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.zeebe.exporters.kafka.serde.generic;
+package io.zeebe.exporters.kafka.config.parser;
 
-public class UnsupportedOperationWithoutHeadersException extends UnsupportedOperationException {
-  private static final String DEFAULT_MESSAGE =
-      "Cannot (de)serialize GenericRecord instances without specifying the descriptor header";
+public class MockConfigParser<T, R> implements ConfigParser<T, R> {
+  private final ConfigParser<T, R> defaultConfigParser;
+  public R config;
 
-  public UnsupportedOperationWithoutHeadersException() {
-    super(DEFAULT_MESSAGE);
+  public MockConfigParser(ConfigParser<T, R> defaultConfigParser) {
+    this.defaultConfigParser = defaultConfigParser;
+  }
+
+  @Override
+  public R parse(T config) {
+    if (this.config == null) {
+      return defaultConfigParser.parse(config);
+    }
+
+    return this.config;
   }
 }

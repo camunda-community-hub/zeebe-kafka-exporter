@@ -17,11 +17,11 @@ package io.zeebe.exporters.kafka.record;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import io.zeebe.exporter.api.record.Record;
 import io.zeebe.exporters.kafka.config.RecordConfig;
 import io.zeebe.exporters.kafka.config.RecordsConfig;
-import io.zeebe.protocol.RecordType;
-import io.zeebe.protocol.ValueType;
+import io.zeebe.protocol.record.Record;
+import io.zeebe.protocol.record.RecordType;
+import io.zeebe.protocol.record.ValueType;
 import io.zeebe.test.exporter.record.MockRecord;
 import java.util.EnumSet;
 import org.apache.kafka.clients.producer.ProducerRecord;
@@ -35,15 +35,15 @@ public class RecordHandlerTest {
     final RecordConfig recordConfig = new RecordConfig();
     final RecordsConfig recordsConfig = new RecordsConfig();
     final RecordHandler recordHandler = new RecordHandler(recordsConfig);
-    recordsConfig.typeMap.put(ValueType.DEPLOYMENT, recordConfig);
-    recordConfig.topic = "topic";
+    recordsConfig.getTypeMap().put(ValueType.DEPLOYMENT, recordConfig);
+    recordConfig.setTopic("topic");
     record.getMetadata().setValueType(ValueType.DEPLOYMENT);
 
     // when
     final ProducerRecord<Record, Record> transformed = recordHandler.transform(record);
 
     // then
-    assertThat(transformed.topic()).isEqualTo(recordConfig.topic);
+    assertThat(transformed.topic()).isEqualTo(recordConfig.getTopic());
     assertThat(transformed.key()).isEqualTo(record);
     assertThat(transformed.value()).isEqualTo(record);
   }
@@ -55,8 +55,8 @@ public class RecordHandlerTest {
     final RecordConfig recordConfig = new RecordConfig();
     final RecordsConfig recordsConfig = new RecordsConfig();
     final RecordHandler recordHandler = new RecordHandler(recordsConfig);
-    recordsConfig.typeMap.put(ValueType.DEPLOYMENT, recordConfig);
-    recordConfig.allowedTypes = EnumSet.of(RecordType.COMMAND);
+    recordsConfig.getTypeMap().put(ValueType.DEPLOYMENT, recordConfig);
+    recordConfig.setAllowedTypes(EnumSet.of(RecordType.COMMAND));
     record.getMetadata().setValueType(ValueType.DEPLOYMENT).setRecordType(RecordType.EVENT);
 
     // when - then
@@ -70,8 +70,8 @@ public class RecordHandlerTest {
     final RecordConfig recordConfig = new RecordConfig();
     final RecordsConfig recordsConfig = new RecordsConfig();
     final RecordHandler recordHandler = new RecordHandler(recordsConfig);
-    recordsConfig.typeMap.put(ValueType.DEPLOYMENT, recordConfig);
-    recordConfig.allowedTypes = EnumSet.of(RecordType.EVENT);
+    recordsConfig.getTypeMap().put(ValueType.DEPLOYMENT, recordConfig);
+    recordConfig.setAllowedTypes(EnumSet.of(RecordType.EVENT));
     record.getMetadata().setValueType(ValueType.DEPLOYMENT).setRecordType(RecordType.EVENT);
 
     // when - then

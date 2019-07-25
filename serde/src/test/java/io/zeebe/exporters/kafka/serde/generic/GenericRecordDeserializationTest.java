@@ -18,7 +18,6 @@ package io.zeebe.exporters.kafka.serde.generic;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.google.protobuf.Message;
-import io.zeebe.exporters.kafka.serde.util.SchemaFactory;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -46,10 +45,13 @@ public class GenericRecordDeserializationTest {
   @Parameterized.Parameters(name = "{0}")
   public static Collection<Object[]> data() {
     final List<Object[]> parameters = new ArrayList<>();
-    final SchemaFactory factory = new SchemaFactory();
-    for (final Message message : factory.records()) {
+    for (final SchemaType type : SchemaType.values()) {
       parameters.add(
-          new Object[] {message.getDescriptorForType().getName(), message.getClass(), message});
+          new Object[] {
+            type.getTypeName(),
+            type.getInstance().getClass(),
+            type.getInstance().newBuilderForType().build()
+          });
     }
 
     return parameters;

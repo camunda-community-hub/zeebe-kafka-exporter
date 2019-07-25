@@ -40,7 +40,7 @@ public class GenericConsumer extends AbstractConsumer {
     consumer.subscribe(Pattern.compile("^zeebe-.*$"));
     while (true) {
       final ConsumerRecords<Schema.RecordId, GenericRecord> consumed =
-          consumer.poll(Duration.ofSeconds(2));
+          consumer.poll(Duration.ofSeconds(5));
       for (ConsumerRecord<Schema.RecordId, GenericRecord> record : consumed) {
         logger.info(
             "================[{}] {}-{} ================",

@@ -4,12 +4,27 @@ Zeebe Kafka Exporter
 An easy to use exporter which will export Zeebe records to a configured Kafka topic, compatible with
 [zeebe](https://github.com/zeebe-io/zeebe) versions:
 
-- [0.15.0](https://github.com/zeebe-io/zeebe/releases/tag/0.15.0)
+- [0.20.0](https://github.com/zeebe-io/zeebe/releases/tag/0.20.0)
 
 For more information about the exporters please read the [Exporter documentation](https://docs.zeebe.io/basics/exporters.html).
 
 > This is a work in progress; you're welcome to contribute code or ideas, but no guarantees are made about the exporter itself.
 Use at your own risks.
+
+## Trying it out
+
+The quickest way to get started is after cloning the project:
+
+```sh
+mvn clean install
+docker-compose up -d zeebe kafka zookeeper consumer
+```
+
+Then you can view the exported topics by checking the consumer logs:
+
+```sh
+docker logs -f consumer
+```
 
 ## Installation
 
@@ -22,16 +37,11 @@ The quickest way to get started is:
 
 The next time you start your Zeebe cluster, all event-type records will be exported to their respective Kafka topics.
 
-> There is currently an issue which prevents using this exporter in an isolated way, since it relies on
-[zeebe-exporter-protobuf](https://github.com/zeebe-io/zeebe-exporter-protobuf) which is packaged under
-`io.zeebe.exporter` (see [zeebe-io/zeebe#2018](https://github.com/zeebe-io/zeebe/issues/2018))
-
 ## Usage
 
 The exporter is set up to stream records from Zeebe to Kafka as they are processed by the exporter stream processor.
 While this is done asynchronously, to ensure that the position is updated correctly, it keeps buffers in flight requests
 and processes their results in the order they were sent, not necessarily in the order the Kafka cluster answered.
-
 
 Records are serialized to Kafka using
 [a common protobuf schema](https://github.com/zeebe-io/zeebe-exporter-protobuf/blob/master/src/main/proto/schema.proto),
@@ -43,7 +53,7 @@ is a good starting point to learn more about how the exporter works.
 ### Advanced configuration
 
 You can configure the producer for more advanced use cases by using the `[exporters.args.producer]` table, in which you
-can define abritrary Kafka producer settings. So for example, to configure two way SSL handshake:
+can define arbitrary Kafka producer settings. So for example, to configure two way SSL handshake:
 
 ```toml
 # ...
@@ -168,14 +178,11 @@ className = "io.zeebe.exporters.kafka.KafkaExporter"
   [exporters.args]
   # Controls how many records can have been sent to the Kafka broker without
   # any acknowledgment Once the limit is reached the exporter will block and
-  # wait until either one record is acknowledged or awaitInFlightRecordTimeout
-  # time is elapsed, at which point an error is produced and the record is
-  # retried at a later time
+  # wait until either one record is acknowledged
   maxInFlightRecords = 1000
-  # Controls how long we should block and await a record to be acknowledged
-  # by the Kafka broker when the maximum number of in-flight records is reached
-  # Format is the same as standard Zeebe configuration timeouts/durations
-  awaitInFlightRecordTimeout = "5s"
+  # How often should the exporter drain the in flight records' queue of completed
+  # requests and update the broker with the guaranteed latest exported position
+  inFlightRecordCheckIntervalMs = 1000
 
   # Producer specific configuration
   [exporters.args.producer]
@@ -186,8 +193,15 @@ className = "io.zeebe.exporters.kafka.KafkaExporter"
   # Controls how long the producer will wait for a request to be acknowledged by
   # the Kafka broker before retrying it
   # Maps to ProducerConfig.REQUEST_TIMEOUT_MS_CONFIG
-  # Format is the same as standard Zeebe configuration timeouts/durations
-  requestTimeout = "5s"
+  requestTimeoutMs = 5000
+  # Grace period when shutting down the producer in milliseconds
+  closeTimeoutMs = 5000
+  # Producer client identifier
+  clientId = "zeebe"
+  # Max concurrent requests to the Kafka broker; note that in flight records are batched such that
+  # in one request you can easily have a thousand records, depending on the producer's batch
+  # configuration.
+  maxConcurrentRequests = 3
 
   # Any setting under the following section will be passed verbatim to
   # ProducerConfig; you can use this to configure authentication, compression,

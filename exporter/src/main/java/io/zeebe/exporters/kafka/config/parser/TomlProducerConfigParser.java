@@ -15,16 +15,17 @@
  */
 package io.zeebe.exporters.kafka.config.parser;
 
+import static io.zeebe.exporters.kafka.config.parser.ConfigParserUtil.get;
+
 import io.zeebe.exporters.kafka.config.ProducerConfig;
 import io.zeebe.exporters.kafka.config.toml.TomlProducerConfig;
-import io.zeebe.util.DurationUtil;
 import java.time.Duration;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public class TomlProducerConfigParser implements Parser<TomlProducerConfig, ProducerConfig> {
+public class TomlProducerConfigParser implements ConfigParser<TomlProducerConfig, ProducerConfig> {
   static final List<String> DEFAULT_SERVERS = Collections.singletonList("localhost:9092");
   static final String DEFAULT_CLIENT_ID = "zeebe";
   static final Duration DEFAULT_CLOSE_TIMEOUT = Duration.ofSeconds(20);
@@ -35,39 +36,14 @@ public class TomlProducerConfigParser implements Parser<TomlProducerConfig, Prod
   public ProducerConfig parse(TomlProducerConfig config) {
     final ProducerConfig parsed = new ProducerConfig();
 
-    if (config.maxConcurrentRequests != null) {
-      parsed.maxConcurrentRequests = config.maxConcurrentRequests;
-    } else {
-      parsed.maxConcurrentRequests = DEFAULT_MAX_CONCURRENT_REQUESTS;
-    }
-
-    if (config.servers != null) {
-      parsed.servers = config.servers;
-    } else {
-      parsed.servers = DEFAULT_SERVERS;
-    }
-
-    if (config.clientId != null) {
-      parsed.clientId = config.clientId;
-    } else {
-      parsed.clientId = DEFAULT_CLIENT_ID;
-    }
-
-    if (config.closeTimeout != null) {
-      parsed.closeTimeout = DurationUtil.parse(config.closeTimeout);
-    } else {
-      parsed.closeTimeout = DEFAULT_CLOSE_TIMEOUT;
-    }
-
-    if (config.requestTimeout != null) {
-      parsed.requestTimeout = DurationUtil.parse(config.requestTimeout);
-    } else {
-      parsed.requestTimeout = DEFAULT_REQUEST_TIMEOUT;
-    }
-
-    if (config.config != null) {
-      parsed.config = parseConfig(config.config);
-    }
+    parsed.setMaxConcurrentRequests(
+        get(config.maxConcurrentRequests, DEFAULT_MAX_CONCURRENT_REQUESTS));
+    parsed.setServers(get(config.servers, DEFAULT_SERVERS));
+    parsed.setClientId(get(config.clientId, DEFAULT_CLIENT_ID));
+    parsed.setCloseTimeout(get(config.closeTimeoutMs, DEFAULT_CLOSE_TIMEOUT, Duration::ofMillis));
+    parsed.setRequestTimeout(
+        get(config.requestTimeoutMs, DEFAULT_REQUEST_TIMEOUT, Duration::ofMillis));
+    parsed.setConfig(get(config.config, Collections.emptyMap(), this::parseConfig));
 
     return parsed;
   }

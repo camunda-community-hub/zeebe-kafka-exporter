@@ -17,8 +17,7 @@ package io.zeebe.exporters.kafka.config.toml;
 
 public class TomlConfig {
   public Integer maxInFlightRecords;
-  public String awaitInFlightRecordTimeout;
-
-  public TomlProducerConfig producer = new TomlProducerConfig();
-  public TomlRecordsConfig records = new TomlRecordsConfig();
+  public Long inFlightRecordCheckIntervalMs;
+  public TomlProducerConfig producer;
+  public TomlRecordsConfig records;
 }

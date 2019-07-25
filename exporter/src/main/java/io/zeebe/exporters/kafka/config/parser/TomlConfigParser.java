@@ -15,21 +15,22 @@
  */
 package io.zeebe.exporters.kafka.config.parser;
 
+import static io.zeebe.exporters.kafka.config.parser.ConfigParserUtil.get;
+
 import io.zeebe.exporters.kafka.config.Config;
 import io.zeebe.exporters.kafka.config.ProducerConfig;
 import io.zeebe.exporters.kafka.config.RecordsConfig;
 import io.zeebe.exporters.kafka.config.toml.TomlConfig;
 import io.zeebe.exporters.kafka.config.toml.TomlProducerConfig;
 import io.zeebe.exporters.kafka.config.toml.TomlRecordsConfig;
-import io.zeebe.util.DurationUtil;
 import java.time.Duration;
 
-public class TomlConfigParser implements Parser<TomlConfig, Config> {
+public class TomlConfigParser implements ConfigParser<TomlConfig, Config> {
   static final int DEFAULT_MAX_IN_FLIGHT_RECORDS = 3;
-  static final Duration DEFAULT_AWAIT_IN_FLIGHT_RECORD_TIMEOUT = Duration.ofSeconds(5);
+  static final Duration DEFAULT_IN_FLIGHT_RECORD_CHECK_INTERVAL = Duration.ofSeconds(1);
 
-  private final Parser<TomlRecordsConfig, RecordsConfig> recordsConfigParser;
-  private final Parser<TomlProducerConfig, ProducerConfig> producerConfigParser;
+  private final ConfigParser<TomlRecordsConfig, RecordsConfig> recordsConfigParser;
+  private final ConfigParser<TomlProducerConfig, ProducerConfig> producerConfigParser;
 
   public TomlConfigParser() {
     this.recordsConfigParser = new TomlRecordsConfigParser();
@@ -37,8 +38,8 @@ public class TomlConfigParser implements Parser<TomlConfig, Config> {
   }
 
   TomlConfigParser(
-      Parser<TomlRecordsConfig, RecordsConfig> recordsConfigParser,
-      Parser<TomlProducerConfig, ProducerConfig> producerConfigParser) {
+      ConfigParser<TomlRecordsConfig, RecordsConfig> recordsConfigParser,
+      ConfigParser<TomlProducerConfig, ProducerConfig> producerConfigParser) {
     this.recordsConfigParser = recordsConfigParser;
     this.producerConfigParser = producerConfigParser;
   }
@@ -50,17 +51,12 @@ public class TomlConfigParser implements Parser<TomlConfig, Config> {
             producerConfigParser.parse(config.producer, TomlProducerConfig::new),
             recordsConfigParser.parse(config.records, TomlRecordsConfig::new));
 
-    if (config.maxInFlightRecords != null) {
-      parsed.maxInFlightRecords = config.maxInFlightRecords;
-    } else {
-      parsed.maxInFlightRecords = DEFAULT_MAX_IN_FLIGHT_RECORDS;
-    }
-
-    if (config.awaitInFlightRecordTimeout != null) {
-      parsed.awaitInFlightRecordTimeout = DurationUtil.parse(config.awaitInFlightRecordTimeout);
-    } else {
-      parsed.awaitInFlightRecordTimeout = DEFAULT_AWAIT_IN_FLIGHT_RECORD_TIMEOUT;
-    }
+    parsed.setMaxInFlightRecords(get(config.maxInFlightRecords, DEFAULT_MAX_IN_FLIGHT_RECORDS));
+    parsed.setInFlightRecordCheckInterval(
+        get(
+            config.inFlightRecordCheckIntervalMs,
+            DEFAULT_IN_FLIGHT_RECORD_CHECK_INTERVAL,
+            Duration::ofMillis));
 
     return parsed;
   }

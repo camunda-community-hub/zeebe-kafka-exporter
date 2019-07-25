@@ -6,14 +6,11 @@ className = "io.zeebe.exporters.kafka.KafkaExporter"
   [exporters.args]
   # Controls how many records can have been sent to the Kafka broker without
   # any acknowledgment Once the limit is reached the exporter will block and
-  # wait until either one record is acknowledged or awaitInFlightRecordTimeout
-  # time is elapsed, at which point an error is produced and the record is
-  # retried at a later time
+  # wait until either one record is acknowledged
   maxInFlightRecords = 1000
-  # Controls how long we should block and await a record to be acknowledged
-  # by the Kafka broker when the maximum number of in-flight records is reached
-  # Format is the same as standard Zeebe configuration timeouts/durations
-  awaitInFlightRecordTimeout = "5s"
+  # How often should the exporter drain the in flight records' queue of completed
+  # requests and update the broker with the guaranteed latest exported position
+  inFlightRecordCheckIntervalMs = 1000
 
   # Producer specific configuration
   [exporters.args.producer]
@@ -24,8 +21,15 @@ className = "io.zeebe.exporters.kafka.KafkaExporter"
   # Controls how long the producer will wait for a request to be acknowledged by
   # the Kafka broker before retrying it
   # Maps to ProducerConfig.REQUEST_TIMEOUT_MS_CONFIG
-  # Format is the same as standard Zeebe configuration timeouts/durations
-  requestTimeout = "5s"
+  requestTimeoutMs = 5000
+  # Grace period when shutting down the producer in milliseconds
+  closeTimeoutMs = 5000
+  # Producer client identifier
+  clientId = "zeebe"
+  # Max concurrent requests to the Kafka broker; note that in flight records are batched such that
+  # in one request you can easily have a thousand records, depending on the producer's batch
+  # configuration.
+  maxConcurrentRequests = 3
 
   # Any setting under the following section will be passed verbatim to
   # ProducerConfig; you can use this to configure authentication, compression,

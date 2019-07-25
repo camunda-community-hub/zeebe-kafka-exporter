@@ -21,12 +21,66 @@ import java.util.Map;
 import java.util.Objects;
 
 public class ProducerConfig {
-  public String clientId;
-  public Duration closeTimeout;
-  public Map<String, Object> config;
-  public int maxConcurrentRequests;
-  public Duration requestTimeout;
-  public List<String> servers;
+  private String clientId;
+  private Duration closeTimeout;
+  private Map<String, Object> config;
+  private int maxConcurrentRequests;
+  private Duration requestTimeout;
+  private List<String> servers;
+
+  public String getClientId() {
+    return clientId;
+  }
+
+  public void setClientId(String clientId) {
+    this.clientId = clientId;
+  }
+
+  public Duration getCloseTimeout() {
+    return closeTimeout;
+  }
+
+  public void setCloseTimeout(Duration closeTimeout) {
+    this.closeTimeout = closeTimeout;
+  }
+
+  public Map<String, Object> getConfig() {
+    return config;
+  }
+
+  public void setConfig(Map<String, Object> config) {
+    this.config = config;
+  }
+
+  public int getMaxConcurrentRequests() {
+    return maxConcurrentRequests;
+  }
+
+  public void setMaxConcurrentRequests(int maxConcurrentRequests) {
+    this.maxConcurrentRequests = maxConcurrentRequests;
+  }
+
+  public Duration getRequestTimeout() {
+    return requestTimeout;
+  }
+
+  public void setRequestTimeout(Duration requestTimeout) {
+    this.requestTimeout = requestTimeout;
+  }
+
+  public List<String> getServers() {
+    return servers;
+  }
+
+  public void setServers(List<String> servers) {
+    this.servers = servers;
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(
+        clientId, closeTimeout, config, maxConcurrentRequests, requestTimeout, servers);
+  }
 
   @Override
   public boolean equals(Object o) {
@@ -45,11 +99,5 @@ public class ProducerConfig {
         && Objects.equals(config, that.config)
         && Objects.equals(requestTimeout, that.requestTimeout)
         && Objects.equals(servers, that.servers);
-  }
-
-  @Override
-  public int hashCode() {
-    return Objects.hash(
-        clientId, closeTimeout, config, maxConcurrentRequests, requestTimeout, servers);
   }
 }
