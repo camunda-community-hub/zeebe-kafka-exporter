@@ -92,6 +92,15 @@ spec:
       }
     }
 
+    stage('Analyse') {
+      when { not { expression { params.RELEASE } } }
+      steps {
+        container('maven') {
+          sh '.ci/scripts/analyse.sh'
+        }
+      }
+    }
+
     stage('Upload') {
       when { not { expression { params.RELEASE } } }
       steps {

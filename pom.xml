@@ -66,12 +66,6 @@
 
     <!-- maven extensions -->
     <extension.version.os-maven-plugin>1.6.1</extension.version.os-maven-plugin>
-
-    <!-- sonarscanner integration -->
-    <!-- sonar.login token must be passed at runtime to avoid sharing token -->
-    <sonar.host.url>https://sonarcloud.io</sonar.host.url>
-    <sonar.organization>zeebe-io</sonar.organization>
-    <sonar.login>${env.SONARCLOUD_TOKEN}</sonar.login>
   </properties>
 
   <dependencyManagement>
@@ -250,21 +244,6 @@
           </additionalSourceDirectories>
         </configuration>
       </plugin>
-
-      <!-- Static analysis -->
-      <plugin>
-        <groupId>org.sonarsource.scanner.maven</groupId>
-        <artifactId>sonar-maven-plugin</artifactId>
-        <version>${plugin.version.sonar}</version>
-        <executions>
-          <execution>
-            <phase>verify</phase>
-            <goals>
-              <goal>sonar</goal>
-            </goals>
-          </execution>
-        </executions>
-      </plugin>
     </plugins>
 
     <pluginManagement>
@@ -342,6 +321,38 @@
             </plugin>
           </plugins>
         </pluginManagement>
+      </build>
+    </profile>
+
+    <profile>
+      <id>sonar</id>
+      <properties>
+        <!-- sonarscanner integration -->
+        <!-- sonar.login token must be passed at runtime to avoid sharing token -->
+        <sonar.host.url>https://sonarcloud.io</sonar.host.url>
+        <sonar.organization>zeebe-io</sonar.organization>
+        <sonar.login>${env.SONARCLOUD_TOKEN}</sonar.login>
+
+        <!-- skip some checks -->
+        <skipTests>true</skipTests>
+        <checkstyle.skip>true</checkstyle.skip>
+      </properties>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.sonarsource.scanner.maven</groupId>
+            <artifactId>sonar-maven-plugin</artifactId>
+            <version>${plugin.version.sonar}</version>
+            <executions>
+              <execution>
+                <phase>verify</phase>
+                <goals>
+                  <goal>sonar</goal>
+                </goals>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
       </build>
     </profile>
   </profiles>
