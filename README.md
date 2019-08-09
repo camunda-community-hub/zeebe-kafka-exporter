@@ -1,6 +1,8 @@
 Zeebe Kafka Exporter
 =====================
 
+[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=io.zeebe%3Azeebe-kafka-exporter-root&metric=alert_status)](https://sonarcloud.io/dashboard?id=io.zeebe%3Azeebe-kafka-exporter-root)
+
 An easy to use exporter which will export Zeebe records to a configured Kafka topic, compatible with
 [zeebe](https://github.com/zeebe-io/zeebe) versions:
 
