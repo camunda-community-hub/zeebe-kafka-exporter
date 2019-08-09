@@ -15,6 +15,7 @@
  */
 package io.zeebe.exporters.kafka.config.toml;
 
+@SuppressWarnings("squid:ClassVariableVisibilityCheck")
 public class TomlConfig {
   public Integer maxInFlightRecords;
   public Long inFlightRecordCheckIntervalMs;

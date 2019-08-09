@@ -18,6 +18,7 @@ package io.zeebe.exporters.kafka.config.toml;
 import java.util.List;
 import java.util.Map;
 
+@SuppressWarnings("squid:ClassVariableVisibilityCheck")
 public class TomlProducerConfig {
   public String clientId;
   public Long closeTimeoutMs;

@@ -42,12 +42,14 @@ public class GenericConsumer extends AbstractConsumer {
       final ConsumerRecords<Schema.RecordId, GenericRecord> consumed =
           consumer.poll(Duration.ofSeconds(5));
       for (ConsumerRecord<Schema.RecordId, GenericRecord> record : consumed) {
-        logger.info(
-            "================[{}] {}-{} ================",
-            record.topic(),
-            record.key().getPartitionId(),
-            record.key().getPosition());
-        logger.info("{}", record.value().getMessage().toString());
+        if (logger.isInfoEnabled()) {
+          logger.info(
+              "================[{}] {}-{} ================",
+              record.topic(),
+              record.key().getPartitionId(),
+              record.key().getPosition());
+          logger.info("{}", record.value().getMessage());
+        }
       }
     }
   }
