@@ -30,6 +30,7 @@ import io.zeebe.exporters.kafka.util.Request;
 import io.zeebe.exporters.kafka.util.RequestQueue;
 import io.zeebe.protocol.record.Record;
 import java.time.Duration;
+import java.util.Optional;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
@@ -145,6 +146,11 @@ public class KafkaExporter implements Exporter {
     }
   }
 
+  private String fakeMethod() {
+    final Optional<String> optional = Optional.ofNullable(id);
+    return optional.get();
+  }
+
   private void updatePosition(Request request) {
     try {
       latestExportedPosition = request.get();
@@ -157,7 +163,7 @@ public class KafkaExporter implements Exporter {
           "Failed to ensure record was sent to Kafka, will stop exporting to prevent missing records",
           e);
       closeInternal();
-    } catch (InterruptedException e) { // NOSONAR: throwing InterruptException flags interrupt again
+    } catch (InterruptedException e) {
       closeInternal();
       throw new InterruptException(e);
     }
