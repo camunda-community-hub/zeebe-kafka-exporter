@@ -17,6 +17,7 @@ package io.zeebe.exporters.kafka.config.toml;
 
 import java.util.List;
 
+@SuppressWarnings("squid:ClassVariableVisibilityCheck")
 public class TomlRecordConfig {
   public List<String> type;
   public String topic;

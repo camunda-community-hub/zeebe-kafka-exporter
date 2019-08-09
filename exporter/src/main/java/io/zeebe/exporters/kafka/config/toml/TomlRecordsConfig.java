@@ -15,6 +15,7 @@
  */
 package io.zeebe.exporters.kafka.config.toml;
 
+@SuppressWarnings("squid:ClassVariableVisibilityCheck")
 public class TomlRecordsConfig {
   public TomlRecordConfig defaults;
   public TomlRecordConfig deployment;

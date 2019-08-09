@@ -157,9 +157,9 @@ public class KafkaExporter implements Exporter {
           "Failed to ensure record was sent to Kafka, will stop exporting to prevent missing records",
           e);
       closeInternal();
-    } catch (InterruptedException e) {
+    } catch (InterruptedException e) { // NOSONAR: throwing InterruptException flags interrupt again
       closeInternal();
-      throw new InterruptException(e); // will mark the thread as interrupted again
+      throw new InterruptException(e);
     }
   }
 

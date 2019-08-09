@@ -44,12 +44,14 @@ public class SingleTopicConsumer extends AbstractConsumer {
       final ConsumerRecords<Schema.RecordId, Schema.WorkflowInstanceRecord> consumed =
           consumer.poll(Duration.ofSeconds(2));
       for (ConsumerRecord<Schema.RecordId, Schema.WorkflowInstanceRecord> record : consumed) {
-        logger.info(
-            "================[{}] {}-{} ================",
-            record.topic(),
-            record.key().getPartitionId(),
-            record.key().getPosition());
-        logger.info("{}", record.value().toString());
+        if (logger.isInfoEnabled()) {
+          logger.info(
+              "================[{}] {}-{} ================",
+              record.topic(),
+              record.key().getPartitionId(),
+              record.key().getPosition());
+          logger.info("{}", record.value());
+        }
       }
     }
   }
