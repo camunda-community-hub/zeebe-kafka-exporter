@@ -109,6 +109,7 @@ spec:
         GPG_PUB_KEY = credentials('maven_central_gpg_signing_key_pub')
         GPG_SEC_KEY = credentials('maven_central_gpg_signing_key_sec')
         GITHUB_TOKEN = credentials('camunda-jenkins-github')
+        SONARCLOUD_TOKEN = credentials('zeebe-sonarcloud-token')
         RELEASE_VERSION = "${params.RELEASE_VERSION}"
         DEVELOPMENT_VERSION = "${params.DEVELOPMENT_VERSION}"
       }

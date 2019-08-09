@@ -1,6 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 
   <modelVersion>4.0.0</modelVersion>
   <name>Zeebe Kafka Exporter Root</name>
@@ -22,7 +24,7 @@
     <artifactId>camunda-release-parent</artifactId>
     <version>2.5</version>
     <!-- do not remove empty tag - http://jira.codehaus.org/browse/MNG-4687 -->
-    <relativePath />
+    <relativePath/>
   </parent>
 
   <properties>
@@ -59,10 +61,17 @@
     <plugin.version.failsafe>2.22.1</plugin.version.failsafe>
     <plugin.version.fmt>2.6.0</plugin.version.fmt>
     <plugin.version.license>3.0</plugin.version.license>
+    <plugin.version.sonar>3.6.0.1398</plugin.version.sonar>
     <plugin.version.surefire>2.22.1</plugin.version.surefire>
 
     <!-- maven extensions -->
     <extension.version.os-maven-plugin>1.6.1</extension.version.os-maven-plugin>
+
+    <!-- sonarscanner integration -->
+    <!-- sonar.login token must be passed at runtime to avoid sharing token -->
+    <sonar.host.url>https://sonarcloud.io</sonar.host.url>
+    <sonar.organization>zeebe-io</sonar.organization>
+    <sonar.login>${env.SONARCLOUD_TOKEN}</sonar.login>
   </properties>
 
   <dependencyManagement>
@@ -240,6 +249,21 @@
             <additionalSourceDirectory>${project.basedir}/src/test/jmh</additionalSourceDirectory>
           </additionalSourceDirectories>
         </configuration>
+      </plugin>
+
+      <!-- Static analysis -->
+      <plugin>
+        <groupId>org.sonarsource.scanner.maven</groupId>
+        <artifactId>sonar-maven-plugin</artifactId>
+        <version>${plugin.version.sonar}</version>
+        <executions>
+          <execution>
+            <phase>verify</phase>
+            <goals>
+              <goal>sonar</goal>
+            </goals>
+          </execution>
+        </executions>
       </plugin>
     </plugins>
 
