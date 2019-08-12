@@ -2,6 +2,8 @@
 set -ef -o pipefail
 
 PROPERTIES=("-DskipTests -Dcheckstyle.skip")
+GIT_URL=${GIT_URL:-$(git remote get-url origin)}
+GIT_BRANCH=${GIT_BRANCH:-$(git rev-parse --abbrev-ref HEAD)}
 
 # Assume if CHANGE_ID defined that we're building a PR
 if [ ! -z "${CHANGE_ID}" ]; then
@@ -20,7 +22,15 @@ else
     PROPERTIES+=("-Dsonar.branch.name=${GIT_BRANCH}")
   fi
 
-  git fetch --no-tags "${GIT_URL}" +refs/heads/master:refs/remotes/origin/master
+  if [ "${GIT_BRANCH}" == "master" ] || [ "${GIT_BRANCH}" == "develop" ]; then
+    TARGET_BRANCH="master"
+  else
+    TARGET_BRANCH="develop"
+  fi
+
+  PROPERTIES+=("-Dsonar.branch.target=${TARGET_BRANCH}")
+  git fetch --no-tags "${GIT_URL}" "+refs/heads/${TARGET_BRANCH}:refs/remotes/origin/${TARGET_BRANCH}"
 fi
 
+echo "Properties: ${PROPERTIES[@]}"
 mvn -s .ci/settings.xml -P sonar sonar:sonar ${PROPERTIES[@]}
