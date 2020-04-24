@@ -1,53 +1,15 @@
+#!/usr/bin/env groovy
+
+@Library(["camunda-ci", "zeebe-jenkins-shared-library"]) _
+
 pipeline {
 
   agent {
     kubernetes {
       cloud 'zeebe-ci'
-      label "zeebe-ci-build_${env.JOB_BASE_NAME}-${env.BUILD_ID}"
+      label "${utils.envPrefix()}ci-zeebe-build_${env.JOB_BASE_NAME.take(20)}-${env.BUILD_ID}"
       defaultContainer 'jnlp'
-      yaml '''\
-apiVersion: v1
-kind: Pod
-metadata:
-  labels:
-    agent: zeebe-ci-build
-spec:
-  nodeSelector:
-    cloud.google.com/gke-nodepool: slaves
-  tolerations:
-    - key: "slaves"
-      operator: "Exists"
-      effect: "NoSchedule"
-  containers:
-    - name: maven
-      image: maven:3.6.0-jdk-8
-      command: ["cat"]
-      tty: true
-      env:
-        - name: JAVA_TOOL_OPTIONS
-          value: |
-            -XX:+UnlockExperimentalVMOptions
-            -XX:+UseCGroupMemoryLimitForHeap
-        - name: DOCKER_HOST
-          value: tcp://localhost:2375
-      resources:
-        limits:
-          cpu: 1
-          memory: 2Gi
-        requests:
-          cpu: 1
-          memory: 2Gi
-    - name: dind
-      image: docker:18.09-dind
-      securityContext:
-        privileged: true
-      volumeMounts:
-        - name: dind-storage
-          mountPath: /var/lib/docker
-  volumes:
-    - name: dind-storage
-      emptyDir: {}
-'''
+      yaml libraryResource("zeebe/podspecs/${utils.isProdJenkins() ? 'mavenDindSmallAgent.yml' : 'mavenDindSmallAgentStage.yml'}")
     }
   }
 
