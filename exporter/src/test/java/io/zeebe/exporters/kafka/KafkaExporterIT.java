@@ -16,18 +16,13 @@
 package io.zeebe.exporters.kafka;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.entry;
 
 import com.google.common.collect.Maps;
-import com.google.protobuf.Message;
-import io.zeebe.exporter.proto.RecordTransformer;
-import io.zeebe.exporter.proto.Schema;
-import io.zeebe.exporter.proto.Schema.RecordId;
-import io.zeebe.exporters.kafka.config.toml.TomlConfig;
-import io.zeebe.exporters.kafka.config.toml.TomlProducerConfig;
+import io.zeebe.exporters.kafka.config.raw.RawConfig;
+import io.zeebe.exporters.kafka.config.raw.RawProducerConfig;
+import io.zeebe.exporters.kafka.serde.RecordId;
 import io.zeebe.exporters.kafka.serde.RecordIdDeserializer;
-import io.zeebe.exporters.kafka.serde.generic.GenericRecord;
-import io.zeebe.exporters.kafka.serde.generic.GenericRecordDeserializer;
+import io.zeebe.exporters.kafka.util.JsonAssertions;
 import io.zeebe.protocol.record.Record;
 import io.zeebe.test.exporter.ExporterIntegrationRule;
 import io.zeebe.test.util.record.RecordingExporterTestWatcher;
@@ -39,6 +34,7 @@ import java.util.Properties;
 import org.apache.kafka.clients.consumer.Consumer;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.common.serialization.Deserializer;
+import org.apache.kafka.common.serialization.StringDeserializer;
 import org.junit.After;
 import org.junit.Rule;
 import org.junit.Test;
@@ -50,7 +46,7 @@ public class KafkaExporterIT {
   @Rule public RecordingExporterTestWatcher testWatcher = new RecordingExporterTestWatcher();
   @Rule public KafkaContainer kafkaContainer = new KafkaContainer().withEmbeddedZookeeper();
 
-  private TomlConfig exporterConfiguration;
+  private RawConfig exporterConfiguration;
   private ExporterIntegrationRule exporterIntegrationRule;
 
   @After
@@ -78,48 +74,49 @@ public class KafkaExporterIT {
   }
 
   private void assertRecordsExported() {
-    final Map<Schema.RecordId, Message> records = consumeAllExportedRecords();
+    final Map<RecordId, String> records = consumeAllExportedRecords();
     exporterIntegrationRule.visitExportedRecords(r -> assertRecordExported(records, r));
   }
 
   private void assertRecordExported(
-      Map<Schema.RecordId, Message> producedRecords, Record<?> record) {
-    assertThat(producedRecords)
-        .contains(
-            entry(
-                RecordTransformer.toRecordId(record), RecordTransformer.toProtobufMessage(record)));
+      final Map<RecordId, String> producedRecords, final Record<?> record) {
+    final String producedRecord =
+        producedRecords.get(new RecordId(record.getPartitionId(), record.getPosition()));
+
+    assertThat(producedRecord).isNotNull();
+    JsonAssertions.assertThat(producedRecord).isJsonEqualTo(record.toJson());
   }
 
-  private Map<Schema.RecordId, Message> consumeAllExportedRecords() {
-    final Map<Schema.RecordId, Message> records = new HashMap<>();
+  private Map<RecordId, String> consumeAllExportedRecords() {
+    final Map<RecordId, String> records = new HashMap<>();
     final Duration timeout = Duration.ofSeconds(5);
 
-    try (Consumer<RecordId, GenericRecord> consumer = newConsumer()) {
-      consumer.poll(timeout).forEach(r -> records.put(r.key(), r.value().getMessage()));
+    try (Consumer<RecordId, String> consumer = newConsumer()) {
+      consumer.poll(timeout).forEach(r -> records.put(r.key(), r.value()));
     }
 
     return records;
   }
 
-  private Consumer<RecordId, GenericRecord> newConsumer() {
+  private Consumer<RecordId, String> newConsumer() {
     final Properties properties = consumerConfig();
     final Deserializer<RecordId> keyDeserializer = new RecordIdDeserializer();
-    final Deserializer<GenericRecord> valueDeserializer = new GenericRecordDeserializer();
+    final Deserializer<String> valueDeserializer = new StringDeserializer();
 
     keyDeserializer.configure(Maps.fromProperties(properties), true);
     valueDeserializer.configure(Maps.fromProperties(properties), false);
-    final Consumer<RecordId, GenericRecord> consumer =
+    final Consumer<RecordId, String> consumer =
         new KafkaConsumer<>(properties, keyDeserializer, valueDeserializer);
     consumer.subscribe(Collections.singletonList(TOPIC));
 
     return consumer;
   }
 
-  private TomlConfig newConfiguration() {
-    final TomlConfig configuration = new TomlConfig();
+  private RawConfig newConfiguration() {
+    final RawConfig configuration = new RawConfig();
     configuration.maxInFlightRecords = 30;
-    configuration.producer = new TomlProducerConfig();
-    configuration.producer.servers = Collections.singletonList(getKafkaServer());
+    configuration.producer = new RawProducerConfig();
+    configuration.producer.servers = getKafkaServer();
 
     return configuration;
   }
@@ -142,10 +139,6 @@ public class KafkaExporterIT {
     properties.put("heartbeat.interval.ms", "100");
     properties.put("max.poll.records", String.valueOf(Integer.MAX_VALUE));
     properties.put("metadata.max.age.ms", "100");
-
-    if (exporterConfiguration.producer.config != null) {
-      properties.putAll(exporterConfiguration.producer.config);
-    }
 
     return properties;
   }

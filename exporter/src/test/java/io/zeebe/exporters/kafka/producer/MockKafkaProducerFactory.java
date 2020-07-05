@@ -15,16 +15,25 @@
  */
 package io.zeebe.exporters.kafka.producer;
 
+import edu.umd.cs.findbugs.annotations.NonNull;
 import io.zeebe.exporters.kafka.config.Config;
+import io.zeebe.exporters.kafka.serde.RecordId;
 import io.zeebe.protocol.record.Record;
 import org.apache.kafka.clients.producer.MockProducer;
 import org.apache.kafka.clients.producer.Producer;
 
+/**
+ * A utility implementation to allow more control of the execution of the {@link
+ * io.zeebe.exporters.kafka.KafkaExporter} in tests. Allows overriding the producer which will be
+ * given to the exporter - if none given, it will create a {@link MockProducer} and memoize the
+ * value.
+ */
+@SuppressWarnings("rawtypes")
 public class MockKafkaProducerFactory implements KafkaProducerFactory {
-  public MockProducer<Record, Record> mockProducer;
+  public MockProducer<RecordId, Record> mockProducer;
 
   @Override
-  public Producer<Record, Record> newProducer(Config config) {
+  public @NonNull Producer<RecordId, Record> newProducer(final @NonNull Config config) {
     if (mockProducer == null) {
       mockProducer = new MockProducer<>();
     }

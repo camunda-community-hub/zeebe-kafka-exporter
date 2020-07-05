@@ -15,27 +15,46 @@
  */
 package io.zeebe.exporters.kafka.util;
 
+import edu.umd.cs.findbugs.annotations.NonNull;
 import java.util.ArrayDeque;
 import java.util.Iterator;
 import java.util.Objects;
 import java.util.Queue;
 import java.util.function.Consumer;
 
-public class RequestQueue {
+/**
+ * Keeps track of all in-flight {@link Request}, in order of which they are sent (which correlates
+ * with the order of their {@link Request#position}. This queue has a maximum size, and it's
+ * recommended not to set it too high to avoid consumming too much memory.
+ */
+public final class RequestQueue {
   private final Queue<Request> requests;
   private final int maxSize;
 
-  public RequestQueue(int maxSize) {
+  /** @param maxSize the maximum number of requests to keep in memory */
+  public RequestQueue(final int maxSize) {
     this.maxSize = maxSize;
     this.requests = new ArrayDeque<>(maxSize);
   }
 
+  /**
+   * Cancels all in-flight requests and stops tracking them. Note that this may not cancel requests
+   * if they were already sent.
+   */
   public void cancelAll() {
     requests.forEach(r -> r.cancel(true));
     requests.clear();
   }
 
-  public boolean offer(Request request) {
+  /**
+   * Appends a new request to the queue if there is space available.
+   *
+   * @param request the request to add
+   * @return true if appended, false if the queue is full
+   */
+  public boolean offer(final @NonNull Request request) {
+    Objects.requireNonNull(request);
+
     if (requests.size() == maxSize) {
       return false;
     }
@@ -43,7 +62,14 @@ public class RequestQueue {
     return requests.add(request);
   }
 
-  public void consumeCompleted(Consumer<Request> consumer) {
+  /**
+   * Consumes all requests which are {@link Request#isDone()}, passing them in order to the consumer
+   * and removing them from the queue. While this is not thread safe, we assume the exporter runs in
+   * a single thread.
+   *
+   * @param consumer the consumer which accepts completed requests
+   */
+  public void consumeCompleted(final @NonNull Consumer<Request> consumer) {
     Objects.requireNonNull(consumer);
     final Iterator<Request> iterator = requests.iterator();
 
@@ -58,7 +84,14 @@ public class RequestQueue {
     }
   }
 
-  public void consume(Consumer<Request> consumer) {
+  /**
+   * Peeks at the oldest request in the queue and passes it on to the consumer, removing it once the
+   * consumer is done with it. Does nothing if there are no requests in the queue. This is used
+   * primarily to block until the oldest request is finished.
+   *
+   * @param consumer the consumer which may receive a request
+   */
+  public void consume(final @NonNull Consumer<Request> consumer) {
     Objects.requireNonNull(consumer);
     final Request request = requests.peek();
 

@@ -15,28 +15,36 @@
  */
 package io.zeebe.exporters.kafka.config;
 
+import edu.umd.cs.findbugs.annotations.NonNull;
+import io.zeebe.protocol.record.Record;
 import io.zeebe.protocol.record.RecordType;
 import java.util.Objects;
 import java.util.Set;
 
-public class RecordConfig {
-  private Set<RecordType> allowedTypes;
-  private String topic;
+/**
+ * {@link RecordConfig} describes what the exporter should do with a record of a given {@link
+ * io.zeebe.protocol.record.ValueType} - this is mapped via {@link RecordsConfig}, which holds a map
+ * of {@link io.zeebe.protocol.record.ValueType} => {@link RecordConfig}.
+ *
+ * <p>For the {@link io.zeebe.protocol.record.ValueType} associated with this instance, only records
+ * with a {@link Record#getRecordType()} which is included in {@code allowedTypes} will be exported.
+ * An empty set of {@code allowedTypes} means nothing gets exported.
+ */
+public final class RecordConfig {
+  private final Set<RecordType> allowedTypes;
+  private final String topic;
 
-  public Set<RecordType> getAllowedTypes() {
+  public RecordConfig(final @NonNull Set<RecordType> allowedTypes, @NonNull final String topic) {
+    this.allowedTypes = Objects.requireNonNull(allowedTypes);
+    this.topic = Objects.requireNonNull(topic);
+  }
+
+  public @NonNull Set<RecordType> getAllowedTypes() {
     return allowedTypes;
   }
 
-  public void setAllowedTypes(Set<RecordType> allowedTypes) {
-    this.allowedTypes = allowedTypes;
-  }
-
-  public String getTopic() {
+  public @NonNull String getTopic() {
     return topic;
-  }
-
-  public void setTopic(String topic) {
-    this.topic = topic;
   }
 
   @Override
@@ -45,16 +53,15 @@ public class RecordConfig {
   }
 
   @Override
-  public boolean equals(Object o) {
+  public boolean equals(final Object o) {
     if (this == o) {
       return true;
     }
-
-    if (!(o instanceof RecordConfig)) {
+    if (o == null || getClass() != o.getClass()) {
       return false;
     }
-
     final RecordConfig that = (RecordConfig) o;
-    return Objects.equals(allowedTypes, that.allowedTypes) && Objects.equals(topic, that.topic);
+    return Objects.equals(getAllowedTypes(), that.getAllowedTypes())
+        && Objects.equals(getTopic(), that.getTopic());
   }
 }

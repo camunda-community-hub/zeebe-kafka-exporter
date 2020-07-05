@@ -15,17 +15,33 @@
  */
 package io.zeebe.exporters.kafka.config.parser;
 
+import edu.umd.cs.findbugs.annotations.NonNull;
+import edu.umd.cs.findbugs.annotations.Nullable;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Optional;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
+/**
+ * Utility tool belt to parse configuration. Only add methods here if they are used in more than one
+ * class.
+ */
 final class ConfigParserUtil {
   private ConfigParserUtil() {}
 
-  static <T> T get(T property, T fallback) {
+  static @NonNull <T> T get(final @Nullable T property, final @NonNull T fallback) {
     return Optional.ofNullable(property).orElse(fallback);
   }
 
-  static <T, R> R get(T property, R fallback, Function<T, R> transformer) {
+  static @NonNull <T, R> R get(
+      final @Nullable T property,
+      final @NonNull R fallback,
+      final @NonNull Function<T, R> transformer) {
     return Optional.ofNullable(property).map(transformer).orElse(fallback);
+  }
+
+  static @NonNull List<String> splitCommaSeparatedString(final @NonNull String value) {
+    return Arrays.stream(value.split(",")).map(String::trim).collect(Collectors.toList());
   }
 }

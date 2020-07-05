@@ -15,30 +15,39 @@
  */
 package io.zeebe.exporters.kafka.config;
 
+import edu.umd.cs.findbugs.annotations.NonNull;
 import java.time.Duration;
 import java.util.Objects;
 
+/**
+ * Entrypoint for the effective {@link io.zeebe.exporters.kafka.KafkaExporter} configuration. This
+ * is what the exporter will use as final configuration. See {@link
+ * io.zeebe.exporters.kafka.config.raw.RawConfig} and {@link
+ * io.zeebe.exporters.kafka.config.parser.RawConfigParser} for more on how the external
+ * configuration is parsed into an instance of this class.
+ */
 public class Config {
   private final ProducerConfig producer;
   private final RecordsConfig records;
+  private final int maxInFlightRecords;
+  private final Duration inFlightRecordCheckInterval;
 
-  private int maxInFlightRecords;
-  private Duration inFlightRecordCheckInterval;
-
-  public Config() {
-    this(new ProducerConfig(), new RecordsConfig());
+  public Config(
+      final @NonNull ProducerConfig producer,
+      final @NonNull RecordsConfig records,
+      final int maxInFlightRecords,
+      final @NonNull Duration inFlightRecordCheckInterval) {
+    this.producer = Objects.requireNonNull(producer);
+    this.records = Objects.requireNonNull(records);
+    this.maxInFlightRecords = maxInFlightRecords;
+    this.inFlightRecordCheckInterval = inFlightRecordCheckInterval;
   }
 
-  public Config(ProducerConfig producer, RecordsConfig records) {
-    this.producer = producer;
-    this.records = records;
-  }
-
-  public ProducerConfig getProducer() {
+  public @NonNull ProducerConfig getProducer() {
     return producer;
   }
 
-  public RecordsConfig getRecords() {
+  public @NonNull RecordsConfig getRecords() {
     return records;
   }
 
@@ -46,16 +55,8 @@ public class Config {
     return maxInFlightRecords;
   }
 
-  public void setMaxInFlightRecords(int maxInFlightRecords) {
-    this.maxInFlightRecords = maxInFlightRecords;
-  }
-
-  public Duration getInFlightRecordCheckInterval() {
+  public @NonNull Duration getInFlightRecordCheckInterval() {
     return inFlightRecordCheckInterval;
-  }
-
-  public void setInFlightRecordCheckInterval(Duration inFlightRecordCheckInterval) {
-    this.inFlightRecordCheckInterval = inFlightRecordCheckInterval;
   }
 
   @Override
@@ -64,19 +65,18 @@ public class Config {
   }
 
   @Override
-  public boolean equals(Object o) {
+  public boolean equals(final Object o) {
     if (this == o) {
       return true;
     }
-
-    if (!(o instanceof Config)) {
+    if (o == null || getClass() != o.getClass()) {
       return false;
     }
-
     final Config config = (Config) o;
-    return maxInFlightRecords == config.maxInFlightRecords
-        && Objects.equals(inFlightRecordCheckInterval, config.inFlightRecordCheckInterval)
-        && Objects.equals(producer, config.producer)
-        && Objects.equals(records, config.records);
+    return getMaxInFlightRecords() == config.getMaxInFlightRecords()
+        && Objects.equals(getProducer(), config.getProducer())
+        && Objects.equals(getRecords(), config.getRecords())
+        && Objects.equals(
+            getInFlightRecordCheckInterval(), config.getInFlightRecordCheckInterval());
   }
 }

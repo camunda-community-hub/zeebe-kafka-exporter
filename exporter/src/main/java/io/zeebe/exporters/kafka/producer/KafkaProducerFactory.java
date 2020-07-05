@@ -15,11 +15,19 @@
  */
 package io.zeebe.exporters.kafka.producer;
 
+import edu.umd.cs.findbugs.annotations.NonNull;
 import io.zeebe.exporters.kafka.config.Config;
+import io.zeebe.exporters.kafka.serde.RecordId;
 import io.zeebe.protocol.record.Record;
 import org.apache.kafka.clients.producer.Producer;
 
+/**
+ * Implementations may or may not make use of the given configuration, but must always return a
+ * valid producer.
+ */
+@SuppressWarnings("rawtypes")
 @FunctionalInterface
 public interface KafkaProducerFactory {
-  Producer<Record, Record> newProducer(Config config);
+  @NonNull
+  Producer<RecordId, Record> newProducer(@NonNull Config config);
 }

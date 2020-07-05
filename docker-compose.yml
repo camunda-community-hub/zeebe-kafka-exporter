@@ -2,11 +2,7 @@ version: '3.3'
 
 services:
   zeebe:
-    build:
-      context: ./exporter
-      dockerfile: Dockerfile
-      labels:
-        io.zeebe.exporter.kafka: "Zeebe Kafka Exporter"
+    image: ${ZEEBE_IMAGE:-camunda/zeebe}:${ZEEBE_VERSION:-0.24.1}
     container_name: zeebe
     hostname: zeebe
     depends_on:
@@ -14,24 +10,24 @@ services:
     ports:
       - "26500:26500"
     restart: always
+    environment:
+      SPRING_CONFIG_ADDITIONAL_LOCATION: /usr/local/zeebe/config/exporter.yml
+      ZEEBE_BROKER_EXPORTERS_KAFKA_ARGS_PRODUCER_SERVERS: "kafka:9092"
+    volumes:
+      - ./exporter/exporter.yml:/usr/local/zeebe/config/exporter.yml
+      - ./exporter/target/zeebe-kafka-exporter-jar-with-dependencies.jar:/usr/local/zeebe/lib/zeebe-kafka-exporter.jar
 
   consumer:
-    build:
-      context: ./samples
-      dockerfile: Dockerfile
-      labels:
-        io.zeebe.exporter.kafka: "Zeebe Kafka Consumer"
+    image: edenhill/kafkacat:${KAFKACAT_VERSION:-1.5.0}
     container_name: consumer
     hostname: consumer
     depends_on:
       - kafka
-      - zookeeper
     restart: always
-    environment:
-      KAFKA_HOST: "kafka:9092"
+    command: [ "kafkacat", "-b", "kafka:9092", "-C", "-J", "-X", "metadata.max.age.ms=1000", "-X", "topic.metadata.refresh.interval.ms=1000", "-G", "zeebe", "^zeebe.*$$" ]
 
   zookeeper:
-    image: confluentinc/cp-zookeeper:latest
+    image: confluentinc/cp-zookeeper:${KAFKA_VERSION:-5.5.1}
     container_name: zookeeper
     hostname: zookeeper
     ports:
@@ -42,7 +38,7 @@ services:
     restart: always
 
   kafka:
-    image: confluentinc/cp-kafka:latest
+    image: confluentinc/cp-kafka:${KAFKA_VERSION:-5.5.1}
     hostname: kafka
     container_name: kafka
     depends_on:
