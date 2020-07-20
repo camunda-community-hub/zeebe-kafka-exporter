@@ -42,9 +42,9 @@ pipeline {
     }
 
     stage('Build') {
+      when { not { expression { params.RELEASE } } }
       parallel {
         stage('Tests') {
-          when { not { expression { params.RELEASE } } }
           steps {
             container('maven') {
               configFileProvider([configFile(fileId: 'maven-nexus-settings-zeebe', variable: 'MAVEN_SETTINGS_XML')]) {
@@ -61,7 +61,6 @@ pipeline {
         }
 
         stage('Analyse') {
-          when { not { expression { params.RELEASE } } }
           steps {
             container('maven') {
               configFileProvider([configFile(fileId: 'maven-nexus-settings-zeebe', variable: 'MAVEN_SETTINGS_XML')]) {
