@@ -14,28 +14,7 @@ cd exporter/target
 export ARTIFACT=zeebe-kafka-exporter-${RELEASE_VERSION}.jar
 export CHECKSUM=${ARTIFACT}.sha1sum
 
-export ARTIFACT_UBER=zeebe-kafka-exporter-${RELEASE_VERSION}-uber.jar
-export CHECKSUM_UBER=${ARTIFACT_UBER}.sha1sum
-
-# create checksum files
-sha1sum ${ARTIFACT} > ${CHECKSUM}
-sha1sum ${ARTIFACT_UBER} > ${CHECKSUM_UBER}
-
-../../github-release upload --user ${GITHUB_ORG} --repo ${GITHUB_REPO} --tag ${RELEASE_VERSION} --name "${ARTIFACT}" --file "${ARTIFACT}"
-../../github-release upload --user ${GITHUB_ORG} --repo ${GITHUB_REPO} --tag ${RELEASE_VERSION} --name "${CHECKSUM}" --file "${CHECKSUM}"
-../../github-release upload --user ${GITHUB_ORG} --repo ${GITHUB_REPO} --tag ${RELEASE_VERSION} --name "${ARTIFACT_UBER}" --file "${ARTIFACT_UBER}"
-../../github-release upload --user ${GITHUB_ORG} --repo ${GITHUB_REPO} --tag ${RELEASE_VERSION} --name "${CHECKSUM_UBER}" --file "${CHECKSUM_UBER}"
-
-cd ../..
-
-# upload samples
-
-cd samples/target
-
-export ARTIFACT=zeebe-kafka-exporter-samples-${RELEASE_VERSION}.jar
-export CHECKSUM=${ARTIFACT}.sha1sum
-
-export ARTIFACT_UBER=zeebe-kafka-exporter-samples-${RELEASE_VERSION}-uber.jar
+export ARTIFACT_UBER=zeebe-kafka-exporter-${RELEASE_VERSION}-jar-with-dependencies.jar
 export CHECKSUM_UBER=${ARTIFACT_UBER}.sha1sum
 
 # create checksum files
