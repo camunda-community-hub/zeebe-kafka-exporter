@@ -22,14 +22,11 @@ else
     PROPERTIES+=("-Dsonar.branch.name=${GIT_BRANCH}")
   fi
 
-  if [ "${GIT_BRANCH}" == "master" ] || [ "${GIT_BRANCH}" == "develop" ]; then
+  if [ ! "${GIT_BRANCH}" == "master" ]; then
     TARGET_BRANCH="master"
-  else
-    TARGET_BRANCH="develop"
+    PROPERTIES+=("-Dsonar.branch.target=${TARGET_BRANCH}")
+    git fetch --no-tags "${GIT_URL}" "+refs/heads/${TARGET_BRANCH}:refs/remotes/origin/${TARGET_BRANCH}"
   fi
-
-  PROPERTIES+=("-Dsonar.branch.target=${TARGET_BRANCH}")
-  git fetch --no-tags "${GIT_URL}" "+refs/heads/${TARGET_BRANCH}:refs/remotes/origin/${TARGET_BRANCH}"
 fi
 
 echo "Properties: ${PROPERTIES[@]}"
