@@ -15,29 +15,52 @@
  */
 package io.zeebe.exporters.kafka.record;
 
+import edu.umd.cs.findbugs.annotations.NonNull;
 import io.zeebe.exporters.kafka.config.RecordConfig;
 import io.zeebe.exporters.kafka.config.RecordsConfig;
+import io.zeebe.exporters.kafka.serde.RecordId;
 import io.zeebe.protocol.record.Record;
+import java.util.Objects;
 import org.apache.kafka.clients.producer.ProducerRecord;
 
-public class RecordHandler {
+/**
+ * {@link RecordHandler} is responsible for testing if certain records are allowed, and if so,
+ * transforming them.
+ *
+ * <p>Should be refactored into two for single responsibility.
+ */
+@SuppressWarnings("rawtypes")
+public final class RecordHandler {
   private final RecordsConfig configuration;
 
-  public RecordHandler(RecordsConfig configuration) {
-    this.configuration = configuration;
+  public RecordHandler(final @NonNull RecordsConfig configuration) {
+    this.configuration = Objects.requireNonNull(configuration);
   }
 
-  public ProducerRecord<Record, Record> transform(Record record) {
+  /**
+   * Transforms the given {@link Record} into a Kafka {@link ProducerRecord}.
+   *
+   * @param record the record to transform
+   * @return the transformed record
+   */
+  public @NonNull ProducerRecord<RecordId, Record> transform(final @NonNull Record record) {
     final RecordConfig config = getRecordConfig(record);
-    return new ProducerRecord<>(config.getTopic(), record, record);
+    return new ProducerRecord<>(
+        config.getTopic(), new RecordId(record.getPartitionId(), record.getPosition()), record);
   }
 
-  public boolean test(Record record) {
+  /**
+   * Tests whether or not the given record is allowed, as specified by the configuration.
+   *
+   * @param record the record to test
+   * @return true if allowed, false otherwise
+   */
+  public boolean test(final @NonNull Record record) {
     final RecordConfig config = getRecordConfig(record);
     return config.getAllowedTypes().contains(record.getRecordType());
   }
 
-  private <T extends Record> RecordConfig getRecordConfig(T record) {
-    return configuration.forType(record.getValueType());
+  private @NonNull RecordConfig getRecordConfig(final @NonNull Record record) {
+    return configuration.forType(Objects.requireNonNull(record).getValueType());
   }
 }

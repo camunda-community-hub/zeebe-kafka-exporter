@@ -20,15 +20,14 @@ import static org.assertj.core.api.Assertions.assertThatCode;
 
 import io.zeebe.exporters.kafka.config.Config;
 import io.zeebe.exporters.kafka.config.parser.MockConfigParser;
-import io.zeebe.exporters.kafka.config.parser.TomlConfigParser;
-import io.zeebe.exporters.kafka.config.toml.TomlConfig;
+import io.zeebe.exporters.kafka.config.parser.RawConfigParser;
+import io.zeebe.exporters.kafka.config.raw.RawConfig;
 import io.zeebe.exporters.kafka.producer.MockKafkaProducerFactory;
+import io.zeebe.exporters.kafka.serde.RecordId;
 import io.zeebe.exporters.kafka.serde.RecordIdSerializer;
-import io.zeebe.exporters.kafka.serde.generic.GenericRecordSerializer;
+import io.zeebe.exporters.kafka.serde.RecordSerializer;
 import io.zeebe.protocol.record.Record;
-import io.zeebe.protocol.record.RecordType;
 import io.zeebe.test.exporter.ExporterTestHarness;
-import java.util.EnumSet;
 import java.util.List;
 import java.util.stream.IntStream;
 import org.apache.kafka.clients.producer.MockProducer;
@@ -36,30 +35,28 @@ import org.apache.kafka.clients.producer.ProducerRecord;
 import org.junit.Before;
 import org.junit.Test;
 
+@SuppressWarnings("rawtypes")
 public class KafkaExporterTest {
   private static final String EXPORTER_ID = "kafka";
 
-  private final TomlConfig tomlConfig = new TomlConfig();
+  private final RawConfig rawConfig = new RawConfig();
   private final MockKafkaProducerFactory mockProducerFactory = new MockKafkaProducerFactory();
-  private final MockConfigParser<TomlConfig, Config> mockConfigParser =
-      new MockConfigParser<>(new TomlConfigParser());
+  private final MockConfigParser<RawConfig, Config> mockConfigParser =
+      new MockConfigParser<>(new RawConfigParser());
   private final KafkaExporter exporter = new KafkaExporter(mockProducerFactory, mockConfigParser);
   private final ExporterTestHarness testHarness = new ExporterTestHarness(exporter);
-  private final Config configuration = mockConfigParser.parse(tomlConfig);
 
   @Before
   public void setup() {
-    configuration.getRecords().getDefaults().setTopic("zeebe");
-    configuration.getRecords().getDefaults().setAllowedTypes(EnumSet.allOf(RecordType.class));
     mockProducerFactory.mockProducer =
-        new MockProducer<>(true, new RecordIdSerializer(), new GenericRecordSerializer());
-    mockConfigParser.config = configuration;
+        new MockProducer<>(true, new RecordIdSerializer(), new RecordSerializer());
+    mockConfigParser.config = mockConfigParser.parse(rawConfig);
   }
 
   @Test
   public void shouldExportRecords() throws Exception {
     // given
-    testHarness.configure(EXPORTER_ID, tomlConfig);
+    testHarness.configure(EXPORTER_ID, rawConfig);
     testHarness.open();
 
     // when
@@ -72,8 +69,11 @@ public class KafkaExporterTest {
             });
 
     // then
-    final ProducerRecord<Record, Record> expected =
-        new ProducerRecord<>(configuration.getRecords().getDefaults().getTopic(), record, record);
+    final ProducerRecord<RecordId, Record> expected =
+        new ProducerRecord<>(
+            mockConfigParser.config.getRecords().getDefaults().getTopic(),
+            new RecordId(record.getPartitionId(), record.getPosition()),
+            record);
     assertThat(mockProducerFactory.mockProducer.history()).hasSize(1).containsExactly(expected);
   }
 
@@ -84,9 +84,10 @@ public class KafkaExporterTest {
 
     // control how many are completed
     mockProducerFactory.mockProducer = new MockProducer<>(false, null, null);
+    rawConfig.maxInFlightRecords = recordsCount; // prevent blocking awaiting completion
+    mockConfigParser.forceParse(rawConfig);
 
-    configuration.setMaxInFlightRecords(recordsCount); // prevent blocking awaiting completion
-    testHarness.configure(EXPORTER_ID, tomlConfig);
+    testHarness.configure(EXPORTER_ID, rawConfig);
     testHarness.open();
 
     // when
@@ -109,8 +110,10 @@ public class KafkaExporterTest {
     // since maxInFlightRecords is less than recordsCount, it will force awaiting
     // the completion of the next request and will update the position accordingly.
     // there's no blocking here because the MockProducer is configured to autocomplete.
-    configuration.setMaxInFlightRecords(recordsCount - 1);
-    testHarness.configure(EXPORTER_ID, tomlConfig);
+    rawConfig.maxInFlightRecords = recordsCount - 1;
+    mockConfigParser.forceParse(rawConfig);
+
+    testHarness.configure(EXPORTER_ID, rawConfig);
     testHarness.open();
 
     // when
@@ -129,8 +132,10 @@ public class KafkaExporterTest {
   public void shouldUpdatePositionOnClose() throws Exception {
     // given
     final int recordsCount = 4;
-    configuration.setMaxInFlightRecords(recordsCount);
-    testHarness.configure(EXPORTER_ID, tomlConfig);
+    rawConfig.maxInFlightRecords = recordsCount;
+    mockConfigParser.forceParse(rawConfig);
+
+    testHarness.configure(EXPORTER_ID, rawConfig);
     testHarness.open();
 
     // when
@@ -145,7 +150,7 @@ public class KafkaExporterTest {
   @Test
   public void shouldDoNothingIfAlreadyClosed() throws Exception {
     // given
-    testHarness.configure(EXPORTER_ID, tomlConfig);
+    testHarness.configure(EXPORTER_ID, rawConfig);
     testHarness.open();
     testHarness.close();
 
@@ -163,8 +168,10 @@ public class KafkaExporterTest {
   public void shouldUpdatePositionToLatestCompletedEventEvenIfOneRecordFails() throws Exception {
     // given
     mockProducerFactory.mockProducer = new MockProducer<>(false, null, null);
-    configuration.setMaxInFlightRecords(2);
-    testHarness.configure(EXPORTER_ID, tomlConfig);
+    rawConfig.maxInFlightRecords = 2;
+    mockConfigParser.forceParse(rawConfig);
+
+    testHarness.configure(EXPORTER_ID, rawConfig);
     testHarness.open();
 
     // when
@@ -180,11 +187,12 @@ public class KafkaExporterTest {
         .isNotEqualTo(failed.getPosition());
   }
 
+  @SuppressWarnings("ResultOfMethodCallIgnored")
   @Test
   public void shouldCloseExporterIfRecordFails() throws Exception {
     // given
     mockProducerFactory.mockProducer = new MockProducer<>(false, null, null);
-    testHarness.configure(EXPORTER_ID, tomlConfig);
+    testHarness.configure(EXPORTER_ID, rawConfig);
     testHarness.open();
 
     // when
@@ -199,7 +207,7 @@ public class KafkaExporterTest {
         .hasSize(1);
   }
 
-  private void completeNextRequests(int requestCount) {
+  private void completeNextRequests(final int requestCount) {
     IntStream.rangeClosed(0, requestCount)
         .forEach(i -> mockProducerFactory.mockProducer.completeNext());
   }

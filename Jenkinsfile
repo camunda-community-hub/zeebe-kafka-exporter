@@ -9,7 +9,7 @@ pipeline {
       cloud getZeebeK8sCloud()
       label getZeebeK8sLabel()
       defaultContainer 'jnlp'
-      yaml libraryResource("zeebe/podspecs/${utils.isProdJenkins() ? 'mavenDindSmallAgent.yml' : 'mavenDindSmallAgentStage.yml'}")
+      yaml libraryResource("zeebe/podspecs/${utils.isProdJenkins() ? 'mavenDindMediumAgent.yml' : 'mavenDindMediumAgentStage.yml'}")
     }
   }
 
@@ -42,28 +42,32 @@ pipeline {
     }
 
     stage('Build') {
-      when { not { expression { params.RELEASE } } }
-      steps {
-        container('maven') {
-          configFileProvider([configFile(fileId: 'maven-nexus-settings-zeebe', variable: 'MAVEN_SETTINGS_XML')]) {
-            sh 'mvn install -B -s $MAVEN_SETTINGS_XML'
+      parallel {
+        stage('Tests') {
+          when { not { expression { params.RELEASE } } }
+          steps {
+            container('maven') {
+              configFileProvider([configFile(fileId: 'maven-nexus-settings-zeebe', variable: 'MAVEN_SETTINGS_XML')]) {
+                sh 'mvn install -B -s $MAVEN_SETTINGS_XML'
+              }
+            }
+          }
+
+          post {
+            always {
+              junit testResults: "**/*/TEST-*.xml", keepLongStdio: true
+            }
           }
         }
-      }
 
-      post {
-        always {
-            junit testResults: "**/*/TEST-*.xml", keepLongStdio: true
-        }
-      }
-    }
-
-    stage('Analyse') {
-      when { not { expression { params.RELEASE } } }
-      steps {
-        container('maven') {
-          configFileProvider([configFile(fileId: 'maven-nexus-settings-zeebe', variable: 'MAVEN_SETTINGS_XML')]) {
-            sh '.ci/scripts/analyse.sh'
+        stage('Analyse') {
+          when { not { expression { params.RELEASE } } }
+          steps {
+            container('maven') {
+              configFileProvider([configFile(fileId: 'maven-nexus-settings-zeebe', variable: 'MAVEN_SETTINGS_XML')]) {
+                sh '.ci/scripts/analyse.sh'
+              }
+            }
           }
         }
       }

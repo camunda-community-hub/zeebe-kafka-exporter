@@ -21,26 +21,44 @@ import io.zeebe.protocol.record.RecordType;
 import io.zeebe.protocol.record.ValueType;
 import java.util.Optional;
 
-public class KafkaRecordFilter implements RecordFilter {
+/**
+ * {@link KafkaRecordFilter} is an implementation of {@link RecordFilter} which uses the {@link
+ * RecordsConfig} to build the filter.
+ */
+public final class KafkaRecordFilter implements RecordFilter {
   private final RecordsConfig config;
 
-  public KafkaRecordFilter(RecordsConfig config) {
+  public KafkaRecordFilter(final RecordsConfig config) {
     this.config = config;
   }
 
+  /**
+   * If any of the {@link RecordsConfig#getTypeMap()} accept the given record type, the {@code
+   * recordType} is accepted.
+   *
+   * @param recordType {@inheritDoc}
+   * @return {@inheritDoc}
+   */
   @Override
-  public boolean acceptType(RecordType recordType) {
-    return config
-        .getTypeMap()
-        .values()
-        .stream()
-        .anyMatch(c -> c.getAllowedTypes().contains(recordType));
+  public boolean acceptType(final RecordType recordType) {
+    return config.getDefaults().getAllowedTypes().contains(recordType)
+        || config.getTypeMap().values().stream()
+            .anyMatch(c -> c.getAllowedTypes().contains(recordType));
   }
 
+  /**
+   * If the {@link io.zeebe.exporters.kafka.config.RecordConfig} instance stored in {@link
+   * RecordsConfig#getTypeMap()} for {@code valueType} has any allowed type at all, the {@code
+   * valueType} is accepted.
+   *
+   * @param valueType {@inheritDoc}
+   * @return {@inheritDoc}
+   */
   @Override
-  public boolean acceptValue(ValueType valueType) {
-    return Optional.ofNullable(config.getTypeMap().get(valueType))
-        .map(c -> !c.getAllowedTypes().isEmpty())
-        .orElse(false);
+  public boolean acceptValue(final ValueType valueType) {
+    return !Optional.ofNullable(config.getTypeMap().get(valueType))
+        .orElse(config.getDefaults())
+        .getAllowedTypes()
+        .isEmpty();
   }
 }

@@ -15,65 +15,68 @@
  */
 package io.zeebe.exporters.kafka.config;
 
+import edu.umd.cs.findbugs.annotations.NonNull;
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
-public class ProducerConfig {
-  private String clientId;
-  private Duration closeTimeout;
-  private Map<String, Object> config;
-  private int maxConcurrentRequests;
-  private Duration requestTimeout;
-  private List<String> servers;
+/**
+ * {@link ProducerConfig} is used by instances of {@link
+ * io.zeebe.exporters.kafka.producer.KafkaProducerFactory} to configure a producer. A few standard
+ * configuration options were extracted as options (e.g. {@code clientId}, {@code servers}) as they
+ * were common - everything else can be configured via the free-form {@code config} map.
+ *
+ * <p>NOTE: be aware the when configuring a producer using the {@code config} map, Kafka expects the
+ * values to either be strings OR very specific data types. While these are well documented, if
+ * you're unsure of the expected data type (e.g. Integer, Long, Boolean), then just pass a string
+ * representation of what you want to use.
+ */
+public final class ProducerConfig {
+  private final String clientId;
+  private final Duration closeTimeout;
+  private final Map<String, Object> config;
+  private final int maxConcurrentRequests;
+  private final Duration requestTimeout;
+  private final List<String> servers;
 
-  public String getClientId() {
+  public ProducerConfig(
+      final String clientId,
+      final Duration closeTimeout,
+      final Map<String, Object> config,
+      final int maxConcurrentRequests,
+      final Duration requestTimeout,
+      final List<String> servers) {
+    this.clientId = Objects.requireNonNull(clientId);
+    this.closeTimeout = Objects.requireNonNull(closeTimeout);
+    this.config = Objects.requireNonNull(config);
+    this.maxConcurrentRequests = maxConcurrentRequests;
+    this.requestTimeout = Objects.requireNonNull(requestTimeout);
+    this.servers = Objects.requireNonNull(servers);
+  }
+
+  public @NonNull String getClientId() {
     return clientId;
   }
 
-  public void setClientId(String clientId) {
-    this.clientId = clientId;
-  }
-
-  public Duration getCloseTimeout() {
+  public @NonNull Duration getCloseTimeout() {
     return closeTimeout;
   }
 
-  public void setCloseTimeout(Duration closeTimeout) {
-    this.closeTimeout = closeTimeout;
-  }
-
-  public Map<String, Object> getConfig() {
+  public @NonNull Map<String, Object> getConfig() {
     return config;
-  }
-
-  public void setConfig(Map<String, Object> config) {
-    this.config = config;
   }
 
   public int getMaxConcurrentRequests() {
     return maxConcurrentRequests;
   }
 
-  public void setMaxConcurrentRequests(int maxConcurrentRequests) {
-    this.maxConcurrentRequests = maxConcurrentRequests;
-  }
-
-  public Duration getRequestTimeout() {
+  public @NonNull Duration getRequestTimeout() {
     return requestTimeout;
   }
 
-  public void setRequestTimeout(Duration requestTimeout) {
-    this.requestTimeout = requestTimeout;
-  }
-
-  public List<String> getServers() {
+  public @NonNull List<String> getServers() {
     return servers;
-  }
-
-  public void setServers(List<String> servers) {
-    this.servers = servers;
   }
 
   @Override
@@ -83,21 +86,19 @@ public class ProducerConfig {
   }
 
   @Override
-  public boolean equals(Object o) {
+  public boolean equals(final Object o) {
     if (this == o) {
       return true;
     }
-
-    if (!(o instanceof ProducerConfig)) {
+    if (o == null || getClass() != o.getClass()) {
       return false;
     }
-
     final ProducerConfig that = (ProducerConfig) o;
-    return maxConcurrentRequests == that.maxConcurrentRequests
-        && Objects.equals(clientId, that.clientId)
-        && Objects.equals(closeTimeout, that.closeTimeout)
-        && Objects.equals(config, that.config)
-        && Objects.equals(requestTimeout, that.requestTimeout)
-        && Objects.equals(servers, that.servers);
+    return getMaxConcurrentRequests() == that.getMaxConcurrentRequests()
+        && Objects.equals(getClientId(), that.getClientId())
+        && Objects.equals(getCloseTimeout(), that.getCloseTimeout())
+        && Objects.equals(getConfig(), that.getConfig())
+        && Objects.equals(getRequestTimeout(), that.getRequestTimeout())
+        && Objects.equals(getServers(), that.getServers());
   }
 }

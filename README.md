@@ -6,35 +6,23 @@ Zeebe Kafka Exporter
 An easy to use exporter which will export Zeebe records to a configured Kafka topic, compatible with
 [zeebe](https://github.com/zeebe-io/zeebe) versions:
 
-- [0.20.0](https://github.com/zeebe-io/zeebe/releases/tag/0.20.0)
+- [0.23.4]https://github.com/zeebe-io/zeebe/releases/tag/0.23.4)
+- [0.24.1](https://github.com/zeebe-io/zeebe/releases/tag/0.24.1)
 
 For more information about the exporters please read the [Exporter documentation](https://docs.zeebe.io/basics/exporters.html).
 
-> This is a work in progress; you're welcome to contribute code or ideas, but no guarantees are made about the exporter itself.
-Use at your own risks.
-
 ## Trying it out
 
-The quickest way to get started is after cloning the project:
-
-```sh
-mvn clean install
-docker-compose up -d zeebe kafka zookeeper consumer
-```
-
-Then you can view the exported topics by checking the consumer logs:
-
-```sh
-docker logs -f consumer
-```
+If you just want to try it out immediately, go to the [Docker](#docker) section below - this will
+show you how to quickly spawn all required services and see how they interact together.
 
 ## Installation
 
 The quickest way to get started is:
 
-1. Download the latest release (`zeebe-kafka-exporter-*-uber.jar`).
+1. Download the latest release (`zeebe-kafka-exporter-*-jar-with-dependencies.jar`).
 1. Copy it to the `lib/` folder of your Zeebe brokers.
-1. Copy the configuration from `exporter.kafka.cfg.toml` into each broker's `zeebe.cfg.toml` (e.g. append it at the end).
+1. Copy the contents of the configuration from `exporter.yml` into your Zeebe `application.yml`
 1. Update the configuration's list of servers to point to your Kafka instances.
 
 The next time you start your Zeebe cluster, all event-type records will be exported to their respective Kafka topics.
@@ -45,105 +33,163 @@ The exporter is set up to stream records from Zeebe to Kafka as they are process
 While this is done asynchronously, to ensure that the position is updated correctly, it keeps buffers in flight requests
 and processes their results in the order they were sent, not necessarily in the order the Kafka cluster answered.
 
-Records are serialized to Kafka using
-[a common protobuf schema](https://github.com/zeebe-io/zeebe-exporter-protobuf/blob/master/src/main/proto/schema.proto),
-where there is one message per record kind (e.g. deployment, job, variable).
+Records are serialized to Kafka using plain JSON. Keys are JSON representation of
+`io.zeebe.exporters.kafka.serde.RecordId`, and values are serialized using the standard Zeebe
+`io.zeebe.protocol.record.Record#toJson()` method. The `io.zeebe.exporters:zeebe-kafka-exporter-serde`
+module provides easy to use `Deserializer` implementations in Java for use in your consumers.
 
-The [configuration file](https://github.com/zeebe-io/zeebe-kafka-exporter/blob/master/exporter/exporter.kafka.cfg.toml)
+The [configuration file](https://github.com/zeebe-io/zeebe-kafka-exporter/blob/master/exporter/exporter.yml)
 is a good starting point to learn more about how the exporter works.
 
 ### Advanced configuration
 
-You can configure the producer for more advanced use cases by using the `[exporters.args.producer]` table, in which you
-can define arbitrary Kafka producer settings. So for example, to configure two way SSL handshake:
+You can configure the producer for more advanced use cases by using the
+`zeebe.broker.exporters.kafka.args.producer.config` configuration property, which lets you
+arbitrarily configure your Kafka producer the same way you normally would. This property is parsed
+as a standard Java properties file. For example, say you wanted to connect to a secured Kafka
+instance, you could define the producer config as:
 
-```toml
-# ...
+```yaml
+config: |
+security.protocol=SSL
+ssl.truststore.location=/truststore.jks
+ssl.truststore.password=test1234
+```
 
-[exporter.args.producer]
-"security.protocol" = "SSL"
-"ssl.truststore.location" = "/var/private/ssl/kafka.client.truststore.jks"
-"ssl.truststore.password" = "test1234"
-"ssl.keystore.location" = "/var/private/ssl/kafka.client.keystore.jks"
-"ssl.keystore.password" = "test1234"
-"ssl.key.password" = "test1234"
+You can also pass this configuration via an environment variable. If you exporter ID is kafka, for
+example, you could set the following environment variable:
 
-# ...
+```shell
+export ZEEBE_BROKER_EXPORTERS_KAFKA_ARGS_PRODUCER_CONFIG="security.protocol=SSL\nssl.truststore.location=/truststore.jks\nssl.truststore.password=test1234"
 ```
 
 ## Examples
 
-In the [zeebe-kafka-exporter-samples](https://github.com/zeebe-io/zeebe-kafka-exporter/tree/master/samples) module, you
-can find examples of different consumers.
+The [zeebe-kafka-exporter-qa](https://github.com/zeebe-io/zeebe-kafka-exporter/tree/master/qa) module
+shows how to start a Docker container, inject the exporter, configure it, and consume the exported records.
 
-### Generic record consumer
+For a more normal deployment, you can look at the
+[docker-compose.yml](https://github.com/zeebe-io/zeebe-kafka-exporter/tree/master/docker-compose.yml)
+file, which will start a Zeebe broker with the exporter configured via
+[exporter.yml](https://github.com/zeebe-io/zeebe-kafka-exporter/tree/master/exporter/exporter.yml),
+a Zookeeper node, a Kafka node, and a consumer node which simply prints out everything send to Kafka
+on any topic starting with `zeebe`.
 
-Although records are serialized using a different Protobuf message per topic, it is possible to read from multiple
-topics by using a `GenericRecordDeserializer`. It relies on the fact that the producer in the exporter uses a
-`GenericRecordSerializer` by default, which will serialize a record as a normal `SchemaSerializer<?>` would, but will
-additionally write the schema descriptor type in the record headers. This allows the consumer to then deserialize the
-message to its correct type, be it `Schema.DeploymentRecord` or `Schema.VariableRecord`.
+### Consuming Zeebe records
 
-> This has the unfortunate side effect that you must write code to unpack the message to a concrete type should you need
-to; any improvements here would welcome.
+As mentioned, Zeebe records are serialized using JSON. The key is the JSON representation of the
+Java class
+[RecordId](https://github.com/zeebe-io/zeebe-kafka-exporter/tree/master/serde/src/main/java/io/zeebe/exporters/kafka/serde/RecordId.java),
+and the value is serialized using the Zeebe `io.zeebe.protocol.record.Record#toJson()` method.
+
+If you want to consume records via the Java client, you can make use of the deserializers provided
+by the `io.zeebe.exporters:zeebe-kafka-exporter-serde` module:
+    - [RecordIdDeserializer](https://github.com/zeebe-io/zeebe-kafka-exporter/tree/master/serde/src/main/java/io/zeebe/exporters/kafka/serde/RecordIdDeserializer.java)
+    - [RecordDeserializer](https://github.com/zeebe-io/zeebe-kafka-exporter/tree/master/serde/src/main/java/io/zeebe/exporters/kafka/serde/RecordDeserializer.java)
 
 An example of a consumer reading from all `zeebe-*` prefixed topics:
 
 ```java
-final Consumer<Schema.RecordId, GenericRecord> consumer =
-    new KafkaConsumer<>(config, new RecordIdDeserializer(), new GenericRecordDeserializer());
-consumer.subscribe(Pattern.compile("^zeebe-.*$"));
-while (true) {
-  final ConsumerRecords<Schema.RecordId, GenericRecord> consumed =
-      consumer.poll(Duration.ofSeconds(2));
-  for (ConsumerRecord<Schema.RecordId, GenericRecord> record : consumed) {
-    logger.info(
-        "================[{}] {}-{} ================",
-        record.topic(),
-        record.key().getPartitionId(),
-        record.key().getPosition());
-    logger.info("{}", record.value().getMessage().toString());
+package com.acme;
+
+import io.zeebe.protocol.record.Record;
+import java.time.Duration;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.UUID;
+import java.util.regex.Pattern;
+import org.apache.kafka.clients.consumer.Consumer;
+import org.apache.kafka.clients.consumer.ConsumerConfig;
+import org.apache.kafka.clients.consumer.ConsumerRecord;
+import org.apache.kafka.clients.consumer.ConsumerRecords;
+import org.apache.kafka.clients.consumer.KafkaConsumer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+public final class MyClass {
+  private static final Logger LOGGER = LoggerFactory.getLogger(MyClass.class);
+  private static final Pattern SUBSCRIPTION_PATTERN = Pattern.compile("^zeebe-.*$");
+
+  public static void main(final String[] args) {
+    final Map<String, Object> config = new HashMap<>();
+    config.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:29092");
+    config.put(ConsumerConfig.GROUP_ID_CONFIG, UUID.randomUUID().toString());
+    config.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
+    config.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, true);
+    config.put(ConsumerConfig.MAX_POLL_RECORDS_CONFIG, Integer.MAX_VALUE);
+    config.put(ConsumerConfig.METADATA_MAX_AGE_CONFIG, 5_000);
+
+    final Consumer<RecordId, Record<?>> consumer =
+      new KafkaConsumer<>(config, new RecordIdDeserializer(), new RecordDeserializer());
+    consumer.subscribe(SUBSCRIPTION_PATTERN);
+
+    while (true) {
+      final ConsumerRecords<RecordId, Record<?>> consumed = consumer.poll(Duration.ofSeconds(1));
+      for (final ConsumerRecord<RecordId, Record<?>> record : consumed) {
+        LOGGER.info(
+          "================[{}] {}-{} ================",
+          record.topic(),
+          record.key().getPartitionId(),
+          record.key().getPosition());
+        LOGGER.info("{}", record.value().getValue());
+      }
+    }
   }
-}
-```
-
-### Single topic consumer
-
-Since records are serialized using the same Protobuf message for a single topic, it's possible to consume them and
-handle the concrete type directly by using a `SchemaDeserializer<?>` for that type. For example, the following will
-consume only workflow instance records, and in the inner loop, the record value is simply the Protobuf message.
-
-```java
-final Consumer<Schema.RecordId, Schema.WorkflowInstanceRecord> consumer =
-    new KafkaConsumer<>(
-        config,
-        new RecordIdDeserializer(),
-        new SchemaDeserializer<>(Schema.WorkflowInstanceRecord.parser()));
-consumer.subscribe(Collections.singleton("zeebe-workflow"));
-
-while (true) {
-  final ConsumerRecords<Schema.RecordId, Schema.WorkflowInstanceRecord> consumed =
-      consumer.poll(Duration.ofSeconds(2));
-  for (ConsumerRecord<Schema.RecordId, Schema.WorkflowInstanceRecord> record : consumed) {
-    logger.info(
-        "================[{}] {}-{} ================",
-        record.topic(),
-        record.key().getPartitionId(),
-        record.key().getPosition());
-    logger.info("{}", record.value().toString());
 }
 ```
 
 ## Docker
 
-The [exporter](https://github.com/zeebe-io/zeebe-kafka-exporter/tree/master/exporter) and
-[samples](https://github.com/zeebe-io/zeebe-kafka-exporter/tree/master/samples) modules both come with their own
-`Dockerfile`; the exporter's will spawn a standard `zeebe` container with a pre-configured exporter, and the samples'
-will spawn an OpenJDK container running the `GenericConsumer` example in a loop.
+The
+[docker-compose.yml](https://github.com/zeebe-io/zeebe-kafka-exporter/tree/master/docker-compose.yml)
+found in the root of the project is a good example of how you can deploy Zeebe, Kafka, and connect
+them via the exporter.
 
-From the root of the project, you can use `docker-compose up -d` to start a `zookeeper`/`kafka` pair (with ports `2181`
-and `29092` exposed respectively), a `zeebe` broker/gateway (client port `25600`), and a generic consumer which will
-output all records being exported. This is meant primarily to get a feel of how the whole thing works together.
+To run it, first build the correct exporter artifact which `docker-compose` can find. From the root
+of the project, run:
+
+```shell
+mvn install -DskipTests -Dexporter.finalName=zeebe-kafka-exporter
+```
+
+> It's important here to note that we set the artifact's final name - this allows us to use a fixed
+> name in the `docker-compose.yml` in order to mount the file to the Zeebe container.
+
+Then you start the services - they can be started in parallel with no worries.
+
+```shell
+docker-compose up -d
+```
+
+> If you wish to stop these containers, remember that some of them create volumes, so unless you
+> plan on reusing those make sure to bring everything down using `docker-compose down -v`.
+
+The services started are the following:
+
+  - zeebe: with the gateway port (26500) opened
+  - kafka: with the standard 9092 port opened for internal communication, and port 29092 for external
+  - consumer: a simple kafkacat image which will print out every record published on any topic starting with `zeebe`
+  - zookeeper: required to start Kafka
+
+Once everything is up and running, use your Zeebe cluster as you normally would. For example, given
+a workflow at `~/workflow.bpmn`, you could deploy it as:
+
+```shell
+zbctl --insecure deploy ~/workflow.bpmn
+```
+
+After this, you can see the messages being consumed by the consumer running:
+
+```shell
+docker logs -f consumer
+```
+
+> You may see some initial error logs from the consumer - this happens while the Kafka broker isn't
+> fully up, but it should stop once kafkacat can connect to it.
+
+> The first time a record of a certain kind (e.g. deployment, job, workflow, etc.) is published, it
+> will create a new topic for it. The consumer is refreshing the list of topics every second, which
+> means that for that first message there may be a bit of delay.
 
 ## Reference
 
@@ -165,91 +211,99 @@ the exporter never blocks.
 
 ## Configuration
 
-A sample configuration file is included in the project under `exporter.kafka.cfg.toml`.
+A sample configuration file is included in the project under `exporter.yml`.
 
-> NOTE: there is currently a bug where the TOML parser used in Zeebe parses all numbers as doubles, which if passed
-directly as `ProducerConfig` may cause errors. It's recommended for now to use the extra config arguments for
-non-numerial values until that's fixed.
+```yaml
+zeebe:
+  broker:
+    exporters:
+      kafka:
+        className: io.zeebe.exporters.kafka.KafkaExporter
+        args:
+          # Controls how many records can have been sent to the Kafka broker without
+          # any acknowledgment Once the limit is reached the exporter will block and
+          # wait until either one record is acknowledged
+          maxInFlightRecords: 1000
+          # How often should the exporter drain the in flight records' queue of completed
+          # requests and update the broker with the guaranteed latest exported position
+          inFlightRecordCheckIntervalMs: 1000
 
-```toml
-[[exporters]]
-id = "kafka"
-className = "io.zeebe.exporters.kafka.KafkaExporter"
+          # Producer specific configuration
+          producer:
+            # The list of initial Kafka broker contact points. The format should be the same
+            # one as the ProducerConfig expects, i.e. "host:port"
+            # Maps to ProducerConfig.BOOTSTRAP_SERVERS_CONFIG
+            # For example:
+            # servers:
+            #   - kafka:9092
+            servers: []
+            # Controls how long the producer will wait for a request to be acknowledged by
+            # the Kafka broker before retrying it
+            # Maps to ProducerConfig.REQUEST_TIMEOUT_MS_CONFIG
+            requestTimeoutMs: 5000
+            # Grace period when shutting down the producer in milliseconds
+            closeTimeoutMs: 5000
+            # Producer client identifier
+            clientId: zeebe
+            # Max concurrent requests to the Kafka broker; note that in flight records are batched such that
+            # in one request you can easily have a thousand records, depending on the producer's batch
+            # configuration.
+            maxConcurrentRequests: 3
 
-  # Top level exporter arguments
-  [exporters.args]
-  # Controls how many records can have been sent to the Kafka broker without
-  # any acknowledgment Once the limit is reached the exporter will block and
-  # wait until either one record is acknowledged
-  maxInFlightRecords = 1000
-  # How often should the exporter drain the in flight records' queue of completed
-  # requests and update the broker with the guaranteed latest exported position
-  inFlightRecordCheckIntervalMs = 1000
+            # Any setting under the following section will be passed verbatim to
+            # ProducerConfig; you can use this to configure authentication, compression,
+            # etc. Note that you can overwrite some important settings, so avoid changing
+            # idempotency, delivery timeout, and retries, unless you know what you're doing
+            config: |
+              linger.ms=5
+              buffer.memory=8388608
+              batch.size=32768
+              max.block.ms=5000
 
-  # Producer specific configuration
-  [exporters.args.producer]
-  # The list of initial Kafka broker contact points. The format should be the same
-  # one as the ProducerConfig expects, i.e. "host:port"
-  # Maps to ProducerConfig.BOOTSTRAP_SERVERS_CONFIG
-  servers = [ "kafka:9092" ]
-  # Controls how long the producer will wait for a request to be acknowledged by
-  # the Kafka broker before retrying it
-  # Maps to ProducerConfig.REQUEST_TIMEOUT_MS_CONFIG
-  requestTimeoutMs = 5000
-  # Grace period when shutting down the producer in milliseconds
-  closeTimeoutMs = 5000
-  # Producer client identifier
-  clientId = "zeebe"
-  # Max concurrent requests to the Kafka broker; note that in flight records are batched such that
-  # in one request you can easily have a thousand records, depending on the producer's batch
-  # configuration.
-  maxConcurrentRequests = 3
-
-  # Any setting under the following section will be passed verbatim to
-  # ProducerConfig; you can use this to configure authentication, compression,
-  # etc. Note that you can overwrite some important settings, so avoid changing
-  # idempotency, delivery timeout, and retries, unless you know what you're doing
-  [exporters.args.producer.config]
-
-  # Controls which records are pushed to Kafka and to which topic
-  # Each entry is a sub-map which can contain two entries:
-  #     type => [string]
-  #     topic => string
-  #
-  # Topic is the topic to which the record with the given value type
-  # should be sent to, e.g. for a deployment record below we would
-  # send the record to "zeebe-deployment" topic.
-  #
-  # Type is a list of accepted record types, allowing you to filter
-  # if you want nothing ([]), commands (["command"]), events (["events"]),
-  # or rejections (["rejection"]), or a combination of the three, e.g.
-  # ["command", "event"].
-  [exporters.args.records]
-  # If a record value type is omitted in your configuration file,
-  # it will fall back to whatever is configured in the defaults
-  defaults = { type = [ "event" ], topic = "zeebe" }
-  # For records with a value of type DEPLOYMENT
-  deployment = { topic = "zeebe-deployment" }
-  # For records with a value of type INCIDENT
-  incident = { topic = "zeebe-incident" }
-  # For records with a value of type JOB_BATCH
-  jobBatch = { topic = "zeebe-job-batch" }
-  # For records with a value of type JOB
-  job = { topic = "zeebe-job" }
-  # For records with a value of type MESSAGE
-  message = { topic = "zeebe-message" }
-  # For records with a value of type MESSAGE_SUBSCRIPTION
-  messageSubscription = { topic = "zeebe-message-subscription" }
-  # For records with a value of type MESSAGE_START_EVENT_SUBSCRIPTION
-  messageStartEventSubscription = { topic = "zeebe-message-subscription-start-event" }
-  # For records with a value of type RAFT
-  raft = { topic = "zeebe-raft" }
-  # For records with a value of type TIMER
-  timer = { topic = "zeebe-timer" }
-  # For records with a value of type VARIABLE
-  variable = { topic = "zeebe-variable" }
-  # For records with a value of type WORKFLOW_INSTANCE
-  workflowInstance = { topic = "zeebe-workflow" }
-  # For records with a value of type WORKFLOW_INSTANCE_SUBSCRIPTION
-  workflowInstanceSubscription = { topic = "zeebe-workflow-subscription" }
+          # Controls which records are pushed to Kafka and to which topic
+          # Each entry is a sub-map which can contain two entries:
+          #     type => string
+          #     topic => string
+          #
+          # Topic is the topic to which the record with the given value type
+          # should be sent to, e.g. for a deployment record below we would
+          # send the record to "zeebe-deployment" topic.
+          #
+          # Type is a comma separated string of accepted record types, allowing you to filter if you
+          # want nothing (""), commands ("command"), events ("events"), or rejections ("rejection"),
+          # or a combination of the three, e.g. "command,event".
+          #
+          # To omit certain records entirely, set type to an empty string. For example,
+          # records:
+          #   deployment: { type: "" }
+          records:
+            # If a record value type is omitted in your configuration file,
+            # it will fall back to whatever is configured in the defaults
+            defaults: { type: "event", topic: zeebe }
+            # For records with a value of type DEPLOYMENT
+            deployment: { topic: zeebe-deployment }
+            # For records with a value of type INCIDENT
+            incident = { topic: zeebe-incident }
+            # For records with a value of type JOB_BATCH
+            jobBatch: { topic = "zeebe-job-batch" }
+            # For records with a value of type JOB
+            job: { topic: zeebe-job }
+            # For records with a value of type MESSAGE
+            message: { topic: zeebe-message }
+            # For records with a value of type MESSAGE_SUBSCRIPTION
+            messageSubscription: { topic: zeebe-message-subscription }
+            # For records with a value of type MESSAGE_START_EVENT_SUBSCRIPTION
+            messageStartEventSubscription: { topic: zeebe-message-subscription-start-event }
+            # For records with a value of type RAFT
+            raft: { topic: zeebe-raft }
+            # For records with a value of type TIMER
+            timer: { topic: zeebe-timer }
+            # For records with a value of type VARIABLE
+            variable: { topic: zeebe-variable }
+            # For records with a value of type WORKFLOW_INSTANCE
+            workflowInstance: { topic: zeebe-workflow }
+            # For records with a value of type WORKFLOW_INSTANCE_RESULT
+            workflowInstanceResult: { topic: zeebe-workflow-result }
+            # For records with a value of type WORKFLOW_INSTANCE_SUBSCRIPTION
+            workflowInstanceSubscription: { topic: zeebe-workflow-subscription }
 ```

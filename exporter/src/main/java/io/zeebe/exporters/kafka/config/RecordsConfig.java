@@ -15,29 +15,43 @@
  */
 package io.zeebe.exporters.kafka.config;
 
+import edu.umd.cs.findbugs.annotations.NonNull;
 import io.zeebe.protocol.record.ValueType;
-import java.util.EnumMap;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 
-public class RecordsConfig {
-  private final Map<ValueType, RecordConfig> typeMap = new EnumMap<>(ValueType.class);
-  private RecordConfig defaults;
+/**
+ * {@link RecordsConfig} provides a default {@link RecordConfig} for every {@link ValueType}, with
+ * the possibility of setting a specific {@link RecordConfig} for a given {@link ValueType}.
+ */
+public final class RecordsConfig {
+  private final Map<ValueType, RecordConfig> typeMap;
+  private final RecordConfig defaults;
 
-  public Map<ValueType, RecordConfig> getTypeMap() {
+  public RecordsConfig(
+      final @NonNull Map<ValueType, RecordConfig> typeMap, @NonNull final RecordConfig defaults) {
+    this.typeMap = Objects.requireNonNull(typeMap);
+    this.defaults = Objects.requireNonNull(defaults);
+  }
+
+  public @NonNull Map<ValueType, RecordConfig> getTypeMap() {
     return typeMap;
   }
 
-  public RecordConfig getDefaults() {
+  public @NonNull RecordConfig getDefaults() {
     return defaults;
   }
 
-  public void setDefaults(RecordConfig defaults) {
-    this.defaults = defaults;
-  }
-
-  public RecordConfig forType(ValueType type) {
-    return typeMap.get(type);
+  /**
+   * Returns the correct {@link RecordConfig} for this type, or {@link #getDefaults()} if none
+   * defined for the given type.
+   *
+   * @param type the value type to get the {@link RecordConfig} of
+   * @return the configured {@link RecordConfig} for this type, or {@link #getDefaults()}
+   */
+  public @NonNull RecordConfig forType(final @NonNull ValueType type) {
+    return Optional.ofNullable(typeMap.get(type)).orElse(defaults);
   }
 
   @Override
@@ -46,16 +60,15 @@ public class RecordsConfig {
   }
 
   @Override
-  public boolean equals(Object o) {
+  public boolean equals(final Object o) {
     if (this == o) {
       return true;
     }
-
-    if (!(o instanceof RecordsConfig)) {
+    if (o == null || getClass() != o.getClass()) {
       return false;
     }
-
     final RecordsConfig that = (RecordsConfig) o;
-    return Objects.equals(defaults, that.defaults) && Objects.equals(typeMap, that.typeMap);
+    return Objects.equals(getTypeMap(), that.getTypeMap())
+        && Objects.equals(getDefaults(), that.getDefaults());
   }
 }

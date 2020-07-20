@@ -15,23 +15,37 @@
  */
 package io.zeebe.exporters.kafka.util;
 
+import edu.umd.cs.findbugs.annotations.NonNull;
+import java.util.Objects;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import org.apache.kafka.clients.producer.RecordMetadata;
 
-public class Request implements Future<Long> {
+/**
+ * Represents an in-flight request as a future, which when completed returns the position of the
+ * record that was successfully acknowledged by Kafka.
+ *
+ * <p>Note that while we treat it as an individual request, it's most likely batched by the Kafka
+ * producer and send in group.
+ */
+public final class Request implements Future<Long> {
   private final Future<RecordMetadata> wrappedFuture;
   private final long position;
 
-  public Request(long position, Future<RecordMetadata> wrappedFuture) {
+  /**
+   * @param position the highest position of any record tracked by this request.
+   * @param wrappedFuture the Kafka request's future with which we can track if the records are
+   *     acknowledged
+   */
+  public Request(final long position, final @NonNull Future<RecordMetadata> wrappedFuture) {
     this.position = position;
-    this.wrappedFuture = wrappedFuture;
+    this.wrappedFuture = Objects.requireNonNull(wrappedFuture);
   }
 
   @Override
-  public boolean cancel(boolean mayInterruptIfRunning) {
+  public boolean cancel(final boolean mayInterruptIfRunning) {
     return wrappedFuture.cancel(mayInterruptIfRunning);
   }
 
@@ -51,8 +65,9 @@ public class Request implements Future<Long> {
     return position;
   }
 
+  @SuppressWarnings("NullableProblems")
   @Override
-  public Long get(long timeout, TimeUnit unit)
+  public Long get(final long timeout, final TimeUnit unit)
       throws InterruptedException, ExecutionException, TimeoutException {
     wrappedFuture.get(timeout, unit);
     return position;

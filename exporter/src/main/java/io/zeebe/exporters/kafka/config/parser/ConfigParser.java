@@ -15,13 +15,23 @@
  */
 package io.zeebe.exporters.kafka.config.parser;
 
+import edu.umd.cs.findbugs.annotations.NonNull;
+import edu.umd.cs.findbugs.annotations.Nullable;
 import java.util.function.Supplier;
 
+/**
+ * {@link ConfigParser} is a single-responsibility interface which should parse any given instance
+ * of type {@code T} into a valid instance of type {@code R}.
+ *
+ * @param <T> the raw configuration type to be parsed
+ * @param <R> the parsed configuration type
+ */
 @FunctionalInterface
 public interface ConfigParser<T, R> {
-  R parse(T config);
+  @NonNull
+  R parse(@Nullable T config);
 
-  default R parse(T config, Supplier<T> defaultValue) {
+  default R parse(@Nullable T config, final @NonNull Supplier<T> defaultValue) {
     if (config == null) {
       config = defaultValue.get();
     }

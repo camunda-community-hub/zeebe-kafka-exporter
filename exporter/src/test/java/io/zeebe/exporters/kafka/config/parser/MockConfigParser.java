@@ -15,20 +15,40 @@
  */
 package io.zeebe.exporters.kafka.config.parser;
 
-public class MockConfigParser<T, R> implements ConfigParser<T, R> {
-  private final ConfigParser<T, R> defaultConfigParser;
-  public R config;
+import edu.umd.cs.findbugs.annotations.NonNull;
+import edu.umd.cs.findbugs.annotations.Nullable;
+import java.util.Objects;
 
-  public MockConfigParser(ConfigParser<T, R> defaultConfigParser) {
-    this.defaultConfigParser = defaultConfigParser;
+/**
+ * {@link MockConfigParser} allows setting a predefined parsed value for any given value. If not
+ * set, it will delegate to an underlying parser of the same types, and memoize the value, such that
+ * every subsequent {@link #parse(Object)} call will return the same object.
+ *
+ * <p>You can override this by calling {@link #forceParse(Object)} if you need.
+ *
+ * @param <T> {@inheritDoc}
+ * @param <R> {@inheritDoc}
+ */
+public class MockConfigParser<T, R> implements ConfigParser<T, R> {
+  public R config;
+  private final ConfigParser<T, R> delegate;
+
+  public MockConfigParser(final @NonNull ConfigParser<T, R> delegate) {
+    this.delegate = Objects.requireNonNull(delegate);
   }
 
   @Override
-  public R parse(T config) {
+  public @NonNull R parse(final @Nullable T config) {
     if (this.config == null) {
-      return defaultConfigParser.parse(config);
+      return delegate.parse(config);
     }
 
     return this.config;
+  }
+
+  /** A helper method in tests to force re-parsing an updated configuration. */
+  public void forceParse(final @Nullable T config) {
+    this.config = null;
+    parse(config);
   }
 }

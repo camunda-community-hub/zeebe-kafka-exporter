@@ -19,45 +19,49 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import io.zeebe.exporters.kafka.config.RecordConfig;
 import io.zeebe.exporters.kafka.config.RecordsConfig;
+import io.zeebe.exporters.kafka.serde.RecordId;
+import io.zeebe.protocol.immutables.record.ImmutableDeploymentRecordValue;
+import io.zeebe.protocol.immutables.record.ImmutableRecord;
 import io.zeebe.protocol.record.Record;
 import io.zeebe.protocol.record.RecordType;
 import io.zeebe.protocol.record.ValueType;
-import io.zeebe.test.exporter.record.MockRecord;
+import io.zeebe.protocol.record.value.DeploymentRecordValue;
 import java.util.EnumSet;
+import java.util.Map;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.junit.Test;
 
+@SuppressWarnings("rawtypes")
 public class RecordHandlerTest {
+
+  private static final RecordConfig DEFAULT_RECORD_CONFIG =
+      new RecordConfig(EnumSet.allOf(RecordType.class), "zeebe");
+
   @Test
   public void shouldTransformRecord() {
     // given
-    final MockRecord record = new MockRecord();
-    final RecordConfig recordConfig = new RecordConfig();
-    final RecordsConfig recordsConfig = new RecordsConfig();
-    final RecordHandler recordHandler = new RecordHandler(recordsConfig);
-    recordsConfig.getTypeMap().put(ValueType.DEPLOYMENT, recordConfig);
-    recordConfig.setTopic("topic");
-    record.getMetadata().setValueType(ValueType.DEPLOYMENT);
+    final Record<DeploymentRecordValue> record =
+        buildDeploymentRecord().recordType(RecordType.COMMAND).build();
+    final RecordConfig deploymentRecordConfig =
+        new RecordConfig(EnumSet.allOf(RecordType.class), "topic");
+    final RecordHandler recordHandler = new RecordHandler(newRecordsConfig(RecordType.COMMAND));
 
     // when
-    final ProducerRecord<Record, Record> transformed = recordHandler.transform(record);
+    final ProducerRecord<RecordId, Record> transformed = recordHandler.transform(record);
 
     // then
-    assertThat(transformed.topic()).isEqualTo(recordConfig.getTopic());
-    assertThat(transformed.key()).isEqualTo(record);
+    assertThat(transformed.topic()).isEqualTo(deploymentRecordConfig.getTopic());
+    assertThat(transformed.key())
+        .isEqualTo(new RecordId(record.getPartitionId(), record.getPosition()));
     assertThat(transformed.value()).isEqualTo(record);
   }
 
   @Test
   public void shouldTestRecordAsNotAllowed() {
     // given
-    final MockRecord record = new MockRecord();
-    final RecordConfig recordConfig = new RecordConfig();
-    final RecordsConfig recordsConfig = new RecordsConfig();
-    final RecordHandler recordHandler = new RecordHandler(recordsConfig);
-    recordsConfig.getTypeMap().put(ValueType.DEPLOYMENT, recordConfig);
-    recordConfig.setAllowedTypes(EnumSet.of(RecordType.COMMAND));
-    record.getMetadata().setValueType(ValueType.DEPLOYMENT).setRecordType(RecordType.EVENT);
+    final Record<DeploymentRecordValue> record =
+        buildDeploymentRecord().recordType(RecordType.COMMAND).build();
+    final RecordHandler recordHandler = new RecordHandler(newRecordsConfig(RecordType.EVENT));
 
     // when - then
     assertThat(recordHandler.test(record)).isFalse();
@@ -66,15 +70,26 @@ public class RecordHandlerTest {
   @Test
   public void shouldTestRecordAsAllowed() {
     // given
-    final MockRecord record = new MockRecord();
-    final RecordConfig recordConfig = new RecordConfig();
-    final RecordsConfig recordsConfig = new RecordsConfig();
-    final RecordHandler recordHandler = new RecordHandler(recordsConfig);
-    recordsConfig.getTypeMap().put(ValueType.DEPLOYMENT, recordConfig);
-    recordConfig.setAllowedTypes(EnumSet.of(RecordType.EVENT));
-    record.getMetadata().setValueType(ValueType.DEPLOYMENT).setRecordType(RecordType.EVENT);
+    final Record<DeploymentRecordValue> record =
+        buildDeploymentRecord().recordType(RecordType.EVENT).build();
+    final RecordHandler recordHandler = new RecordHandler(newRecordsConfig(RecordType.EVENT));
 
     // when - then
     assertThat(recordHandler.test(record)).isTrue();
+  }
+
+  private RecordsConfig newRecordsConfig(final RecordType allowedType) {
+    final RecordConfig recordConfig = new RecordConfig(EnumSet.of(allowedType), "topic");
+    return new RecordsConfig(Map.of(ValueType.DEPLOYMENT, recordConfig), DEFAULT_RECORD_CONFIG);
+  }
+
+  private ImmutableRecord.Builder<DeploymentRecordValue> buildDeploymentRecord() {
+    return ImmutableRecord.<DeploymentRecordValue>builder()
+        .valueType(ValueType.DEPLOYMENT)
+        .recordType(RecordType.EVENT)
+        .timestamp(System.currentTimeMillis())
+        .value(ImmutableDeploymentRecordValue.builder().build())
+        .partitionId(1)
+        .position(1);
   }
 }

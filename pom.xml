@@ -9,27 +9,27 @@
   <artifactId>zeebe-kafka-exporter-root</artifactId>
   <groupId>io.zeebe</groupId>
   <packaging>pom</packaging>
-  <version>1.2.0-SNAPSHOT</version>
+  <version>2.0.0-SNAPSHOT</version>
   <inceptionYear>2019</inceptionYear>
   <url>https://github.com/zeebe-io/zeebe-kafka-exporter</url>
 
   <modules>
     <module>exporter</module>
-    <module>samples</module>
+    <module>qa</module>
     <module>serde</module>
   </modules>
 
   <parent>
     <groupId>org.camunda</groupId>
     <artifactId>camunda-release-parent</artifactId>
-    <version>2.5</version>
+    <version>3.7</version>
     <!-- do not remove empty tag - http://jira.codehaus.org/browse/MNG-4687 -->
     <relativePath/>
   </parent>
 
   <properties>
     <!-- release parent settings -->
-    <version.java>1.8</version.java>
+    <version.java>11</version.java>
     <nexus.snapshot.repository>
       https://app.camunda.com/nexus/content/repositories/zeebe-io-snapshots/
     </nexus.snapshot.repository>
@@ -43,25 +43,28 @@
     <license.header>com/mycila/maven/plugin/license/templates/APACHE-2.txt</license.header>
 
     <!-- project dependencies -->
-    <version.assertj>3.12.2</version.assertj>
+    <version.assertj>3.16.1</version.assertj>
+    <version.awaitility>4.0.3</version.awaitility>
+    <version.jackson>2.11.1</version.jackson>
     <version.junit>4.12</version.junit>
     <version.kafka>2.3.0</version.kafka>
-    <version.log4j>2.12.0</version.log4j>
     <version.mockito>3.0.0</version.mockito>
-    <version.protobuf>3.7.0</version.protobuf>
-    <version.slf4j>1.7.26</version.slf4j>
-    <version.testcontainers>1.11.3</version.testcontainers>
-    <version.zeebe>0.20.0</version.zeebe>
-    <version.zeebe-exporter-protobuf>0.7.0</version.zeebe-exporter-protobuf>
+    <version.slf4j>1.7.30</version.slf4j>
+    <version.spotbugs>3.1.12</version.spotbugs>
+    <version.testcontainers>1.14.3</version.testcontainers>
+    <version.zeebe>0.24.1</version.zeebe>
+    <version.zeebe-test-container>0.33.0</version.zeebe-test-container>
+    <version.zeebe-protocol-immutables>1.0.0</version.zeebe-protocol-immutables>
 
     <!-- plugin version -->
     <plugin.version.assembly>3.1.1</plugin.version.assembly>
     <plugin.version.checkstyle>3.0.0</plugin.version.checkstyle>
     <plugin.version.enforcer>3.0.0-M2</plugin.version.enforcer>
     <plugin.version.failsafe>2.22.1</plugin.version.failsafe>
-    <plugin.version.fmt>2.6.0</plugin.version.fmt>
+    <plugin.version.fmt>2.10</plugin.version.fmt>
+    <plugin.version.javadoc>3.2.0</plugin.version.javadoc>
     <plugin.version.license>3.0</plugin.version.license>
-    <plugin.version.sonar>3.6.0.1398</plugin.version.sonar>
+    <plugin.version.sonar>3.7.0.1746</plugin.version.sonar>
     <plugin.version.surefire>2.22.1</plugin.version.surefire>
 
     <!-- maven extensions -->
@@ -80,14 +83,20 @@
 
       <dependency>
         <groupId>io.zeebe</groupId>
-        <artifactId>zeebe-exporter-protobuf</artifactId>
-        <version>${version.zeebe-exporter-protobuf}</version>
+        <artifactId>zeebe-protocol-immutables</artifactId>
+        <version>${version.zeebe-protocol-immutables}</version>
       </dependency>
 
       <dependency>
-        <groupId>com.google.protobuf</groupId>
-        <artifactId>protobuf-java</artifactId>
-        <version>${version.protobuf}</version>
+        <groupId>com.fasterxml.jackson.core</groupId>
+        <artifactId>jackson-databind</artifactId>
+        <version>${version.jackson}</version>
+      </dependency>
+
+      <dependency>
+        <groupId>com.fasterxml.jackson.core</groupId>
+        <artifactId>jackson-annotations</artifactId>
+        <version>${version.jackson}</version>
       </dependency>
 
       <dependency>
@@ -97,9 +106,22 @@
       </dependency>
 
       <dependency>
+        <groupId>org.slf4j</groupId>
+        <artifactId>slf4j-simple</artifactId>
+        <version>${version.slf4j}</version>
+      </dependency>
+
+      <dependency>
         <groupId>org.apache.kafka</groupId>
         <artifactId>kafka-clients</artifactId>
         <version>${version.kafka}</version>
+      </dependency>
+
+      <dependency>
+        <groupId>com.github.spotbugs</groupId>
+        <artifactId>spotbugs-annotations</artifactId>
+        <version>${version.spotbugs}</version>
+        <scope>compile</scope>
       </dependency>
 
       <dependency>
@@ -115,15 +137,9 @@
       </dependency>
 
       <dependency>
-        <groupId>org.apache.logging.log4j</groupId>
-        <artifactId>log4j-slf4j-impl</artifactId>
-        <version>${version.log4j}</version>
-      </dependency>
-
-      <dependency>
-        <groupId>org.apache.logging.log4j</groupId>
-        <artifactId>log4j-core</artifactId>
-        <version>${version.log4j}</version>
+        <groupId>io.zeebe</groupId>
+        <artifactId>zeebe-test-container</artifactId>
+        <version>${version.zeebe-test-container}</version>
       </dependency>
 
       <dependency>
@@ -143,11 +159,27 @@
         <artifactId>mockito-core</artifactId>
         <version>${version.mockito}</version>
       </dependency>
+
+      <dependency>
+        <groupId>org.awaitility</groupId>
+        <artifactId>awaitility</artifactId>
+        <version>${version.awaitility}</version>
+      </dependency>
     </dependencies>
   </dependencyManagement>
 
   <build>
     <plugins>
+      <!-- JAVADOC -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-javadoc-plugin</artifactId>
+        <version>${plugin.version.javadoc}</version>
+        <configuration>
+          <source>${version.java}</source>
+        </configuration>
+      </plugin>
+
       <!-- LICENSE PLUGIN -->
       <plugin>
         <groupId>com.mycila</groupId>
@@ -198,7 +230,6 @@
           <sourceDirectories>
             <sourceDirectory>${project.build.sourceDirectory}</sourceDirectory>
             <sourceDirectory>${project.build.testSourceDirectory}</sourceDirectory>
-            <sourceDirectory>${project.basedir}/src/test/jmh</sourceDirectory>
           </sourceDirectories>
         </configuration>
         <executions>
@@ -238,11 +269,6 @@
             </goals>
           </execution>
         </executions>
-        <configuration>
-          <additionalSourceDirectories>
-            <additionalSourceDirectory>${project.basedir}/src/test/jmh</additionalSourceDirectory>
-          </additionalSourceDirectories>
-        </configuration>
       </plugin>
     </plugins>
 
@@ -273,22 +299,6 @@
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-assembly-plugin</artifactId>
           <version>${plugin.version.assembly}</version>
-          <configuration>
-            <descriptorRefs>
-              <descriptorRef>jar-with-dependencies</descriptorRef>
-            </descriptorRefs>
-            <finalName>${project.artifactId}-${project.version}-uber</finalName>
-            <appendAssemblyId>false</appendAssemblyId>
-          </configuration>
-          <executions>
-            <execution>
-              <id>make-assembly</id>
-              <phase>package</phase>
-              <goals>
-                <goal>single</goal>
-              </goals>
-            </execution>
-          </executions>
         </plugin>
       </plugins>
     </pluginManagement>
@@ -332,6 +342,7 @@
         <sonar.host.url>https://sonarcloud.io</sonar.host.url>
         <sonar.organization>zeebe-io</sonar.organization>
         <sonar.login>${env.SONARCLOUD_TOKEN}</sonar.login>
+        <sonar.projectName>Zeebe Kafka Exporter</sonar.projectName>
 
         <!-- skip some checks -->
         <skipTests>true</skipTests>

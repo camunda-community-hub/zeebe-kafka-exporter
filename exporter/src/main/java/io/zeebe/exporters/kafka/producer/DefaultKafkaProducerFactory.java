@@ -15,9 +15,11 @@
  */
 package io.zeebe.exporters.kafka.producer;
 
+import edu.umd.cs.findbugs.annotations.NonNull;
 import io.zeebe.exporters.kafka.config.Config;
+import io.zeebe.exporters.kafka.serde.RecordId;
 import io.zeebe.exporters.kafka.serde.RecordIdSerializer;
-import io.zeebe.exporters.kafka.serde.generic.GenericRecordSerializer;
+import io.zeebe.exporters.kafka.serde.RecordSerializer;
 import io.zeebe.protocol.record.Record;
 import java.util.HashMap;
 import java.util.Map;
@@ -25,9 +27,24 @@ import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.Producer;
 import org.apache.kafka.clients.producer.ProducerConfig;
 
-public class DefaultKafkaProducerFactory implements KafkaProducerFactory {
+/**
+ * {@link DefaultKafkaProducerFactory} is the default implementation of {@link KafkaProducerFactory}
+ * used by {@link io.zeebe.exporters.kafka.KafkaExporter}. It creates a new {@link Producer} based
+ * on the given {@link Config}, and adds a few default properties.
+ *
+ * <p>It's tuned for small, fast batching, and low memory consumption. By default, it will wait up
+ * to 10ms or until it has batched 32Kb in memory before sending a request. This is to lessen the
+ * load on Kafka while remaining fairly responsive.
+ *
+ * <p>The memory usage of the producer is soft capped to 8Mb - if you produce much faster than it
+ * can export, then you may run into exceptions. In this case, you can increase the memory to
+ * something you feel more comfortable with via {@link
+ * io.zeebe.exporters.kafka.config.raw.RawProducerConfig#config}.
+ */
+public final class DefaultKafkaProducerFactory implements KafkaProducerFactory {
+  @SuppressWarnings("rawtypes")
   @Override
-  public Producer<Record, Record> newProducer(Config config) {
+  public @NonNull Producer<RecordId, Record> newProducer(final @NonNull Config config) {
     final Map<String, Object> options = new HashMap<>();
 
     options.put(ProducerConfig.ENABLE_IDEMPOTENCE_CONFIG, true);
@@ -41,13 +58,22 @@ public class DefaultKafkaProducerFactory implements KafkaProducerFactory {
     options.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, config.getProducer().getServers());
     options.put(ProducerConfig.CLIENT_ID_CONFIG, config.getProducer().getClientId());
 
+    // provides a soft memory bound - there's some memory overhead used by SSL, compression, etc.,
+    // but this gives us a good idea of how much memory will be used by the exporter
+    options.put(ProducerConfig.BUFFER_MEMORY_CONFIG, 8 * 1024 * 1024L);
+
+    // wait up to 10ms or until the batch is full before sending
+    options.put(ProducerConfig.LINGER_MS_CONFIG, 10L);
+    options.put(ProducerConfig.BATCH_SIZE_CONFIG, 512 * 1024);
+
+    // determines how long to block if the buffer memory is full before throwing an exception
+    options.put(ProducerConfig.MAX_BLOCK_MS_CONFIG, 5_000L);
+
     // allow user configuration to override producer options
-    if (config.getProducer().getConfig() != null) {
-      options.putAll(config.getProducer().getConfig());
-    }
+    options.putAll(config.getProducer().getConfig());
 
     options.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, RecordIdSerializer.class);
-    options.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, GenericRecordSerializer.class);
+    options.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, RecordSerializer.class);
 
     return new KafkaProducer<>(options);
   }

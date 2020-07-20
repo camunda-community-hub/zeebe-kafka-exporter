@@ -15,71 +15,71 @@
  */
 package io.zeebe.exporters.kafka;
 
+import edu.umd.cs.findbugs.annotations.NonNull;
 import io.zeebe.exporter.api.Exporter;
 import io.zeebe.exporter.api.context.Context;
 import io.zeebe.exporter.api.context.Controller;
 import io.zeebe.exporters.kafka.config.Config;
 import io.zeebe.exporters.kafka.config.parser.ConfigParser;
-import io.zeebe.exporters.kafka.config.parser.TomlConfigParser;
-import io.zeebe.exporters.kafka.config.toml.TomlConfig;
+import io.zeebe.exporters.kafka.config.parser.RawConfigParser;
+import io.zeebe.exporters.kafka.config.raw.RawConfig;
 import io.zeebe.exporters.kafka.producer.DefaultKafkaProducerFactory;
 import io.zeebe.exporters.kafka.producer.KafkaProducerFactory;
 import io.zeebe.exporters.kafka.record.KafkaRecordFilter;
 import io.zeebe.exporters.kafka.record.RecordHandler;
+import io.zeebe.exporters.kafka.serde.RecordId;
 import io.zeebe.exporters.kafka.util.Request;
 import io.zeebe.exporters.kafka.util.RequestQueue;
 import io.zeebe.protocol.record.Record;
 import java.time.Duration;
+import java.util.Objects;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import org.apache.kafka.clients.producer.Producer;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.clients.producer.RecordMetadata;
-import org.apache.kafka.common.errors.InterruptException;
 import org.slf4j.Logger;
 
-/**
- * Implementation of a Zeebe exporter producing serialized records to a given Kafka topic.
- *
- * <p>TODO: implement another transmission strategy using transactions and see which is better
- */
+/** Implementation of a Zeebe exporter producing serialized records to a given Kafka topic. */
 public class KafkaExporter implements Exporter {
   static final Duration IN_FLIGHT_RECORD_CHECKER_INTERVAL = Duration.ofSeconds(1);
   private static final int UNSET_POSITION = -1;
 
   private final KafkaProducerFactory producerFactory;
-  private final ConfigParser<TomlConfig, Config> configParser;
+  private final ConfigParser<RawConfig, Config> configParser;
 
   private boolean isClosed = true;
   private String id;
   private Controller controller;
   private Logger logger;
 
+  @SuppressWarnings("rawtypes")
+  private Producer<RecordId, Record> producer;
+
   private Config config;
   private RecordHandler recordHandler;
-  private Producer<Record, Record> producer;
   private RequestQueue requests;
   private long latestExportedPosition = UNSET_POSITION;
 
   public KafkaExporter() {
-    this.producerFactory = new DefaultKafkaProducerFactory();
-    this.configParser = new TomlConfigParser();
+    this(new DefaultKafkaProducerFactory(), new RawConfigParser());
   }
 
   public KafkaExporter(
-      KafkaProducerFactory producerFactory, ConfigParser<TomlConfig, Config> configParser) {
-    this.producerFactory = producerFactory;
-    this.configParser = configParser;
+      final @NonNull KafkaProducerFactory producerFactory,
+      final @NonNull ConfigParser<RawConfig, Config> configParser) {
+    this.producerFactory = Objects.requireNonNull(producerFactory);
+    this.configParser = Objects.requireNonNull(configParser);
   }
 
   @Override
-  public void configure(Context context) {
+  public void configure(final Context context) {
     this.logger = context.getLogger();
     this.id = context.getConfiguration().getId();
 
-    final TomlConfig tomlConfig = context.getConfiguration().instantiate(TomlConfig.class);
-    this.config = this.configParser.parse(tomlConfig);
+    final RawConfig rawConfig = context.getConfiguration().instantiate(RawConfig.class);
+    this.config = this.configParser.parse(rawConfig);
     this.recordHandler = new RecordHandler(this.config.getRecords());
 
     context.setFilter(new KafkaRecordFilter(this.config.getRecords()));
@@ -87,7 +87,7 @@ public class KafkaExporter implements Exporter {
   }
 
   @Override
-  public void open(Controller controller) {
+  public void open(final Controller controller) {
     this.controller = controller;
     this.isClosed = false;
     this.requests = new RequestQueue(this.config.getMaxInFlightRecords());
@@ -107,8 +107,9 @@ public class KafkaExporter implements Exporter {
     logger.debug("Closed exporter {}", id);
   }
 
+  @SuppressWarnings("rawtypes")
   @Override
-  public void export(Record record) {
+  public void export(final Record record) {
     // The producer may be closed prematurely if an unrecoverable exception occurred, at which point
     // we ignore any further records; this way we do not block the exporter processor, and on
     // restart will reprocess all other records that we "missed" here.
@@ -119,7 +120,7 @@ public class KafkaExporter implements Exporter {
     }
 
     if (recordHandler.test(record)) {
-      final ProducerRecord<Record, Record> kafkaRecord = recordHandler.transform(record);
+      final ProducerRecord<RecordId, Record> kafkaRecord = recordHandler.transform(record);
       final Future<RecordMetadata> future = producer.send(kafkaRecord);
       final Request request = new Request(record.getPosition(), future);
 
@@ -145,21 +146,23 @@ public class KafkaExporter implements Exporter {
     }
   }
 
-  private void updatePosition(Request request) {
+  private void updatePosition(final Request request) {
     try {
       latestExportedPosition = request.get();
-    } catch (CancellationException e) {
+    } catch (final CancellationException e) {
       logger.error(
-          "In flight record was cancelled prematurely, will stop exporting to prevent missing records");
+          "In flight record was cancelled prematurely, will stop exporting to prevent missing records",
+          e);
       closeInternal();
-    } catch (ExecutionException e) {
+    } catch (final ExecutionException e) {
       logger.error(
           "Failed to ensure record was sent to Kafka, will stop exporting to prevent missing records",
           e);
       closeInternal();
-    } catch (InterruptedException e) { // NOSONAR: throwing InterruptException flags interrupt again
+    } catch (final InterruptedException e) {
+      Thread.currentThread().interrupt();
+      logger.debug("Interrupted while updating the last exported position, closing the exporter");
       closeInternal();
-      throw new InterruptException(e);
     }
   }
 
