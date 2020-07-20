@@ -193,7 +193,7 @@ docker logs -f consumer
 
 ## Reference
 
-The exporter uses a Kafka producer to push records out to different topics based on the incoming record value type (e.g. deployment, raft, etc.)
+The exporter uses a Kafka producer to push records out to different topics based on the incoming record value type (e.g. deployment, etc.)
 
 The producer is configured to be an idempotent producer which will retry a record "forever"; there is a delivery timeout configured, but the timeout is set
 to ~25 days, which for most use cases should be enough to fix any recoverable errors. In the case of unrecoverable errors, unfortunately a restart is pretty much
@@ -294,8 +294,6 @@ zeebe:
             messageSubscription: { topic: zeebe-message-subscription }
             # For records with a value of type MESSAGE_START_EVENT_SUBSCRIPTION
             messageStartEventSubscription: { topic: zeebe-message-subscription-start-event }
-            # For records with a value of type RAFT
-            raft: { topic: zeebe-raft }
             # For records with a value of type TIMER
             timer: { topic: zeebe-timer }
             # For records with a value of type VARIABLE
