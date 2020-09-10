@@ -17,7 +17,6 @@ package io.zeebe.exporters.kafka.producer;
 
 import edu.umd.cs.findbugs.annotations.NonNull;
 import io.zeebe.exporters.kafka.config.Config;
-import io.zeebe.exporters.kafka.serde.RecordId;
 import io.zeebe.protocol.record.Record;
 import org.apache.kafka.clients.producer.Producer;
 
@@ -29,5 +28,5 @@ import org.apache.kafka.clients.producer.Producer;
 @FunctionalInterface
 public interface KafkaProducerFactory {
   @NonNull
-  Producer<RecordId, Record> newProducer(@NonNull Config config);
+  Producer<Long, Record> newProducer(@NonNull Config config);
 }

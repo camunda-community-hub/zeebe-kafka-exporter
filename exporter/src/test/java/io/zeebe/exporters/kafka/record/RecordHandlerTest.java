@@ -19,7 +19,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import io.zeebe.exporters.kafka.config.RecordConfig;
 import io.zeebe.exporters.kafka.config.RecordsConfig;
-import io.zeebe.exporters.kafka.serde.RecordId;
 import io.zeebe.protocol.immutables.record.ImmutableDeploymentRecordValue;
 import io.zeebe.protocol.immutables.record.ImmutableRecord;
 import io.zeebe.protocol.record.Record;
@@ -47,12 +46,11 @@ public class RecordHandlerTest {
     final RecordHandler recordHandler = new RecordHandler(newRecordsConfig(RecordType.COMMAND));
 
     // when
-    final ProducerRecord<RecordId, Record> transformed = recordHandler.transform(record);
+    final ProducerRecord<Long, Record> transformed = recordHandler.transform(record);
 
     // then
     assertThat(transformed.topic()).isEqualTo(deploymentRecordConfig.getTopic());
-    assertThat(transformed.key())
-        .isEqualTo(new RecordId(record.getPartitionId(), record.getPosition()));
+    assertThat(transformed.key()).isEqualTo(record.getPartitionId());
     assertThat(transformed.value()).isEqualTo(record);
   }
 

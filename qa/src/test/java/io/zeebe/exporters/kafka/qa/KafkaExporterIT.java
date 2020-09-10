@@ -21,7 +21,6 @@ import io.zeebe.containers.ZeebeBrokerContainer;
 import io.zeebe.containers.ZeebePort;
 import io.zeebe.exporters.kafka.serde.RecordDeserializer;
 import io.zeebe.exporters.kafka.serde.RecordId;
-import io.zeebe.exporters.kafka.serde.RecordIdDeserializer;
 import io.zeebe.model.bpmn.Bpmn;
 import io.zeebe.model.bpmn.BpmnModelInstance;
 import io.zeebe.protocol.record.Assertions;
@@ -40,6 +39,7 @@ import org.apache.kafka.clients.consumer.Consumer;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
+import org.apache.kafka.common.serialization.LongDeserializer;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
@@ -99,12 +99,18 @@ public final class KafkaExporterIT {
         client.newDeployCommand().addWorkflowModel(process, "process.bpmn").send().join();
 
     // then
-    final List<ConsumerRecord<RecordId, Record<?>>> exportedRecords = consumeAllExportedRecords();
+    final List<ConsumerRecord<Long, Record<?>>> exportedRecords = consumeAllExportedRecords();
     final ConsumedRecord<DeploymentRecordValue> exportedDeploymentEvent =
         exportedRecords.stream()
             .filter(e -> e.value().getValueType() == ValueType.DEPLOYMENT)
             .filter(r -> r.value().getIntent() == DeploymentIntent.CREATE)
-            .map(r -> new ConsumedRecord<>(r.key(), (Record<DeploymentRecordValue>) r.value()))
+            .map(
+                r -> {
+                  final Record<DeploymentRecordValue> record =
+                      (Record<DeploymentRecordValue>) r.value();
+                  return new ConsumedRecord<>(
+                      new RecordId(record.getPartitionId(), record.getPosition()), record);
+                })
             .findFirst()
             .orElseThrow();
     final Record<DeploymentRecordValue> exportedRecord = exportedDeploymentEvent.getRecord();
@@ -119,13 +125,13 @@ public final class KafkaExporterIT {
         .hasResource(Bpmn.convertToString(process).getBytes());
   }
 
-  private List<ConsumerRecord<RecordId, Record<?>>> consumeAllExportedRecords() {
-    final List<ConsumerRecord<RecordId, Record<?>>> records = new ArrayList<>();
+  private List<ConsumerRecord<Long, Record<?>>> consumeAllExportedRecords() {
+    final List<ConsumerRecord<Long, Record<?>>> records = new ArrayList<>();
     final Duration timeout = Duration.ofSeconds(5);
-    ConsumerRecords<RecordId, Record<?>> consumedRecords;
+    ConsumerRecords<Long, Record<?>> consumedRecords;
 
     do {
-      try (Consumer<RecordId, Record<?>> consumer = newConsumer()) {
+      try (Consumer<Long, Record<?>> consumer = newConsumer()) {
         consumedRecords = consumer.poll(timeout);
         consumedRecords.forEach(records::add);
       }
@@ -134,10 +140,10 @@ public final class KafkaExporterIT {
     return records;
   }
 
-  private Consumer<RecordId, Record<?>> newConsumer() {
+  private Consumer<Long, Record<?>> newConsumer() {
     final Properties config = newConsumerConfig();
-    final Consumer<RecordId, Record<?>> consumer =
-        new KafkaConsumer<>(config, new RecordIdDeserializer(), new RecordDeserializer());
+    final Consumer<Long, Record<?>> consumer =
+        new KafkaConsumer<>(config, new LongDeserializer(), new RecordDeserializer());
     consumer.subscribe(TOPIC_SUBSCRIPTION_PATTERN);
 
     return consumer;

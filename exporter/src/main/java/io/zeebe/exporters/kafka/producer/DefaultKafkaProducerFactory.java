@@ -17,8 +17,7 @@ package io.zeebe.exporters.kafka.producer;
 
 import edu.umd.cs.findbugs.annotations.NonNull;
 import io.zeebe.exporters.kafka.config.Config;
-import io.zeebe.exporters.kafka.serde.RecordId;
-import io.zeebe.exporters.kafka.serde.RecordIdSerializer;
+import io.zeebe.exporters.kafka.serde.ProtobufRecordSerializer;
 import io.zeebe.exporters.kafka.serde.RecordSerializer;
 import io.zeebe.protocol.record.Record;
 import java.util.HashMap;
@@ -26,6 +25,7 @@ import java.util.Map;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.Producer;
 import org.apache.kafka.clients.producer.ProducerConfig;
+import org.apache.kafka.common.serialization.LongSerializer;
 
 /**
  * {@link DefaultKafkaProducerFactory} is the default implementation of {@link KafkaProducerFactory}
@@ -44,7 +44,7 @@ import org.apache.kafka.clients.producer.ProducerConfig;
 public final class DefaultKafkaProducerFactory implements KafkaProducerFactory {
   @SuppressWarnings("rawtypes")
   @Override
-  public @NonNull Producer<RecordId, Record> newProducer(final @NonNull Config config) {
+  public @NonNull Producer<Long, Record> newProducer(final @NonNull Config config) {
     final Map<String, Object> options = new HashMap<>();
 
     options.put(ProducerConfig.ENABLE_IDEMPOTENCE_CONFIG, true);
@@ -72,8 +72,12 @@ public final class DefaultKafkaProducerFactory implements KafkaProducerFactory {
     // allow user configuration to override producer options
     options.putAll(config.getProducer().getConfig());
 
-    options.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, RecordIdSerializer.class);
-    options.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, RecordSerializer.class);
+    options.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, LongSerializer.class);
+    if ("protobuf".equals(config.getProducer().getFormat())) {
+      options.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, ProtobufRecordSerializer.class);
+    } else {
+      options.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, RecordSerializer.class);
+    }
 
     return new KafkaProducer<>(options);
   }
