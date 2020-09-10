@@ -18,8 +18,8 @@ package io.zeebe.exporters.kafka.record;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import io.zeebe.exporters.kafka.config.RecordConfig;
 import io.zeebe.exporters.kafka.config.RecordsConfig;
-import io.zeebe.exporters.kafka.serde.RecordId;
 import io.zeebe.protocol.record.Record;
+import io.zeebe.protocol.record.value.WorkflowInstanceRelated;
 import java.util.Objects;
 import org.apache.kafka.clients.producer.ProducerRecord;
 
@@ -43,10 +43,13 @@ public final class RecordHandler {
    * @param record the record to transform
    * @return the transformed record
    */
-  public @NonNull ProducerRecord<RecordId, Record> transform(final @NonNull Record record) {
+  public @NonNull ProducerRecord<Long, Record> transform(final @NonNull Record record) {
     final RecordConfig config = getRecordConfig(record);
-    return new ProducerRecord<>(
-        config.getTopic(), new RecordId(record.getPartitionId(), record.getPosition()), record);
+    long key = record.getPartitionId();
+    if (record instanceof WorkflowInstanceRelated) {
+      key = ((WorkflowInstanceRelated) record).getWorkflowInstanceKey();
+    }
+    return new ProducerRecord<>(config.getTopic(), key, record);
   }
 
   /**

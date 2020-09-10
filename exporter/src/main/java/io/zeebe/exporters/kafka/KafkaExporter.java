@@ -27,7 +27,6 @@ import io.zeebe.exporters.kafka.producer.DefaultKafkaProducerFactory;
 import io.zeebe.exporters.kafka.producer.KafkaProducerFactory;
 import io.zeebe.exporters.kafka.record.KafkaRecordFilter;
 import io.zeebe.exporters.kafka.record.RecordHandler;
-import io.zeebe.exporters.kafka.serde.RecordId;
 import io.zeebe.exporters.kafka.util.Request;
 import io.zeebe.exporters.kafka.util.RequestQueue;
 import io.zeebe.protocol.record.Record;
@@ -55,7 +54,7 @@ public class KafkaExporter implements Exporter {
   private Logger logger;
 
   @SuppressWarnings("rawtypes")
-  private Producer<RecordId, Record> producer;
+  private Producer<Long, Record> producer;
 
   private Config config;
   private RecordHandler recordHandler;
@@ -120,7 +119,7 @@ public class KafkaExporter implements Exporter {
     }
 
     if (recordHandler.test(record)) {
-      final ProducerRecord<RecordId, Record> kafkaRecord = recordHandler.transform(record);
+      final ProducerRecord<Long, Record> kafkaRecord = recordHandler.transform(record);
       final Future<RecordMetadata> future = producer.send(kafkaRecord);
       final Request request = new Request(record.getPosition(), future);
 

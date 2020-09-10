@@ -17,14 +17,13 @@ package io.zeebe.exporters.kafka;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
+import static org.junit.Assert.assertThat;
 
 import io.zeebe.exporters.kafka.config.Config;
 import io.zeebe.exporters.kafka.config.parser.MockConfigParser;
 import io.zeebe.exporters.kafka.config.parser.RawConfigParser;
 import io.zeebe.exporters.kafka.config.raw.RawConfig;
 import io.zeebe.exporters.kafka.producer.MockKafkaProducerFactory;
-import io.zeebe.exporters.kafka.serde.RecordId;
-import io.zeebe.exporters.kafka.serde.RecordIdSerializer;
 import io.zeebe.exporters.kafka.serde.RecordSerializer;
 import io.zeebe.protocol.record.Record;
 import io.zeebe.test.exporter.ExporterTestHarness;
@@ -32,6 +31,7 @@ import java.util.List;
 import java.util.stream.IntStream;
 import org.apache.kafka.clients.producer.MockProducer;
 import org.apache.kafka.clients.producer.ProducerRecord;
+import org.apache.kafka.common.serialization.LongSerializer;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -49,7 +49,7 @@ public class KafkaExporterTest {
   @Before
   public void setup() {
     mockProducerFactory.mockProducer =
-        new MockProducer<>(true, new RecordIdSerializer(), new RecordSerializer());
+        new MockProducer<>(true, new LongSerializer(), new RecordSerializer());
     mockConfigParser.config = mockConfigParser.parse(rawConfig);
   }
 
@@ -69,10 +69,10 @@ public class KafkaExporterTest {
             });
 
     // then
-    final ProducerRecord<RecordId, Record> expected =
+    final ProducerRecord<Long, Record> expected =
         new ProducerRecord<>(
             mockConfigParser.config.getRecords().getDefaults().getTopic(),
-            new RecordId(record.getPartitionId(), record.getPosition()),
+            (long) record.getPartitionId(),
             record);
     assertThat(mockProducerFactory.mockProducer.history()).hasSize(1).containsExactly(expected);
   }

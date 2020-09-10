@@ -17,11 +17,12 @@ package io.zeebe.exporters.kafka;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Maps;
 import io.zeebe.exporters.kafka.config.raw.RawConfig;
 import io.zeebe.exporters.kafka.config.raw.RawProducerConfig;
 import io.zeebe.exporters.kafka.serde.RecordId;
-import io.zeebe.exporters.kafka.serde.RecordIdDeserializer;
 import io.zeebe.exporters.kafka.util.JsonAssertions;
 import io.zeebe.protocol.record.Record;
 import io.zeebe.test.exporter.ExporterIntegrationRule;
@@ -34,6 +35,7 @@ import java.util.Properties;
 import org.apache.kafka.clients.consumer.Consumer;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.common.serialization.Deserializer;
+import org.apache.kafka.common.serialization.LongDeserializer;
 import org.apache.kafka.common.serialization.StringDeserializer;
 import org.junit.After;
 import org.junit.Rule;
@@ -46,6 +48,7 @@ public class KafkaExporterIT {
   @Rule public RecordingExporterTestWatcher testWatcher = new RecordingExporterTestWatcher();
   @Rule public KafkaContainer kafkaContainer = new KafkaContainer().withEmbeddedZookeeper();
 
+  private ObjectMapper mapper = new ObjectMapper();
   private RawConfig exporterConfiguration;
   private ExporterIntegrationRule exporterIntegrationRule;
 
@@ -91,21 +94,33 @@ public class KafkaExporterIT {
     final Map<RecordId, String> records = new HashMap<>();
     final Duration timeout = Duration.ofSeconds(5);
 
-    try (Consumer<RecordId, String> consumer = newConsumer()) {
-      consumer.poll(timeout).forEach(r -> records.put(r.key(), r.value()));
+    try (Consumer<Long, String> consumer = newConsumer()) {
+      consumer
+          .poll(timeout)
+          .forEach(
+              r -> {
+                try {
+                  final Map<String, Object> record = (Map) mapper.readValue(r.value(), Map.class);
+                  final Number position = (Number) record.get("position");
+                  final int partitionId = (Integer) record.get("partitionId");
+                  records.put(new RecordId(partitionId, position.longValue()), r.value());
+                } catch (JsonProcessingException e) {
+                  throw new RuntimeException(e);
+                }
+              });
     }
 
     return records;
   }
 
-  private Consumer<RecordId, String> newConsumer() {
+  private Consumer<Long, String> newConsumer() {
     final Properties properties = consumerConfig();
-    final Deserializer<RecordId> keyDeserializer = new RecordIdDeserializer();
+    final Deserializer<Long> keyDeserializer = new LongDeserializer();
     final Deserializer<String> valueDeserializer = new StringDeserializer();
 
     keyDeserializer.configure(Maps.fromProperties(properties), true);
     valueDeserializer.configure(Maps.fromProperties(properties), false);
-    final Consumer<RecordId, String> consumer =
+    final Consumer<Long, String> consumer =
         new KafkaConsumer<>(properties, keyDeserializer, valueDeserializer);
     consumer.subscribe(Collections.singletonList(TOPIC));
 
