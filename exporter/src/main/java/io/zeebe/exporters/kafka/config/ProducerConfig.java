@@ -36,7 +36,6 @@ public final class ProducerConfig {
   private final String clientId;
   private final Duration closeTimeout;
   private final Map<String, Object> config;
-  private final int maxConcurrentRequests;
   private final Duration requestTimeout;
   private final List<String> servers;
 
@@ -44,13 +43,11 @@ public final class ProducerConfig {
       final String clientId,
       final Duration closeTimeout,
       final Map<String, Object> config,
-      final int maxConcurrentRequests,
       final Duration requestTimeout,
       final List<String> servers) {
     this.clientId = Objects.requireNonNull(clientId);
     this.closeTimeout = Objects.requireNonNull(closeTimeout);
     this.config = Objects.requireNonNull(config);
-    this.maxConcurrentRequests = maxConcurrentRequests;
     this.requestTimeout = Objects.requireNonNull(requestTimeout);
     this.servers = Objects.requireNonNull(servers);
   }
@@ -67,10 +64,6 @@ public final class ProducerConfig {
     return config;
   }
 
-  public int getMaxConcurrentRequests() {
-    return maxConcurrentRequests;
-  }
-
   public @NonNull Duration getRequestTimeout() {
     return requestTimeout;
   }
@@ -81,8 +74,7 @@ public final class ProducerConfig {
 
   @Override
   public int hashCode() {
-    return Objects.hash(
-        clientId, closeTimeout, config, maxConcurrentRequests, requestTimeout, servers);
+    return Objects.hash(clientId, closeTimeout, config, requestTimeout, servers);
   }
 
   @Override
@@ -94,8 +86,7 @@ public final class ProducerConfig {
       return false;
     }
     final ProducerConfig that = (ProducerConfig) o;
-    return getMaxConcurrentRequests() == that.getMaxConcurrentRequests()
-        && Objects.equals(getClientId(), that.getClientId())
+    return Objects.equals(getClientId(), that.getClientId())
         && Objects.equals(getCloseTimeout(), that.getCloseTimeout())
         && Objects.equals(getConfig(), that.getConfig())
         && Objects.equals(getRequestTimeout(), that.getRequestTimeout())
