@@ -14,10 +14,6 @@ branches:
   only:
     - master
 
-jobs:
-  include:
-    - jdk: openjdk11
-      install:
-        - mvn clean install --batch-mode -V -DskipTests=true -Dmaven.test.skip=true -Dmaven.javadoc.skip=true -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn
-      script:
-        - mvn verify --batch-mode -Droot.logging.level=INFO -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Sl4jMavenTransferListener=warn
+jdk:
+  - openjdk11
+
