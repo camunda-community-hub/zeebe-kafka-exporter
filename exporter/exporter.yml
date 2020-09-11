@@ -70,7 +70,7 @@ zeebe:
             # For records with a value of type INCIDENT
             incident: { topic: zeebe-incident }
             # For records with a value of type JOB_BATCH
-            jobBatch: { topic = "zeebe-job-batch" }
+            jobBatch: { topic: zeebe-job-batch }
             # For records with a value of type JOB
             job: { topic: zeebe-job }
             # For records with a value of type MESSAGE
