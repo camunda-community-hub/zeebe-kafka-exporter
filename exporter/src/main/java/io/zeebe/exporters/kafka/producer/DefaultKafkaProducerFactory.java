@@ -48,9 +48,9 @@ public final class DefaultKafkaProducerFactory implements KafkaProducerFactory {
     final Map<String, Object> options = new HashMap<>();
 
     options.put(ProducerConfig.ENABLE_IDEMPOTENCE_CONFIG, true);
-    options.put(
-        ProducerConfig.MAX_IN_FLIGHT_REQUESTS_PER_CONNECTION,
-        config.getProducer().getMaxConcurrentRequests());
+    // since we're using "infinite" retries/delivery with an idempotent producer, setting the max
+    // in flight requests to 1 ensures batches are delivered in order.
+    options.put(ProducerConfig.MAX_IN_FLIGHT_REQUESTS_PER_CONNECTION, 1);
     options.put(ProducerConfig.DELIVERY_TIMEOUT_MS_CONFIG, Integer.MAX_VALUE);
     options.put(
         ProducerConfig.REQUEST_TIMEOUT_MS_CONFIG,

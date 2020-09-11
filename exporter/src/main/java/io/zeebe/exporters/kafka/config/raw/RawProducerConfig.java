@@ -39,13 +39,6 @@ public class RawProducerConfig {
   public String config;
 
   /**
-   * Max concurrent requests to the Kafka broker; note that in flight records are batched such that
-   * in one request you can easily have a thousand records, depending on the producer's batch
-   * configuration.
-   */
-  public Integer maxConcurrentRequests;
-
-  /**
    * Controls how long the producer will wait for a request to be acknowledged by the Kafka broker
    * before retrying it. Maps to ProducerConfig.REQUEST_TIMEOUT_MS_CONFIG
    */

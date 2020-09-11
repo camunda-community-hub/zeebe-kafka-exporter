@@ -39,14 +39,12 @@ public class RawProducerConfigParserTest {
     // then
     assertThat(parsed)
         .extracting(
-            "maxConcurrentRequests",
             "servers",
             "clientId",
             "closeTimeout",
             "requestTimeout",
             "config")
         .containsExactly(
-            RawProducerConfigParser.DEFAULT_MAX_CONCURRENT_REQUESTS,
             RawProducerConfigParser.DEFAULT_SERVERS,
             RawProducerConfigParser.DEFAULT_CLIENT_ID,
             RawProducerConfigParser.DEFAULT_CLOSE_TIMEOUT,
@@ -58,7 +56,6 @@ public class RawProducerConfigParserTest {
   public void shouldParse() {
     // given
     final RawProducerConfig config = new RawProducerConfig();
-    config.maxConcurrentRequests = 1;
     config.servers = "localhost:3000";
     config.clientId = "client";
     config.closeTimeoutMs = 3000L;
@@ -71,14 +68,12 @@ public class RawProducerConfigParserTest {
     // then
     assertThat(parsed)
         .extracting(
-            "maxConcurrentRequests",
             "servers",
             "clientId",
             "closeTimeout",
             "requestTimeout",
             "config")
         .containsExactly(
-            1,
             Collections.singletonList("localhost:3000"),
             "client",
             Duration.ofSeconds(3),

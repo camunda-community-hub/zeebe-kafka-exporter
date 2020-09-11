@@ -45,14 +45,11 @@ public class RawProducerConfigParser implements ConfigParser<RawProducerConfig, 
   static final String DEFAULT_CLIENT_ID = "zeebe";
   static final Duration DEFAULT_CLOSE_TIMEOUT = Duration.ofSeconds(20);
   static final Duration DEFAULT_REQUEST_TIMEOUT = Duration.ofSeconds(5);
-  static final int DEFAULT_MAX_CONCURRENT_REQUESTS = 3;
 
   @Override
   public @NonNull ProducerConfig parse(final @Nullable RawProducerConfig config) {
     Objects.requireNonNull(config);
 
-    final Integer maxConcurrentRequests =
-        get(config.maxConcurrentRequests, DEFAULT_MAX_CONCURRENT_REQUESTS);
     final List<String> servers =
         get(config.servers, DEFAULT_SERVERS, ConfigParserUtil::splitCommaSeparatedString);
     final String clientId = get(config.clientId, DEFAULT_CLIENT_ID);
@@ -63,8 +60,7 @@ public class RawProducerConfigParser implements ConfigParser<RawProducerConfig, 
     final Map<String, Object> producerConfig =
         get(config.config, new HashMap<>(), this::parseProperties);
 
-    return new ProducerConfig(
-        clientId, closeTimeout, producerConfig, maxConcurrentRequests, requestTimeout, servers);
+    return new ProducerConfig(clientId, closeTimeout, producerConfig, requestTimeout, servers);
   }
 
   private @NonNull Map<String, Object> parseProperties(final @NonNull String propertiesString) {

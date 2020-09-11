@@ -36,7 +36,7 @@ import java.util.Objects;
  * to overwrite the parsing for nested types.
  */
 public final class RawConfigParser implements ConfigParser<RawConfig, Config> {
-  static final int DEFAULT_MAX_IN_FLIGHT_RECORDS = 3;
+  static final int DEFAULT_MAX_IN_FLIGHT_RECORDS = 100;
   static final Duration DEFAULT_IN_FLIGHT_RECORD_CHECK_INTERVAL = Duration.ofSeconds(1);
 
   private final ConfigParser<RawRecordsConfig, RecordsConfig> recordsConfigParser;
