@@ -50,4 +50,11 @@ public class RawProducerConfig {
    * Maps to ProducerConfig.BOOTSTRAP_SERVERS_CONFIG
    */
   public String servers;
+
+  /**
+   * The serialisation format for the message value
+   *
+   * <p>default is "json" also supported is "protobuf"
+   */
+  public String format;
 }

@@ -17,6 +17,7 @@ package io.zeebe.exporters.kafka.producer;
 
 import edu.umd.cs.findbugs.annotations.NonNull;
 import io.zeebe.exporters.kafka.config.Config;
+import io.zeebe.exporters.kafka.serde.ProtobufRecordSerializer;
 import io.zeebe.exporters.kafka.serde.RecordSerializer;
 import io.zeebe.protocol.record.Record;
 import java.util.HashMap;
@@ -72,7 +73,11 @@ public final class DefaultKafkaProducerFactory implements KafkaProducerFactory {
     options.putAll(config.getProducer().getConfig());
 
     options.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, LongSerializer.class);
-    options.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, RecordSerializer.class);
+    if ("protobuf".equals(config.getProducer().getFormat())) {
+      options.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, ProtobufRecordSerializer.class);
+    } else {
+      options.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, RecordSerializer.class);
+    }
 
     return new KafkaProducer<>(options);
   }

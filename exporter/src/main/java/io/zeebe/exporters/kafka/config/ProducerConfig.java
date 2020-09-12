@@ -38,18 +38,21 @@ public final class ProducerConfig {
   private final Map<String, Object> config;
   private final Duration requestTimeout;
   private final List<String> servers;
+  private final String format;
 
   public ProducerConfig(
       final String clientId,
       final Duration closeTimeout,
       final Map<String, Object> config,
       final Duration requestTimeout,
-      final List<String> servers) {
+      final List<String> servers,
+      final String format) {
     this.clientId = Objects.requireNonNull(clientId);
     this.closeTimeout = Objects.requireNonNull(closeTimeout);
     this.config = Objects.requireNonNull(config);
     this.requestTimeout = Objects.requireNonNull(requestTimeout);
     this.servers = Objects.requireNonNull(servers);
+    this.format = Objects.requireNonNull(format);
   }
 
   public @NonNull String getClientId() {
@@ -72,9 +75,13 @@ public final class ProducerConfig {
     return servers;
   }
 
+  public @NonNull String getFormat() {
+    return format;
+  }
+
   @Override
   public int hashCode() {
-    return Objects.hash(clientId, closeTimeout, config, requestTimeout, servers);
+    return Objects.hash(clientId, closeTimeout, config, requestTimeout, servers, format);
   }
 
   @Override
@@ -90,6 +97,7 @@ public final class ProducerConfig {
         && Objects.equals(getCloseTimeout(), that.getCloseTimeout())
         && Objects.equals(getConfig(), that.getConfig())
         && Objects.equals(getRequestTimeout(), that.getRequestTimeout())
-        && Objects.equals(getServers(), that.getServers());
+        && Objects.equals(getServers(), that.getServers())
+        && Objects.equals(getFormat(), that.getFormat());
   }
 }

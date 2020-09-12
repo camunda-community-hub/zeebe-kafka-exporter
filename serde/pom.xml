@@ -17,6 +17,7 @@
 
   <properties>
     <version.java>8</version.java>
+    <version.exporter.protobuf>0.11.0</version.exporter.protobuf>
   </properties>
 
   <dependencies>
@@ -55,5 +56,18 @@
       <artifactId>spotbugs-annotations</artifactId>
       <scope>compile</scope>
     </dependency>
+
+    <dependency>
+      <groupId>io.zeebe</groupId>
+      <artifactId>zeebe-exporter-protobuf</artifactId>
+      <version>${version.exporter.protobuf}</version>
+    </dependency>
+
+    <dependency>
+      <groupId>com.github.daniel-shuy</groupId>
+      <artifactId>kafka-protobuf-serde</artifactId>
+      <version>2.2.0</version>
+    </dependency>
+
   </dependencies>
 </project>
