@@ -50,4 +50,12 @@ public class RawProducerConfig {
    * Maps to ProducerConfig.BOOTSTRAP_SERVERS_CONFIG
    */
   public String servers;
+
+  /**
+   * The serialisation format for the message value
+   *
+   * <p>default is "json" also supported is "protobuf", @see {@link
+   * io.zeebe.exporters.kafka.config.ProducerConfig.Format}
+   */
+  public String format;
 }

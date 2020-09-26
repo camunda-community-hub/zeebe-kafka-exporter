@@ -18,6 +18,7 @@ package io.zeebe.exporters.kafka.config.parser;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import io.zeebe.exporters.kafka.config.ProducerConfig;
+import io.zeebe.exporters.kafka.config.ProducerConfig.Format;
 import io.zeebe.exporters.kafka.config.raw.RawProducerConfig;
 import java.time.Duration;
 import java.util.Collections;
@@ -38,18 +39,14 @@ public class RawProducerConfigParserTest {
 
     // then
     assertThat(parsed)
-        .extracting(
-            "servers",
-            "clientId",
-            "closeTimeout",
-            "requestTimeout",
-            "config")
+        .extracting("servers", "clientId", "closeTimeout", "requestTimeout", "config", "format")
         .containsExactly(
             RawProducerConfigParser.DEFAULT_SERVERS,
             RawProducerConfigParser.DEFAULT_CLIENT_ID,
             RawProducerConfigParser.DEFAULT_CLOSE_TIMEOUT,
             RawProducerConfigParser.DEFAULT_REQUEST_TIMEOUT,
-            new HashMap<>());
+            new HashMap<>(),
+            Format.JSON);
   }
 
   @Test
@@ -61,23 +58,20 @@ public class RawProducerConfigParserTest {
     config.closeTimeoutMs = 3000L;
     config.requestTimeoutMs = 3000L;
     config.config = "linger.ms=5\nmax.buffer.count=2";
+    config.format = "protobuf";
 
     // when
     final ProducerConfig parsed = parser.parse(config);
 
     // then
     assertThat(parsed)
-        .extracting(
-            "servers",
-            "clientId",
-            "closeTimeout",
-            "requestTimeout",
-            "config")
+        .extracting("servers", "clientId", "closeTimeout", "requestTimeout", "config", "format")
         .containsExactly(
             Collections.singletonList("localhost:3000"),
             "client",
             Duration.ofSeconds(3),
             Duration.ofSeconds(3),
-            Map.of("linger.ms", "5", "max.buffer.count", "2"));
+            Map.of("linger.ms", "5", "max.buffer.count", "2"),
+            Format.PROTOBUF);
   }
 }

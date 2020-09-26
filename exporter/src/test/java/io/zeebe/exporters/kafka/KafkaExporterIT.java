@@ -18,8 +18,11 @@ package io.zeebe.exporters.kafka;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.google.common.collect.Maps;
+import com.google.protobuf.Message;
+import io.zeebe.exporters.kafka.config.ProducerConfig.Format;
 import io.zeebe.exporters.kafka.config.raw.RawConfig;
 import io.zeebe.exporters.kafka.config.raw.RawProducerConfig;
+import io.zeebe.exporters.kafka.serde.ProtobufRecordDeserializer;
 import io.zeebe.exporters.kafka.serde.RecordId;
 import io.zeebe.exporters.kafka.serde.RecordIdDeserializer;
 import io.zeebe.exporters.kafka.util.JsonAssertions;
@@ -59,70 +62,95 @@ public class KafkaExporterIT {
     exporterConfiguration = null;
   }
 
-  @Test
-  public void shouldExportRecords() {
+  private void shouldExportRecordsUsingFormat(Format format) {
     // given
-    startZeebeBroker();
+    startZeebeBroker(format);
 
     // when
     exporterIntegrationRule.performSampleWorkload();
 
     // then
     exporterIntegrationRule.stop();
-    assertRecordsExported();
+    assertRecordsExported(format);
     exporterIntegrationRule = null;
   }
 
-  private void assertRecordsExported() {
-    final Map<RecordId, String> records = consumeAllExportedRecords();
-    exporterIntegrationRule.visitExportedRecords(r -> assertRecordExported(records, r));
+  @Test
+  public void shouldExportRecordsUsingJsonFormat() {
+    shouldExportRecordsUsingFormat(Format.JSON);
+  }
+
+  @Test
+  public void shouldExportRecordsUsingProtobufFormat() {
+    shouldExportRecordsUsingFormat(Format.PROTOBUF);
+  }
+
+  private void assertRecordsExported(Format format) {
+    final Map<RecordId, Object> records = consumeAllExportedRecords(format);
+    exporterIntegrationRule.visitExportedRecords(r -> assertRecordExported(format, records, r));
   }
 
   private void assertRecordExported(
-      final Map<RecordId, String> producedRecords, final Record<?> record) {
-    final String producedRecord =
+      final Format format, final Map<RecordId, Object> producedRecords, final Record<?> record) {
+    final Object producedRecord =
         producedRecords.get(new RecordId(record.getPartitionId(), record.getPosition()));
 
     assertThat(producedRecord).isNotNull();
-    JsonAssertions.assertThat(producedRecord).isJsonEqualTo(record.toJson());
+
+    switch (format) {
+      case JSON:
+        {
+          assertThat(producedRecord).isInstanceOf(String.class);
+          JsonAssertions.assertThat((String) producedRecord).isJsonEqualTo(record.toJson());
+          break;
+        }
+      case PROTOBUF:
+        {
+          // no need to verify the correctness of protocol buffers protocol, just verify its a valid
+          // Message
+          assertThat(producedRecord).isInstanceOf(Message.class);
+          break;
+        }
+    }
   }
 
-  private Map<RecordId, String> consumeAllExportedRecords() {
-    final Map<RecordId, String> records = new HashMap<>();
+  private Map<RecordId, Object> consumeAllExportedRecords(Format format) {
+    final Map<RecordId, Object> records = new HashMap<>();
     final Duration timeout = Duration.ofSeconds(5);
 
-    try (Consumer<RecordId, String> consumer = newConsumer()) {
+    try (Consumer<RecordId, ?> consumer = newConsumer(format)) {
       consumer.poll(timeout).forEach(r -> records.put(r.key(), r.value()));
     }
 
     return records;
   }
 
-  private Consumer<RecordId, String> newConsumer() {
+  private Consumer<RecordId, ?> newConsumer(Format format) {
     final Properties properties = consumerConfig();
     final Deserializer<RecordId> keyDeserializer = new RecordIdDeserializer();
-    final Deserializer<String> valueDeserializer = new StringDeserializer();
+    final Deserializer<?> valueDeserializer =
+        format == Format.JSON ? new StringDeserializer() : new ProtobufRecordDeserializer();
 
     keyDeserializer.configure(Maps.fromProperties(properties), true);
     valueDeserializer.configure(Maps.fromProperties(properties), false);
-    final Consumer<RecordId, String> consumer =
+    final Consumer<RecordId, ?> consumer =
         new KafkaConsumer<>(properties, keyDeserializer, valueDeserializer);
     consumer.subscribe(Collections.singletonList(TOPIC));
 
     return consumer;
   }
 
-  private RawConfig newConfiguration() {
+  private RawConfig newConfiguration(Format format) {
     final RawConfig configuration = new RawConfig();
     configuration.maxInFlightRecords = 30;
     configuration.producer = new RawProducerConfig();
     configuration.producer.servers = getKafkaServer();
-
+    configuration.producer.format = format.getFormatName();
     return configuration;
   }
 
-  private void startZeebeBroker() {
-    exporterConfiguration = newConfiguration();
+  private void startZeebeBroker(Format format) {
+    exporterConfiguration = newConfiguration(format);
     exporterIntegrationRule = new ExporterIntegrationRule();
     exporterIntegrationRule.configure("kafka", KafkaExporter.class, exporterConfiguration);
     exporterIntegrationRule.start();

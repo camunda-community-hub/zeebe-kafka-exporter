@@ -20,6 +20,7 @@ import static io.zeebe.exporters.kafka.config.parser.ConfigParserUtil.get;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
 import io.zeebe.exporters.kafka.config.ProducerConfig;
+import io.zeebe.exporters.kafka.config.ProducerConfig.Format;
 import io.zeebe.exporters.kafka.config.raw.RawProducerConfig;
 import java.io.IOException;
 import java.io.Reader;
@@ -45,6 +46,7 @@ public class RawProducerConfigParser implements ConfigParser<RawProducerConfig, 
   static final String DEFAULT_CLIENT_ID = "zeebe";
   static final Duration DEFAULT_CLOSE_TIMEOUT = Duration.ofSeconds(20);
   static final Duration DEFAULT_REQUEST_TIMEOUT = Duration.ofSeconds(5);
+  static final String DEFAULT_FORMAT = Format.JSON.getFormatName();
 
   @Override
   public @NonNull ProducerConfig parse(final @Nullable RawProducerConfig config) {
@@ -59,8 +61,10 @@ public class RawProducerConfigParser implements ConfigParser<RawProducerConfig, 
         get(config.requestTimeoutMs, DEFAULT_REQUEST_TIMEOUT, Duration::ofMillis);
     final Map<String, Object> producerConfig =
         get(config.config, new HashMap<>(), this::parseProperties);
+    final Format format = Format.forName(get(config.format, DEFAULT_FORMAT));
 
-    return new ProducerConfig(clientId, closeTimeout, producerConfig, requestTimeout, servers);
+    return new ProducerConfig(
+        clientId, closeTimeout, producerConfig, requestTimeout, servers, format);
   }
 
   private @NonNull Map<String, Object> parseProperties(final @NonNull String propertiesString) {
