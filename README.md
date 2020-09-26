@@ -41,6 +41,35 @@ module provides easy to use `Deserializer` implementations in Java for use in yo
 The [configuration file](https://github.com/zeebe-io/zeebe-kafka-exporter/blob/master/exporter/exporter.yml)
 is a good starting point to learn more about how the exporter works.
 
+### Partitioning
+
+As ordering in Zeebe is critical to understanding the flow of events, it's important that it be
+preserved in Kafka as well. To achieve this, the exporter implements its own `Partitioner`.
+
+It does so by taking the Zeebe partition ID (which starts at 1), and applying a modulo against the
+number of Kafka partitions for the given topic, e.g. `zeebePartitionId % kafkaPartitionsCount`.
+
+> One downside is that if you have more Kafka partitions than Zeebe partitions, some of your
+> partitions will be unused: partition 0, and any partition whose number is greater than the count
+> of Zeebe partitions. **As such, it's completely useless to add more Kafka partitions than Zeebe
+> partitions in most cases.**
+
+For example, if you have 3 Zeebe partitions, and 2 Kafka partitions:
+
+- `RecordId{partitionId=1, position=1}` => Kafka partition 1
+- `RecordId{partitionId=2, position=1}` => Kafka partition 0
+- `RecordId{partitionId=3, position=1}` => Kafka partition 1
+- `RecordId{partitionId=3, position=2}` => Kafka partition 1
+- `RecordId{partitionId=2, position=2}` => Kafka partition 0
+
+With more Kafka partitions, for example, 4 Kafka partitions, and 3 Zeebe partitions:
+
+- `RecordId{partitionId=1, position=1}` => Kafka partition 1
+- `RecordId{partitionId=2, position=1}` => Kafka partition 2
+- `RecordId{partitionId=3, position=1}` => Kafka partition 3
+- `RecordId{partitionId=3, position=2}` => Kafka partition 3
+- `RecordId{partitionId=2, position=2}` => Kafka partition 2
+
 ### Advanced configuration
 
 You can configure the producer for more advanced use cases by using the

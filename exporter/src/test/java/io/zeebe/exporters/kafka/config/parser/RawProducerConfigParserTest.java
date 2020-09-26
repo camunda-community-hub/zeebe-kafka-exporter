@@ -38,12 +38,7 @@ public class RawProducerConfigParserTest {
 
     // then
     assertThat(parsed)
-        .extracting(
-            "servers",
-            "clientId",
-            "closeTimeout",
-            "requestTimeout",
-            "config")
+        .extracting("servers", "clientId", "closeTimeout", "requestTimeout", "config")
         .containsExactly(
             RawProducerConfigParser.DEFAULT_SERVERS,
             RawProducerConfigParser.DEFAULT_CLIENT_ID,
@@ -67,12 +62,7 @@ public class RawProducerConfigParserTest {
 
     // then
     assertThat(parsed)
-        .extracting(
-            "servers",
-            "clientId",
-            "closeTimeout",
-            "requestTimeout",
-            "config")
+        .extracting("servers", "clientId", "closeTimeout", "requestTimeout", "config")
         .containsExactly(
             Collections.singletonList("localhost:3000"),
             "client",

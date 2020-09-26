@@ -74,6 +74,7 @@ public final class DefaultKafkaProducerFactory implements KafkaProducerFactory {
 
     options.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, RecordIdSerializer.class);
     options.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, RecordSerializer.class);
+    options.put(ProducerConfig.PARTITIONER_CLASS_CONFIG, RecordIdPartitioner.class);
 
     return new KafkaProducer<>(options);
   }
