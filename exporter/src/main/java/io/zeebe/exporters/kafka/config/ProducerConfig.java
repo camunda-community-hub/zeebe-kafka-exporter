@@ -17,9 +17,11 @@ package io.zeebe.exporters.kafka.config;
 
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.time.Duration;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.stream.Collectors;
 
 /**
  * {@link ProducerConfig} is used by instances of {@link
@@ -38,18 +40,21 @@ public final class ProducerConfig {
   private final Map<String, Object> config;
   private final Duration requestTimeout;
   private final List<String> servers;
+  private final Format format;
 
   public ProducerConfig(
       final String clientId,
       final Duration closeTimeout,
       final Map<String, Object> config,
       final Duration requestTimeout,
-      final List<String> servers) {
+      final List<String> servers,
+      final Format format) {
     this.clientId = Objects.requireNonNull(clientId);
     this.closeTimeout = Objects.requireNonNull(closeTimeout);
     this.config = Objects.requireNonNull(config);
     this.requestTimeout = Objects.requireNonNull(requestTimeout);
     this.servers = Objects.requireNonNull(servers);
+    this.format = Objects.requireNonNull(format);
   }
 
   public @NonNull String getClientId() {
@@ -72,9 +77,13 @@ public final class ProducerConfig {
     return servers;
   }
 
+  public @NonNull Format getFormat() {
+    return format;
+  }
+
   @Override
   public int hashCode() {
-    return Objects.hash(clientId, closeTimeout, config, requestTimeout, servers);
+    return Objects.hash(clientId, closeTimeout, config, requestTimeout, servers, format);
   }
 
   @Override
@@ -90,6 +99,38 @@ public final class ProducerConfig {
         && Objects.equals(getCloseTimeout(), that.getCloseTimeout())
         && Objects.equals(getConfig(), that.getConfig())
         && Objects.equals(getRequestTimeout(), that.getRequestTimeout())
-        && Objects.equals(getServers(), that.getServers());
+        && Objects.equals(getServers(), that.getServers())
+        && Objects.equals(getFormat(), that.getFormat());
+  }
+
+  public enum Format {
+    JSON("json"),
+    PROTOBUF("protobuf");
+
+    private final String formatName;
+
+    Format(final String formatName) {
+      this.formatName = formatName;
+    }
+
+    public String getFormatName() {
+      return formatName;
+    }
+
+    public static Format forName(final String name) {
+      if (JSON.formatName.equals(name)) {
+        return JSON;
+      } else if (PROTOBUF.formatName.equals(name)) {
+        return PROTOBUF;
+      } else {
+        throw new IllegalArgumentException(
+            String.format(
+                "Unknown format name: %s, valid values are %s",
+                name,
+                Arrays.stream(Format.values())
+                    .map(Format::getFormatName)
+                    .collect(Collectors.joining(", "))));
+      }
+    }
   }
 }

@@ -2,3 +2,8 @@
 target/
 *.iml
 *.jar
+.settings
+.classpath
+.project
+.factorypath
+.vscode
