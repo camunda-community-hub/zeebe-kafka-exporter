@@ -76,15 +76,13 @@ public final class DefaultKafkaProducerFactory implements KafkaProducerFactory {
     options.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, RecordIdSerializer.class);
     switch (config.getProducer().getFormat()) {
       case JSON:
-        {
-          options.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, RecordSerializer.class);
-          break;
-        }
+        options.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, RecordSerializer.class);
+        break;
       case PROTOBUF:
-        {
-          options.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, ProtobufRecordSerializer.class);
-          break;
-        }
+        options.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, ProtobufRecordSerializer.class);
+        break;
+      default:
+        throw new IllegalArgumentException(String.format("Expected format to be one of JSON or PROTOBUF, but got %s", config.getProducer().getFormat()));
     }
 
     return new KafkaProducer<>(options);
