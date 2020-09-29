@@ -25,7 +25,7 @@ import org.apache.kafka.common.serialization.Serializer;
 
 /**
  * A {@link Serializer} implementations for {@link Record} objects which uses
- * KafkaProtobufSerializer to serialise Schema.Record instances to kafak
+ * KafkaProtobufSerializer to serialise Schema.Record instances to Kafka
  */
 @SuppressWarnings("rawtypes")
 public final class ProtobufRecordSerializer implements Serializer<Record> {
