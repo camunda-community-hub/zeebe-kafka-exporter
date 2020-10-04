@@ -19,6 +19,9 @@ import edu.umd.cs.findbugs.annotations.NonNull;
 import io.zeebe.exporter.api.Exporter;
 import io.zeebe.exporter.api.context.Context;
 import io.zeebe.exporter.api.context.Controller;
+import io.zeebe.exporters.kafka.batch.BatchedRecord;
+import io.zeebe.exporters.kafka.batch.BatchedRecordException;
+import io.zeebe.exporters.kafka.batch.RecordBatch;
 import io.zeebe.exporters.kafka.config.Config;
 import io.zeebe.exporters.kafka.config.parser.ConfigParser;
 import io.zeebe.exporters.kafka.config.parser.RawConfigParser;
@@ -28,17 +31,19 @@ import io.zeebe.exporters.kafka.producer.KafkaProducerFactory;
 import io.zeebe.exporters.kafka.record.KafkaRecordFilter;
 import io.zeebe.exporters.kafka.record.RecordHandler;
 import io.zeebe.exporters.kafka.serde.RecordId;
-import io.zeebe.exporters.kafka.util.Request;
-import io.zeebe.exporters.kafka.util.RequestQueue;
+import io.zeebe.exporters.kafka.serde.RecordSerializer;
 import io.zeebe.protocol.record.Record;
 import java.time.Duration;
 import java.util.Objects;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
+import java.util.concurrent.TimeoutException;
 import org.apache.kafka.clients.producer.Producer;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.clients.producer.RecordMetadata;
+import org.apache.kafka.common.errors.InterruptException;
+import org.apache.kafka.common.serialization.Serializer;
 import org.slf4j.Logger;
 
 /** Implementation of a Zeebe exporter producing serialized records to a given Kafka topic. */
@@ -53,13 +58,10 @@ public class KafkaExporter implements Exporter {
   private String id;
   private Controller controller;
   private Logger logger;
-
-  @SuppressWarnings("rawtypes")
-  private Producer<RecordId, Record> producer;
-
+  private Producer<RecordId, byte[]> producer;
   private Config config;
   private RecordHandler recordHandler;
-  private RequestQueue requests;
+  private RecordBatch recordBatch;
   private long latestExportedPosition = UNSET_POSITION;
 
   public KafkaExporter() {
@@ -80,7 +82,7 @@ public class KafkaExporter implements Exporter {
 
     final RawConfig rawConfig = context.getConfiguration().instantiate(RawConfig.class);
     this.config = this.configParser.parse(rawConfig);
-    this.recordHandler = new RecordHandler(this.config.getRecords());
+    this.recordHandler = new RecordHandler(this.config.getRecords(), newSerializer());
 
     context.setFilter(new KafkaRecordFilter(this.config.getRecords()));
     this.logger.debug("Configured exporter {}", this.id);
@@ -90,8 +92,8 @@ public class KafkaExporter implements Exporter {
   public void open(final Controller controller) {
     this.controller = controller;
     this.isClosed = false;
-    this.requests = new RequestQueue(this.config.getMaxInFlightRecords());
     this.producer = this.producerFactory.newProducer(this.config);
+    this.recordBatch = new RecordBatch(this.config.getMaxBatchSize());
     this.controller.scheduleTask(
         this.config.getInFlightRecordCheckInterval(), this::checkCompletedInFlightRequests);
 
@@ -100,42 +102,53 @@ public class KafkaExporter implements Exporter {
 
   @Override
   public void close() {
-    closeInternal();
+    if (isClosed) {
+      return;
+    }
+
+    isClosed = true;
+    recordBatch.cancel();
     checkCompletedInFlightRequests();
-    requests.cancelAll();
+    recordBatch.clear();
+    closeProducer();
 
     logger.debug("Closed exporter {}", id);
   }
 
-  @SuppressWarnings("rawtypes")
   @Override
   public void export(final Record record) {
-    // The producer may be closed prematurely if an unrecoverable exception occurred, at which point
-    // we ignore any further records; this way we do not block the exporter processor, and on
-    // restart will reprocess all other records that we "missed" here.
-    if (producer == null) {
-      requests.cancelAll();
-      logger.debug("Exporter {} was prematurely closed earlier; skipping record {}", id, record);
+    if (isClosed) {
+      logger.warn("Expected to export {}, but the exporter is already closed", record);
       return;
     }
 
-    if (recordHandler.test(record)) {
-      final ProducerRecord<RecordId, Record> kafkaRecord = recordHandler.transform(record);
-      final Future<RecordMetadata> future = producer.send(kafkaRecord);
-      final Request request = new Request(record.getPosition(), future);
-
-      while (!requests.offer(request)) {
-        logger.trace("Too many in flight records, blocking until at least one completes...");
-        requests.consume(this::updatePosition);
-      }
-
-      logger.trace("Exported record {}", record);
+    if (!recordHandler.test(record)) {
+      logger.trace("Ignoring record {}", record);
+      return;
     }
+
+    if (recordBatch.isFull()) {
+      // this will await completion of the record and update the position, OR an exception may be
+      // thrown which will cause us to retry - either way, if we pass this then we can assume
+      // there's space in the batch now
+      logger.trace(
+          "Too many in flight records, blocking at most {} until at least one completes...",
+          Duration.ofSeconds(1));
+      recordBatch.consume(this::updatePosition);
+    }
+
+    batchRecord(record);
+    logger.trace("Batched record {}", record);
   }
 
-  /* assumes it is called strictly as a scheduled task */
+  /* assumes it is called strictly as a scheduled task or during close */
   private void checkCompletedInFlightRequests() {
-    requests.consumeCompleted(this::updatePosition);
+    try {
+      recordBatch.consumeCompleted(this::updatePosition);
+    } catch (final BatchedRecordException e) {
+      handleBatchedRecordException(e);
+    }
+
     if (latestExportedPosition != UNSET_POSITION) {
       controller.updateLastExportedRecordPosition(latestExportedPosition);
     }
@@ -146,36 +159,93 @@ public class KafkaExporter implements Exporter {
     }
   }
 
-  private void updatePosition(final Request request) {
+  @SuppressWarnings("rawtypes")
+  private Serializer<Record> newSerializer() {
+    final Serializer<Record> serializer = new RecordSerializer();
+    serializer.configure(config.getProducer().getConfig(), false);
+
+    return serializer;
+  }
+
+  @SuppressWarnings("rawtypes")
+  private void batchRecord(final Record record) {
+    final ProducerRecord<RecordId, byte[]> producerRecord = recordHandler.transform(record);
+    final Future<RecordMetadata> request = producer.send(producerRecord);
+
+    recordBatch.add(producerRecord, request);
+  }
+
+  private void updatePosition(final BatchedRecord record) {
     try {
-      latestExportedPosition = request.get();
-    } catch (final CancellationException e) {
-      logger.error(
-          "In flight record was cancelled prematurely, will stop exporting to prevent missing records",
-          e);
-      closeInternal();
+      if (!record.wasExported()) {
+        record.awaitCompletion(config.getMaxBlockingTimeout());
+      }
+
+      if (record.wasCancelled()) {
+        logger.debug("Skipping already cancelled record as we cannot guarantee it was exported");
+        return;
+      }
+
+      latestExportedPosition = record.getRecord().key().getPosition();
     } catch (final ExecutionException e) {
-      logger.error(
-          "Failed to ensure record was sent to Kafka, will stop exporting to prevent missing records",
-          e);
-      closeInternal();
-    } catch (final InterruptedException e) {
-      Thread.currentThread().interrupt();
-      logger.debug("Interrupted while updating the last exported position, closing the exporter");
-      closeInternal();
+      // rethrow and let this be handled where we're expecting it; by doing this we can also ensure
+      // the record is not removed from the batch yet
+      throw new BatchedRecordException(record, e);
+    } catch (final CancellationException e) {
+      // if this occurs while we're waiting for the result, then we can safely expect that it was
+      // cancelled in the context of this exporter, so there's nothing to do here
+      logger.debug("Record {} was cancelled while awaiting result", record, e);
+    } catch (final InterruptedException e) { // NOSONAR - InterruptException will re-interrupt
+      // being interrupted while awaiting completion of the request most likely means the exporter
+      // thread is shutting down, at which point we can expect to be closed; so simply rethrow this
+      // exception
+      throw new InterruptException(e);
+    } catch (final TimeoutException e) {
+      throw new BlockingRequestTimeoutException(record, config.getMaxBlockingTimeout(), e);
     }
   }
 
-  private void closeInternal() {
-    if (!isClosed) {
-      isClosed = true;
+  private void closeProducer() {
+    if (producer != null) {
+      final Duration closeTimeout = config.getProducer().getCloseTimeout();
+      logger.debug("Closing producer with timeout {}", closeTimeout);
+      producer.close(closeTimeout);
+      producer = null;
+    }
+  }
 
-      if (producer != null) {
-        final Duration closeTimeout = config.getProducer().getCloseTimeout();
-        logger.debug("Closing producer with timeout {}", closeTimeout);
-        producer.close(closeTimeout);
-        producer = null;
-      }
+  /**
+   * A {@link BatchedRecordException} is thrown when attempting to check the result of a record that
+   * was sent by the producer via {@link Producer#send(ProducerRecord)}, and an error occurred.
+   *
+   * <p>There are two possible classes of errors: recoverable and unrecoverable ones. These are
+   * outlined in {@link org.apache.kafka.clients.producer.Callback}. In both cases, we have to
+   * cancel all in flight records, as we don't know how the producer batched internally - to
+   * preserve logical ordering, we then cancel all records, and retry them.
+   *
+   * <p>Additionally, in the case of an unrecoverable error, we recreate the producer, which may
+   * help solve some issues. However, some errors are plain and simply non recoverable - an
+   * authentication error will not be solved without a configuration change.
+   *
+   * @param e the exception thrown
+   */
+  private void handleBatchedRecordException(final BatchedRecordException e) {
+    logger.warn(
+        "Cancelling all in flight records after {} and retrying them due to an exception thrown by the underlying producer",
+        e.getRecord(),
+        e);
+
+    if (!e.isRecoverable()) {
+      logger.debug("Recreating producer due to an unrecoverable exception", e);
+      closeProducer();
+      producer = producerFactory.newProducer(config);
+    }
+
+    for (final BatchedRecord batchedRecord : recordBatch) {
+      batchedRecord.cancel();
+
+      final Future<RecordMetadata> request = producer.send(batchedRecord.getRecord());
+      batchedRecord.retry(request);
     }
   }
 }

@@ -249,10 +249,18 @@ zeebe:
       kafka:
         className: io.zeebe.exporters.kafka.KafkaExporter
         args:
-          # Controls how many records can have been sent to the Kafka broker without
-          # any acknowledgment Once the limit is reached the exporter will block and
-          # wait until either one record is acknowledged
-          maxInFlightRecords: 1000
+          # Controls the maximum size in bytes that an exporter instance will buffer before waiting
+          # for at least one record to complete. Note that this is a soft upper bound - in order to
+          # accommodate potentially large records which would exceed a single batch size, the
+          # exporter will always accept a record whose size would cause the batch to spill over,
+          # but will stop after.
+          #
+          # Default is 8MB
+          maxBatchSize: 8388608
+          # The maximum time to block when the batch is full. If the batch is full, and a new
+          # record comes in, the exporter will block until there is space in the batch, or until
+          # maxBlockingTimeoutMs milliseconds elapse.
+          maxBlockingTimeoutMs: 1000
           # How often should the exporter drain the in flight records' queue of completed
           # requests and update the broker with the guaranteed latest exported position
           inFlightRecordCheckIntervalMs: 1000

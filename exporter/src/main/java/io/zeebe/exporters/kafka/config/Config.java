@@ -29,18 +29,21 @@ import java.util.Objects;
 public class Config {
   private final ProducerConfig producer;
   private final RecordsConfig records;
-  private final int maxInFlightRecords;
+  private final int maxBatchSize;
+  private final Duration maxBlockingTimeout;
   private final Duration inFlightRecordCheckInterval;
 
   public Config(
       final @NonNull ProducerConfig producer,
       final @NonNull RecordsConfig records,
-      final int maxInFlightRecords,
+      final int maxBatchSize,
+      final @NonNull Duration maxBlockingTimeout,
       final @NonNull Duration inFlightRecordCheckInterval) {
     this.producer = Objects.requireNonNull(producer);
     this.records = Objects.requireNonNull(records);
-    this.maxInFlightRecords = maxInFlightRecords;
-    this.inFlightRecordCheckInterval = inFlightRecordCheckInterval;
+    this.maxBatchSize = maxBatchSize;
+    this.maxBlockingTimeout = Objects.requireNonNull(maxBlockingTimeout);
+    this.inFlightRecordCheckInterval = Objects.requireNonNull(inFlightRecordCheckInterval);
   }
 
   public @NonNull ProducerConfig getProducer() {
@@ -51,8 +54,12 @@ public class Config {
     return records;
   }
 
-  public int getMaxInFlightRecords() {
-    return maxInFlightRecords;
+  public int getMaxBatchSize() {
+    return maxBatchSize;
+  }
+
+  public @NonNull Duration getMaxBlockingTimeout() {
+    return maxBlockingTimeout;
   }
 
   public @NonNull Duration getInFlightRecordCheckInterval() {
@@ -61,7 +68,7 @@ public class Config {
 
   @Override
   public int hashCode() {
-    return Objects.hash(producer, records, maxInFlightRecords, inFlightRecordCheckInterval);
+    return Objects.hash(producer, records, maxBatchSize, inFlightRecordCheckInterval);
   }
 
   @Override
@@ -73,7 +80,7 @@ public class Config {
       return false;
     }
     final Config config = (Config) o;
-    return getMaxInFlightRecords() == config.getMaxInFlightRecords()
+    return getMaxBatchSize() == config.getMaxBatchSize()
         && Objects.equals(getProducer(), config.getProducer())
         && Objects.equals(getRecords(), config.getRecords())
         && Objects.equals(

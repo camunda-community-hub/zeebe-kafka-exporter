@@ -25,13 +25,14 @@ import io.zeebe.protocol.immutables.record.ImmutableRecord;
 import io.zeebe.protocol.record.Record;
 import io.zeebe.protocol.record.RecordType;
 import io.zeebe.protocol.record.ValueType;
+import io.zeebe.protocol.record.intent.DeploymentIntent;
 import io.zeebe.protocol.record.value.DeploymentRecordValue;
+import java.nio.charset.StandardCharsets;
 import java.util.EnumSet;
 import java.util.Map;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.junit.Test;
 
-@SuppressWarnings("rawtypes")
 public class RecordHandlerTest {
 
   private static final RecordConfig DEFAULT_RECORD_CONFIG =
@@ -47,13 +48,13 @@ public class RecordHandlerTest {
     final RecordHandler recordHandler = new RecordHandler(newRecordsConfig(RecordType.COMMAND));
 
     // when
-    final ProducerRecord<RecordId, Record> transformed = recordHandler.transform(record);
+    final ProducerRecord<RecordId, byte[]> transformed = recordHandler.transform(record);
 
     // then
     assertThat(transformed.topic()).isEqualTo(deploymentRecordConfig.getTopic());
     assertThat(transformed.key())
         .isEqualTo(new RecordId(record.getPartitionId(), record.getPosition()));
-    assertThat(transformed.value()).isEqualTo(record);
+    assertThat(transformed.value()).isEqualTo(record.toJson().getBytes(StandardCharsets.UTF_8));
   }
 
   @Test
@@ -88,6 +89,7 @@ public class RecordHandlerTest {
         .valueType(ValueType.DEPLOYMENT)
         .recordType(RecordType.EVENT)
         .timestamp(System.currentTimeMillis())
+        .intent(DeploymentIntent.CREATE)
         .value(ImmutableDeploymentRecordValue.builder().build())
         .partitionId(1)
         .position(1);

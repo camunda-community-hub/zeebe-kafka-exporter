@@ -32,7 +32,6 @@ import java.util.Objects;
 import java.util.Properties;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.apache.http.HttpHost;
 import org.apache.kafka.clients.consumer.Consumer;

@@ -158,7 +158,7 @@ public class KafkaExporterIT {
   @NonNull
   private RawConfig newConfiguration() {
     final RawConfig configuration = new RawConfig();
-    configuration.maxInFlightRecords = 30;
+    configuration.maxBatchSize = 32 * 1024 * 1024;
     configuration.producer = new RawProducerConfig();
     configuration.producer.servers = getKafkaServer();
 

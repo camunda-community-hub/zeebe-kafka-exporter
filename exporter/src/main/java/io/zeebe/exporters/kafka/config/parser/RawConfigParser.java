@@ -36,7 +36,8 @@ import java.util.Objects;
  * to overwrite the parsing for nested types.
  */
 public final class RawConfigParser implements ConfigParser<RawConfig, Config> {
-  static final int DEFAULT_MAX_IN_FLIGHT_RECORDS = 100;
+  static final int DEFAULT_MAX_BATCH_SIZE = 8 * 1024 * 1024;
+  static final Duration DEFAULT_MAX_BLOCKING_TIMEOUT = Duration.ofSeconds(1);
   static final Duration DEFAULT_IN_FLIGHT_RECORD_CHECK_INTERVAL = Duration.ofSeconds(1);
 
   private final ConfigParser<RawRecordsConfig, RecordsConfig> recordsConfigParser;
@@ -61,8 +62,9 @@ public final class RawConfigParser implements ConfigParser<RawConfig, Config> {
         producerConfigParser.parse(config.producer, RawProducerConfig::new);
     final RecordsConfig recordsConfig =
         recordsConfigParser.parse(config.records, RawRecordsConfig::new);
-    final Integer maxInFlightRecords =
-        get(config.maxInFlightRecords, DEFAULT_MAX_IN_FLIGHT_RECORDS);
+    final Integer maxBatchSize = get(config.maxBatchSize, DEFAULT_MAX_BATCH_SIZE);
+    final Duration maxBlockingTimeout =
+        get(config.maxBlockingTimeoutMs, DEFAULT_MAX_BLOCKING_TIMEOUT, Duration::ofMillis);
     final Duration inFlightRecordCheckInterval =
         get(
             config.inFlightRecordCheckIntervalMs,
@@ -70,6 +72,10 @@ public final class RawConfigParser implements ConfigParser<RawConfig, Config> {
             Duration::ofMillis);
 
     return new Config(
-        producerConfig, recordsConfig, maxInFlightRecords, inFlightRecordCheckInterval);
+        producerConfig,
+        recordsConfig,
+        maxBatchSize,
+        maxBlockingTimeout,
+        inFlightRecordCheckInterval);
   }
 }
