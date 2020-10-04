@@ -83,7 +83,7 @@ public class RecordIdPartitioner implements Partitioner {
     final RecordId recordId = (RecordId) key;
     final int partitionId = recordId.getPartitionId() % numPartitions;
 
-    LOGGER.info("Assigning partition {} to record ID {}", partitionId, recordId);
+    LOGGER.trace("Assigning partition {} to record ID {}", partitionId, recordId);
 
     return partitionId;
   }
