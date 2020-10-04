@@ -19,13 +19,12 @@ import edu.umd.cs.findbugs.annotations.NonNull;
 import io.zeebe.exporters.kafka.config.Config;
 import io.zeebe.exporters.kafka.serde.RecordId;
 import io.zeebe.exporters.kafka.serde.RecordIdSerializer;
-import io.zeebe.exporters.kafka.serde.RecordSerializer;
-import io.zeebe.protocol.record.Record;
 import java.util.HashMap;
 import java.util.Map;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.Producer;
 import org.apache.kafka.clients.producer.ProducerConfig;
+import org.apache.kafka.common.serialization.ByteArraySerializer;
 
 /**
  * {@link DefaultKafkaProducerFactory} is the default implementation of {@link KafkaProducerFactory}
@@ -42,29 +41,31 @@ import org.apache.kafka.clients.producer.ProducerConfig;
  * io.zeebe.exporters.kafka.config.raw.RawProducerConfig#config}.
  */
 public final class DefaultKafkaProducerFactory implements KafkaProducerFactory {
-  @SuppressWarnings("rawtypes")
   @Override
-  public @NonNull Producer<RecordId, Record> newProducer(final @NonNull Config config) {
+  public @NonNull Producer<RecordId, byte[]> newProducer(
+      final @NonNull Config config, final String producerId) {
     final Map<String, Object> options = new HashMap<>();
+    final String clientId = String.format("%s-%s", config.getProducer().getClientId(), producerId);
 
+    options.put(ProducerConfig.TRANSACTIONAL_ID_CONFIG, producerId);
+    options.put(ProducerConfig.CLIENT_ID_CONFIG, clientId);
     options.put(ProducerConfig.ENABLE_IDEMPOTENCE_CONFIG, true);
-    // since we're using "infinite" retries/delivery with an idempotent producer, setting the max
-    // in flight requests to 1 ensures batches are delivered in order.
+
+    // disable concurrent connections to ensure order is preserved
     options.put(ProducerConfig.MAX_IN_FLIGHT_REQUESTS_PER_CONNECTION, 1);
     options.put(ProducerConfig.DELIVERY_TIMEOUT_MS_CONFIG, Integer.MAX_VALUE);
     options.put(
         ProducerConfig.REQUEST_TIMEOUT_MS_CONFIG,
         (int) config.getProducer().getRequestTimeout().toMillis());
     options.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, config.getProducer().getServers());
-    options.put(ProducerConfig.CLIENT_ID_CONFIG, config.getProducer().getClientId());
 
     // provides a soft memory bound - there's some memory overhead used by SSL, compression, etc.,
     // but this gives us a good idea of how much memory will be used by the exporter
-    options.put(ProducerConfig.BUFFER_MEMORY_CONFIG, 8 * 1024 * 1024L);
+    options.put(ProducerConfig.BUFFER_MEMORY_CONFIG, 2 * config.getMaxBatchSize());
 
     // wait up to 10ms or until the batch is full before sending
     options.put(ProducerConfig.LINGER_MS_CONFIG, 10L);
-    options.put(ProducerConfig.BATCH_SIZE_CONFIG, 512 * 1024);
+    options.put(ProducerConfig.BATCH_SIZE_CONFIG, config.getMaxBatchSize());
 
     // determines how long to block if the buffer memory is full before throwing an exception
     options.put(ProducerConfig.MAX_BLOCK_MS_CONFIG, 5_000L);
@@ -73,7 +74,7 @@ public final class DefaultKafkaProducerFactory implements KafkaProducerFactory {
     options.putAll(config.getProducer().getConfig());
 
     options.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, RecordIdSerializer.class);
-    options.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, RecordSerializer.class);
+    options.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, ByteArraySerializer.class);
     options.put(ProducerConfig.PARTITIONER_CLASS_CONFIG, RecordIdPartitioner.class);
 
     return new KafkaProducer<>(options);

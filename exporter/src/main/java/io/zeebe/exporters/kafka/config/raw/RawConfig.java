@@ -18,11 +18,19 @@ package io.zeebe.exporters.kafka.config.raw;
 @SuppressWarnings("squid:ClassVariableVisibilityCheck")
 public class RawConfig {
   /**
-   * Controls how many records can have been sent to the Kafka broker without any acknowledgment.
-   * Once the limit is reached the exporter will block and wait until either one record is
-   * acknowledged
+   * Controls the maximum size in bytes that an exporter instance will buffer before waiting for at
+   * least one record to complete. Note that this is a soft upper bound - in order to accommodate
+   * potentially large records which would exceed a single batch size, the exporter will always
+   * accept a record whose size would cause the batch to spill over, but will stop after.
    */
-  public Integer maxInFlightRecords;
+  public Integer maxBatchSize;
+
+  /**
+   * The maximum time to block when the batch is full. If the batch is full, and a new record comes
+   * in, the exporter will block until there is space in the batch, or {@code maxBlockingTimeoutMs}
+   * milliseconds elapse.
+   */
+  public Long maxBlockingTimeoutMs;
 
   /**
    * How often should the exporter drain the in flight records' queue of completed requests and

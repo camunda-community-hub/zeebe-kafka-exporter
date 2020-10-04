@@ -45,8 +45,9 @@ public class RawConfigParserTest {
     // then
     assertThat(parsed.getRecords()).isEqualTo(recordsConfigParser.parse(new RawRecordsConfig()));
     assertThat(parsed.getProducer()).isEqualTo(producerConfigParser.parse(new RawProducerConfig()));
-    assertThat(parsed.getMaxInFlightRecords())
-        .isEqualTo(RawConfigParser.DEFAULT_MAX_IN_FLIGHT_RECORDS);
+    assertThat(parsed.getMaxBatchSize()).isEqualTo(RawConfigParser.DEFAULT_MAX_BATCH_SIZE);
+    assertThat(parsed.getMaxBlockingTimeout())
+        .isEqualTo(RawConfigParser.DEFAULT_MAX_BLOCKING_TIMEOUT);
     assertThat(parsed.getInFlightRecordCheckInterval())
         .isEqualTo(RawConfigParser.DEFAULT_IN_FLIGHT_RECORD_CHECK_INTERVAL);
   }
@@ -57,7 +58,8 @@ public class RawConfigParserTest {
     final RawConfig config = new RawConfig();
     final ProducerConfig producerConfig = producerConfigParser.parse(new RawProducerConfig());
     final RecordsConfig recordsConfig = recordsConfigParser.parse(new RawRecordsConfig());
-    config.maxInFlightRecords = 2;
+    config.maxBatchSize = 2;
+    config.maxBlockingTimeoutMs = 500L;
     config.inFlightRecordCheckIntervalMs = 500L;
 
     // when
@@ -66,7 +68,8 @@ public class RawConfigParserTest {
     // then
     assertThat(parsed.getProducer()).isEqualTo(producerConfig);
     assertThat(parsed.getRecords()).isEqualTo(recordsConfig);
-    assertThat(parsed.getMaxInFlightRecords()).isEqualTo(2);
+    assertThat(parsed.getMaxBatchSize()).isEqualTo(2);
+    assertThat(parsed.getMaxBlockingTimeout()).isEqualTo(Duration.ofMillis(500));
     assertThat(parsed.getInFlightRecordCheckInterval()).isEqualTo(Duration.ofMillis(500));
   }
 }

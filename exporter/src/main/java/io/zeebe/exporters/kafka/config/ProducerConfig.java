@@ -40,11 +40,11 @@ public final class ProducerConfig {
   private final List<String> servers;
 
   public ProducerConfig(
-      final String clientId,
-      final Duration closeTimeout,
-      final Map<String, Object> config,
-      final Duration requestTimeout,
-      final List<String> servers) {
+      final @NonNull String clientId,
+      final @NonNull Duration closeTimeout,
+      final @NonNull Map<String, Object> config,
+      final @NonNull Duration requestTimeout,
+      final @NonNull List<String> servers) {
     this.clientId = Objects.requireNonNull(clientId);
     this.closeTimeout = Objects.requireNonNull(closeTimeout);
     this.config = Objects.requireNonNull(config);

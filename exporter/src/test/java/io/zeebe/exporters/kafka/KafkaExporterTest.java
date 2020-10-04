@@ -18,29 +18,32 @@ package io.zeebe.exporters.kafka;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 
+import edu.umd.cs.findbugs.annotations.NonNull;
 import io.zeebe.exporters.kafka.config.Config;
 import io.zeebe.exporters.kafka.config.parser.MockConfigParser;
 import io.zeebe.exporters.kafka.config.parser.RawConfigParser;
 import io.zeebe.exporters.kafka.config.raw.RawConfig;
 import io.zeebe.exporters.kafka.producer.MockKafkaProducerFactory;
+import io.zeebe.exporters.kafka.record.RecordHandler;
 import io.zeebe.exporters.kafka.serde.RecordId;
 import io.zeebe.exporters.kafka.serde.RecordIdSerializer;
-import io.zeebe.exporters.kafka.serde.RecordSerializer;
 import io.zeebe.protocol.record.Record;
 import io.zeebe.test.exporter.ExporterTestHarness;
 import java.util.List;
 import java.util.stream.IntStream;
 import org.apache.kafka.clients.producer.MockProducer;
 import org.apache.kafka.clients.producer.ProducerRecord;
+import org.apache.kafka.common.serialization.ByteArraySerializer;
 import org.junit.Before;
 import org.junit.Test;
 
-@SuppressWarnings("rawtypes")
+@SuppressWarnings({"rawtypes", "ResultOfMethodCallIgnored"})
 public class KafkaExporterTest {
   private static final String EXPORTER_ID = "kafka";
 
   private final RawConfig rawConfig = new RawConfig();
-  private final MockKafkaProducerFactory mockProducerFactory = new MockKafkaProducerFactory();
+  private final MockKafkaProducerFactory mockProducerFactory =
+      new MockKafkaProducerFactory(this::newMockProducer);
   private final MockConfigParser<RawConfig, Config> mockConfigParser =
       new MockConfigParser<>(new RawConfigParser());
   private final KafkaExporter exporter = new KafkaExporter(mockProducerFactory, mockConfigParser);
@@ -48,8 +51,6 @@ public class KafkaExporterTest {
 
   @Before
   public void setup() {
-    mockProducerFactory.mockProducer =
-        new MockProducer<>(true, new RecordIdSerializer(), new RecordSerializer());
     mockConfigParser.config = mockConfigParser.parse(rawConfig);
   }
 
@@ -69,50 +70,29 @@ public class KafkaExporterTest {
             });
 
     // then
-    final ProducerRecord<RecordId, Record> expected =
-        new ProducerRecord<>(
-            mockConfigParser.config.getRecords().getDefaults().getTopic(),
-            new RecordId(record.getPartitionId(), record.getPosition()),
-            record);
-    assertThat(mockProducerFactory.mockProducer.history()).hasSize(1).containsExactly(expected);
-  }
+    final ProducerRecord<RecordId, byte[]> expected =
+        new RecordHandler(mockConfigParser.config.getRecords()).transform(record);
+    mockProducerFactory.mockProducer.commitTransaction();
+    assertThat(mockProducerFactory.mockProducer.history()).hasSize(1);
 
-  @Test
-  public void shouldUpdatePositionBasedOnCompletedRequests() throws Exception {
-    // given
-    final int recordsCount = 4;
-
-    // control how many are completed
-    mockProducerFactory.mockProducer =
-        new MockProducer<>(false, new RecordIdSerializer(), new RecordSerializer());
-    rawConfig.maxInFlightRecords = recordsCount; // prevent blocking awaiting completion
-    mockConfigParser.forceParse(rawConfig);
-
-    testHarness.configure(EXPORTER_ID, rawConfig);
-    testHarness.open();
-
-    // when
-    final List<Record> records = testHarness.stream().export(recordsCount);
-    final int lastCompleted = records.size() - 2;
-    completeNextRequests(lastCompleted);
-    checkInFlightRequests();
-
-    // then
-    assertThat(testHarness.getLastUpdatedPosition())
-        .isEqualTo(records.get(lastCompleted).getPosition());
+    final ProducerRecord<RecordId, byte[]> producedRecord =
+        mockProducerFactory.mockProducer.history().get(0);
+    assertThat(producedRecord.topic()).isEqualTo(expected.topic());
+    assertThat(producedRecord.key()).isEqualTo(expected.key());
+    assertThat(producedRecord.value()).isEqualTo(expected.value());
   }
 
   @Test
   public void shouldBlockIfRequestQueueFull() throws Exception {
     // given
     mockProducerFactory.mockProducer =
-        new MockProducer<>(false, new RecordIdSerializer(), new RecordSerializer());
-    final int recordsCount = 2;
+        new MockProducer<>(false, new RecordIdSerializer(), new ByteArraySerializer());
 
-    // since maxInFlightRecords is less than recordsCount, it will force awaiting
-    // the completion of the next request and will update the position accordingly.
-    // there's no blocking here because the MockProducer is configured to autocomplete.
-    rawConfig.maxInFlightRecords = recordsCount - 1;
+    // since maxBatchSize is pretty small, it should accept the first record but immediately block
+    // on the second one (as the batch is already full). the completion of the next request and will
+    // update the position accordingly. there's no blocking here because the MockProducer is
+    // configured to autocomplete.
+    rawConfig.maxBatchSize = 1;
     mockConfigParser.forceParse(rawConfig);
 
     testHarness.configure(EXPORTER_ID, rawConfig);
@@ -122,9 +102,8 @@ public class KafkaExporterTest {
     final Record exported = testHarness.export();
     mockProducerFactory.mockProducer.completeNext();
     final Record notExported = testHarness.export();
-    checkInFlightRequests();
 
-    // then
+    // then - no need to check the position is updated since when full it will have done so already
     assertThat(testHarness.getLastUpdatedPosition())
         .isEqualTo(exported.getPosition())
         .isNotEqualTo(notExported.getPosition());
@@ -134,7 +113,7 @@ public class KafkaExporterTest {
   public void shouldUpdatePositionOnClose() throws Exception {
     // given
     final int recordsCount = 4;
-    rawConfig.maxInFlightRecords = recordsCount;
+    rawConfig.maxBatchSize = recordsCount;
     mockConfigParser.forceParse(rawConfig);
 
     testHarness.configure(EXPORTER_ID, rawConfig);
@@ -167,48 +146,29 @@ public class KafkaExporterTest {
   }
 
   @Test
-  public void shouldUpdatePositionToLatestCompletedEventEvenIfOneRecordFails() throws Exception {
+  public void shouldRetryRecordOnException() throws Exception {
     // given
     mockProducerFactory.mockProducer =
-        new MockProducer<>(false, new RecordIdSerializer(), new RecordSerializer());
-    rawConfig.maxInFlightRecords = 2;
-    mockConfigParser.forceParse(rawConfig);
-
-    testHarness.configure(EXPORTER_ID, rawConfig);
-    testHarness.open();
-
-    // when
-    final Record successful = testHarness.export();
-    mockProducerFactory.mockProducer.completeNext();
-    final Record failed = testHarness.export();
-    mockProducerFactory.mockProducer.errorNext(new RuntimeException("failed"));
-    checkInFlightRequests();
-
-    // then
-    assertThat(testHarness.getLastUpdatedPosition())
-        .isEqualTo(successful.getPosition())
-        .isNotEqualTo(failed.getPosition());
-  }
-
-  @SuppressWarnings("ResultOfMethodCallIgnored")
-  @Test
-  public void shouldCloseExporterIfRecordFails() throws Exception {
-    // given
-    mockProducerFactory.mockProducer =
-        new MockProducer<>(false, new RecordIdSerializer(), new RecordSerializer());
+        new MockProducer<>(false, new RecordIdSerializer(), new ByteArraySerializer());
     testHarness.configure(EXPORTER_ID, rawConfig);
     testHarness.open();
 
     // when
     testHarness.export();
-    mockProducerFactory.mockProducer.errorNext(new RuntimeException("failed"));
+    mockProducerFactory.mockProducer.fenceProducer();
     checkInFlightRequests();
-    testHarness.stream().export(5);
+    testHarness.stream().export(2);
+    mockProducerFactory.mockProducer.commitTransaction();
 
     // then
     assertThat(mockProducerFactory.mockProducer.history())
-        .describedAs("should not have exported more records")
-        .hasSize(1);
+        .describedAs("should have the produced the exact amount of exported records")
+        .hasSize(3);
+  }
+
+  @NonNull
+  private MockProducer<RecordId, byte[]> newMockProducer() {
+    return new MockProducer<>(true, new RecordIdSerializer(), new ByteArraySerializer());
   }
 
   private void completeNextRequests(final int requestCount) {

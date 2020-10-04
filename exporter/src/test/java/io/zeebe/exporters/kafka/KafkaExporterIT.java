@@ -59,7 +59,9 @@ public class KafkaExporterIT {
 
   @Rule
   public KafkaContainer kafkaContainer =
-      new KafkaContainer(DockerImageName.parse("confluentinc/cp-kafka:5.5.1"))
+      new KafkaContainer(DockerImageName.parse("confluentinc/cp-kafka").withTag("5.5.1"))
+          .withEnv("KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR", "1")
+          .withEnv("KAFKA_TRANSACTION_STATE_LOG_MIN_ISR", "1")
           .withEmbeddedZookeeper();
 
   private RawConfig exporterConfiguration;
@@ -163,7 +165,7 @@ public class KafkaExporterIT {
   @NonNull
   private RawConfig newConfiguration() {
     final RawConfig configuration = new RawConfig();
-    configuration.maxInFlightRecords = 30;
+    configuration.maxBatchSize = 32 * 1024 * 1024;
     configuration.producer = new RawProducerConfig();
     configuration.producer.servers = getKafkaServer();
 

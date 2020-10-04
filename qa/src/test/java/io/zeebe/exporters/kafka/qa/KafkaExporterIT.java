@@ -20,10 +20,11 @@ import io.zeebe.containers.ZeebeContainer;
 import io.zeebe.exporters.kafka.serde.RecordDeserializer;
 import io.zeebe.exporters.kafka.serde.RecordId;
 import io.zeebe.exporters.kafka.serde.RecordIdDeserializer;
+import io.zeebe.exporters.kafka.tck.DebugHttpExporterClient;
 import io.zeebe.exporters.kafka.tck.ExporterTechnologyCompatibilityKit;
-import io.zeebe.exporters.kafka.tck.elastic.ElasticExporterClient;
 import io.zeebe.protocol.record.Record;
-import java.io.IOException;
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
@@ -32,11 +33,9 @@ import java.util.Properties;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
-import org.apache.http.HttpHost;
 import org.apache.kafka.clients.consumer.Consumer;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
-import org.elasticsearch.client.RestClient;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -48,7 +47,6 @@ import org.slf4j.LoggerFactory;
 import org.testcontainers.containers.KafkaContainer;
 import org.testcontainers.containers.Network;
 import org.testcontainers.containers.output.Slf4jLogConsumer;
-import org.testcontainers.elasticsearch.ElasticsearchContainer;
 import org.testcontainers.lifecycle.Startable;
 import org.testcontainers.lifecycle.Startables;
 import org.testcontainers.utility.DockerImageName;
@@ -69,41 +67,30 @@ final class KafkaExporterIT {
 
   private Network network;
   private KafkaContainer kafkaContainer;
-  private ElasticsearchContainer elasticContainer;
   private ZeebeContainer zeebeContainer;
 
   private ZeebeClient client;
-  private ElasticExporterClient elasticClient;
 
   @BeforeEach
   void setUp() {
     network = Network.newNetwork();
     kafkaContainer = newKafkaContainer();
-    elasticContainer = newElasticContainer();
     zeebeContainer = newZeebeContainer();
 
-    final Stream<Startable> containers =
-        Stream.of(kafkaContainer, elasticContainer, zeebeContainer);
+    final Stream<Startable> containers = Stream.of(kafkaContainer, zeebeContainer);
     Startables.deepStart(containers).join();
 
     client = newClient();
-    elasticClient = newElasticClient();
   }
 
   @AfterEach
-  void tearDown() throws IOException {
-    if (elasticClient != null) {
-      elasticClient.close();
-      elasticClient = null;
-    }
-
+  void tearDown() {
     if (client != null) {
       client.close();
-      client = null;
     }
 
     // safely close as many containers as possible
-    Stream.of(zeebeContainer, kafkaContainer, elasticContainer)
+    Stream.of(zeebeContainer, kafkaContainer)
         .filter(Objects::nonNull)
         .parallel()
         .forEach(
@@ -114,26 +101,27 @@ final class KafkaExporterIT {
                 LOGGER.error("Failed to stop container {}", container);
               }
             });
-    zeebeContainer = null;
-    kafkaContainer = null;
-    elasticContainer = null;
 
     if (network != null) {
       network.close();
-      network = null;
     }
   }
 
   @Timeout(value = 5, unit = TimeUnit.MINUTES)
   @Test
-  void shouldExportToKafka() {
+  void shouldExportToKafka() throws MalformedURLException {
     // given
+    final URL debugHttpServerUrl =
+        new URL(
+            String.format(
+                "http://%s:%d/records.json",
+                zeebeContainer.getContainerIpAddress(), zeebeContainer.getMappedPort(8000)));
     final ExporterTechnologyCompatibilityKit tck =
-        new ExporterTechnologyCompatibilityKit(client, elasticClient::streamRecords);
+        new ExporterTechnologyCompatibilityKit(
+            client, new DebugHttpExporterClient((debugHttpServerUrl)));
 
     // when
     tck.performSampleWorkload();
-    zeebeContainer.shutdownGracefully(Duration.ofSeconds(15));
 
     // then
     final List<Record<?>> records = consumeAllExportedRecords();
@@ -172,13 +160,6 @@ final class KafkaExporterIT {
         .build();
   }
 
-  private ElasticExporterClient newElasticClient() {
-    final HttpHost elasticHost = HttpHost.create("http://" + elasticContainer.getHttpHostAddress());
-    return ElasticExporterClient.builder()
-        .withClientBuilder(RestClient.builder(elasticHost))
-        .build();
-  }
-
   private Properties newConsumerConfig() {
     final Properties properties = new Properties();
     properties.put("auto.offset.reset", "earliest");
@@ -193,9 +174,10 @@ final class KafkaExporterIT {
 
   @SuppressWarnings("OctalInteger")
   private ZeebeContainer newZeebeContainer() {
-    final ZeebeContainer container =
-        new ZeebeContainer(
-            "camunda/zeebe:" + ZeebeClient.class.getPackage().getImplementationVersion());
+    final DockerImageName zeebeImageName =
+        DockerImageName.parse("camunda/zeebe")
+            .withTag(ZeebeClient.class.getPackage().getImplementationVersion());
+    final ZeebeContainer container = new ZeebeContainer(zeebeImageName.asCanonicalNameString());
     final MountableFile exporterJar =
         MountableFile.forClasspathResource("zeebe-kafka-exporter.jar", 0775);
     final MountableFile exporterConfig = MountableFile.forClasspathResource("exporters.yml", 0775);
@@ -203,12 +185,11 @@ final class KafkaExporterIT {
     final Slf4jLogConsumer logConsumer =
         new Slf4jLogConsumer(newContainerLogger("zeebeContainer"), true);
 
+    container.addExposedPort(8000);
     return container
         .withNetwork(network)
         .withNetworkAliases(networkAlias)
-        .withEnv("ZEEBE_BROKER_NETWORK_HOST", "0.0.0.0")
         .withEnv("ZEEBE_BROKER_NETWORK_ADVERTISEDHOST", networkAlias)
-        .withEnv("ZEEBE_BROKER_EXPORTERS_ELASTIC_ARGS_URL", "http://elastic:9200")
         .withEnv("ZEEBE_BROKER_EXPORTERS_KAFKA_ARGS_PRODUCER_SERVERS", "kafka:9092")
         .withCopyFileToContainer(exporterJar, "/usr/local/zeebe/lib/zeebe-kafka-exporter.jar")
         .withCopyFileToContainer(exporterConfig, "/usr/local/zeebe/config/exporters.yml")
@@ -216,26 +197,16 @@ final class KafkaExporterIT {
         .withLogConsumer(logConsumer);
   }
 
-  private ElasticsearchContainer newElasticContainer() {
-    final ElasticsearchContainer container =
-        new ElasticsearchContainer(
-            DockerImageName.parse("docker.elastic.co/elasticsearch/elasticsearch:6.8.13"));
-    final Slf4jLogConsumer logConsumer =
-        new Slf4jLogConsumer(newContainerLogger("elasticContainer"), true);
-
-    return container
-        .withNetwork(network)
-        .withNetworkAliases("elastic")
-        .withLogConsumer(logConsumer);
-  }
-
   private KafkaContainer newKafkaContainer() {
-    final KafkaContainer container =
-        new KafkaContainer(DockerImageName.parse("confluentinc/cp-kafka:5.5.1"));
+    final DockerImageName kafkaImage =
+        DockerImageName.parse("confluentinc/cp-kafka").withTag("5.5.1");
+    final KafkaContainer container = new KafkaContainer(kafkaImage);
     final Slf4jLogConsumer logConsumer =
         new Slf4jLogConsumer(newContainerLogger("kafkaContainer"), true);
 
     return container
+        .withEnv("KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR", "1")
+        .withEnv("KAFKA_TRANSACTION_STATE_LOG_MIN_ISR", "1")
         .withEmbeddedZookeeper()
         .withNetwork(network)
         .withNetworkAliases("kafka")

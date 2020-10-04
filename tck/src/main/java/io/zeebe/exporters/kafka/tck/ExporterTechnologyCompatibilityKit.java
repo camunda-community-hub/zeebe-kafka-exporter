@@ -68,7 +68,7 @@ public final class ExporterTechnologyCompatibilityKit {
           .done();
 
   private final ZeebeClient client;
-  private final RecordStreamSupplier recordSupplier;
+  private final RecordStreamer recordSupplier;
 
   /**
    * @param client a configured ZeebeClient which can be used to deploy workflows, publish messages,
@@ -77,7 +77,7 @@ public final class ExporterTechnologyCompatibilityKit {
    *     of the call, not necessarily all exported records ever); the stream may be slightly delayed
    */
   public ExporterTechnologyCompatibilityKit(
-      final @NonNull ZeebeClient client, final @NonNull RecordStreamSupplier recordSupplier) {
+      final @NonNull ZeebeClient client, final @NonNull RecordStreamer recordSupplier) {
     this.client = Objects.requireNonNull(client);
     this.recordSupplier = Objects.requireNonNull(recordSupplier);
   }
@@ -120,7 +120,8 @@ public final class ExporterTechnologyCompatibilityKit {
    *     provided by the {@code recordSupplier}
    */
   public void assertAllRecordsExported(final @Nullable List<Record<?>> actualRecords) {
-    final List<Record<?>> expectedRecords = recordSupplier.get().collect(Collectors.toList());
+    final List<Record<?>> expectedRecords =
+        recordSupplier.streamRecords().collect(Collectors.toList());
 
     Assertions.assertThat(expectedRecords).isNotEmpty();
     Assertions.assertThat(actualRecords)
@@ -170,7 +171,7 @@ public final class ExporterTechnologyCompatibilityKit {
   @NonNull
   private Optional<Record<IncidentRecordValue>> findIncident(final long workflowInstanceKey) {
     return recordSupplier
-        .get()
+        .streamRecords()
         .filter(r -> r.getIntent() == IncidentIntent.CREATED)
         .map(r -> (Record<IncidentRecordValue>) r)
         .filter(r -> r.getValue().getWorkflowInstanceKey() == workflowInstanceKey)
@@ -229,7 +230,7 @@ public final class ExporterTechnologyCompatibilityKit {
   private Optional<Record<WorkflowInstanceRecordValue>> getProcessCompleted(
       final long workflowInstanceKey) {
     return recordSupplier
-        .get()
+        .streamRecords()
         .filter(r -> r.getIntent() == WorkflowInstanceIntent.ELEMENT_COMPLETED)
         .filter(r -> r.getKey() == workflowInstanceKey)
         .map(r -> (Record<WorkflowInstanceRecordValue>) r)

@@ -16,9 +16,10 @@
 package io.zeebe.exporters.kafka.tck;
 
 import io.zeebe.protocol.record.Record;
-import java.util.function.Supplier;
+import io.zeebe.protocol.record.RecordValue;
 import java.util.stream.Stream;
 
-/** A convenience type alias for {@code Supplier<Stream<Record<?>>} */
 @FunctionalInterface
-public interface RecordStreamSupplier extends Supplier<Stream<Record<?>>> {}
+public interface RecordStreamer {
+  Stream<Record<? extends RecordValue>> streamRecords();
+}
