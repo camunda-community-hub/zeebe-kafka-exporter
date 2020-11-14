@@ -13,26 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.zeebe.exporters.kafka.qa;
+package io.zeebe.exporters.kafka.tck;
 
-import io.zeebe.exporters.kafka.serde.RecordId;
 import io.zeebe.protocol.record.Record;
-import io.zeebe.protocol.record.RecordValue;
+import java.util.function.Supplier;
+import java.util.stream.Stream;
 
-final class ConsumedRecord<T extends RecordValue> {
-  private final RecordId id;
-  private final Record<T> record;
-
-  public ConsumedRecord(final RecordId id, final Record<T> record) {
-    this.id = id;
-    this.record = record;
-  }
-
-  public RecordId getId() {
-    return id;
-  }
-
-  public Record<T> getRecord() {
-    return record;
-  }
-}
+/** A convenience type alias for {@code Supplier<Stream<Record<?>>} */
+@FunctionalInterface
+public interface RecordStreamSupplier extends Supplier<Stream<Record<?>>> {}
