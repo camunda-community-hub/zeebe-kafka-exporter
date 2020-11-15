@@ -16,118 +16,141 @@
 package io.zeebe.exporters.kafka.qa;
 
 import io.zeebe.client.ZeebeClient;
-import io.zeebe.client.api.response.DeploymentEvent;
 import io.zeebe.containers.ZeebeBrokerContainer;
 import io.zeebe.containers.ZeebePort;
 import io.zeebe.exporters.kafka.serde.RecordDeserializer;
 import io.zeebe.exporters.kafka.serde.RecordId;
 import io.zeebe.exporters.kafka.serde.RecordIdDeserializer;
-import io.zeebe.model.bpmn.Bpmn;
-import io.zeebe.model.bpmn.BpmnModelInstance;
-import io.zeebe.protocol.record.Assertions;
+import io.zeebe.exporters.kafka.tck.ExporterTechnologyCompatibilityKit;
+import io.zeebe.exporters.kafka.tck.elastic.ElasticExporterClient;
 import io.zeebe.protocol.record.Record;
-import io.zeebe.protocol.record.RecordType;
-import io.zeebe.protocol.record.ValueType;
-import io.zeebe.protocol.record.intent.DeploymentIntent;
-import io.zeebe.protocol.record.value.DeploymentRecordValue;
-import io.zeebe.protocol.record.value.deployment.ResourceType;
+import java.io.IOException;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.Properties;
+import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+import org.apache.http.HttpHost;
 import org.apache.kafka.clients.consumer.Consumer;
-import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.RuleChain;
+import org.elasticsearch.client.RestClient;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.api.parallel.Execution;
+import org.junit.jupiter.api.parallel.ExecutionMode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.testcontainers.containers.KafkaContainer;
 import org.testcontainers.containers.Network;
 import org.testcontainers.containers.output.Slf4jLogConsumer;
+import org.testcontainers.elasticsearch.ElasticsearchContainer;
+import org.testcontainers.lifecycle.Startable;
+import org.testcontainers.lifecycle.Startables;
 import org.testcontainers.utility.MountableFile;
 
 /**
  * This tests the deployment of the exporter into a Zeebe broker in a as-close-to-production way as
- * possible, by starting a Zeebe container and deploying the exporter as one normally would. As the
- * verification tools are somewhat limited at the moment, we only verify that some things are
- * exported; a full verification of the behaviour is still done in the main exporter module. Once
- * verification tools get better, all the verification should be moved into this module.
+ * possible, by starting a Zeebe container and deploying the exporter as one normally would.
+ *
+ * <p>In order to verify certain properties - i.e. all records were exported correctly, order was
+ * maintained on a per partition basis, etc. - we use the Elasticsearch Exporter, which is official
+ * and trusted, to compare results.
  */
-public final class KafkaExporterIT {
+@Execution(ExecutionMode.SAME_THREAD)
+final class KafkaExporterIT {
   private static final Pattern TOPIC_SUBSCRIPTION_PATTERN = Pattern.compile("zeebe.*");
+  private static final Logger LOGGER = LoggerFactory.getLogger(KafkaExporterIT.class);
 
-  private final KafkaContainer kafkaContainer = newKafkaContainer();
-  private final ZeebeBrokerContainer zeebeContainer = newZeebeContainer();
-
-  @Rule
-  public final RuleChain ruleChain = RuleChain.outerRule(kafkaContainer).around(zeebeContainer);
+  private Network network;
+  private KafkaContainer kafkaContainer;
+  private ElasticsearchContainer elasticContainer;
+  private ZeebeBrokerContainer zeebeContainer;
 
   private ZeebeClient client;
+  private ElasticExporterClient elasticClient;
 
-  @Before
-  public void setUp() {
+  @BeforeEach
+  void setUp() {
+    network = Network.newNetwork();
+    kafkaContainer = newKafkaContainer();
+    elasticContainer = newElasticContainer();
+    zeebeContainer = newZeebeContainer();
+
+    final Stream<Startable> containers =
+        Stream.of(kafkaContainer, elasticContainer, zeebeContainer);
+    Startables.deepStart(containers).join();
+
     client = newClient();
+    elasticClient = newElasticClient();
   }
 
-  @After
-  public void tearDown() {
+  @AfterEach
+  void tearDown() throws IOException {
+    if (elasticClient != null) {
+      elasticClient.close();
+      elasticClient = null;
+    }
+
     if (client != null) {
       client.close();
       client = null;
     }
+
+    // safely close as many containers as possible
+    Stream.of(zeebeContainer, kafkaContainer, elasticContainer)
+        .filter(Objects::nonNull)
+        .parallel()
+        .forEach(
+            container -> {
+              try {
+                container.stop();
+              } catch (final Exception e) {
+                LOGGER.error("Failed to stop container {}", container);
+              }
+            });
+    zeebeContainer = null;
+    kafkaContainer = null;
+    elasticContainer = null;
+
+    if (network != null) {
+      network.close();
+      network = null;
+    }
   }
 
+  @Timeout(value = 5, unit = TimeUnit.MINUTES)
   @Test
-  public void shouldExportToKafka() {
+  void shouldExportToKafka() {
     // given
-    final BpmnModelInstance process =
-        Bpmn.createExecutableProcess("process")
-            .startEvent("start")
-            .serviceTask("task")
-            .zeebeJobType("type")
-            .endEvent()
-            .done();
+    final ExporterTechnologyCompatibilityKit tck =
+        new ExporterTechnologyCompatibilityKit(client, elasticClient::streamRecords);
 
     // when
-    final DeploymentEvent deploymentEvent =
-        client.newDeployCommand().addWorkflowModel(process, "process.bpmn").send().join();
+    tck.performSampleWorkload();
+    zeebeContainer.shutdownGracefully(Duration.ofSeconds(15));
 
     // then
-    final List<ConsumerRecord<RecordId, Record<?>>> exportedRecords = consumeAllExportedRecords();
-    final ConsumedRecord<DeploymentRecordValue> exportedDeploymentEvent =
-        exportedRecords.stream()
-            .filter(e -> e.value().getValueType() == ValueType.DEPLOYMENT)
-            .filter(r -> r.value().getIntent() == DeploymentIntent.CREATE)
-            .map(r -> new ConsumedRecord<>(r.key(), (Record<DeploymentRecordValue>) r.value()))
-            .findFirst()
-            .orElseThrow();
-    final Record<DeploymentRecordValue> exportedRecord = exportedDeploymentEvent.getRecord();
-    Assertions.assertThat(exportedRecord)
-        .hasPartitionId(exportedDeploymentEvent.getId().getPartitionId());
-    Assertions.assertThat(exportedRecord)
-        .hasPosition(exportedDeploymentEvent.getId().getPosition());
-    Assertions.assertThat(exportedRecord).hasRecordType(RecordType.COMMAND);
-    Assertions.assertThat(exportedRecord.getValue().getResources().get(0))
-        .hasResourceType(ResourceType.BPMN_XML)
-        .hasResourceName("process.bpmn")
-        .hasResource(Bpmn.convertToString(process).getBytes());
+    final List<Record<?>> records = consumeAllExportedRecords();
+    tck.assertAllRecordsExported(records);
+    tck.assertRecordsMaintainOrderPerPartition(records);
   }
 
-  private List<ConsumerRecord<RecordId, Record<?>>> consumeAllExportedRecords() {
-    final List<ConsumerRecord<RecordId, Record<?>>> records = new ArrayList<>();
+  private List<Record<?>> consumeAllExportedRecords() {
+    final List<Record<?>> records = new ArrayList<>();
     final Duration timeout = Duration.ofSeconds(5);
     ConsumerRecords<RecordId, Record<?>> consumedRecords;
 
     do {
       try (Consumer<RecordId, Record<?>> consumer = newConsumer()) {
         consumedRecords = consumer.poll(timeout);
-        consumedRecords.forEach(records::add);
+        consumedRecords.forEach(r -> records.add(r.value()));
       }
     } while (!consumedRecords.isEmpty());
 
@@ -150,6 +173,13 @@ public final class KafkaExporterIT {
         .build();
   }
 
+  private ElasticExporterClient newElasticClient() {
+    final HttpHost elasticHost = HttpHost.create("http://" + elasticContainer.getHttpHostAddress());
+    return ElasticExporterClient.builder()
+        .withClientBuilder(RestClient.builder(elasticHost))
+        .build();
+  }
+
   private Properties newConsumerConfig() {
     final Properties properties = new Properties();
     properties.put("auto.offset.reset", "earliest");
@@ -163,35 +193,50 @@ public final class KafkaExporterIT {
   }
 
   @SuppressWarnings("OctalInteger")
-  private static ZeebeBrokerContainer newZeebeContainer() {
+  private ZeebeBrokerContainer newZeebeContainer() {
     final ZeebeBrokerContainer container =
         new ZeebeBrokerContainer(ZeebeClient.class.getPackage().getImplementationVersion());
     final MountableFile exporterJar =
         MountableFile.forClasspathResource("zeebe-kafka-exporter.jar", 0775);
-    final MountableFile exporterConfig =
-        MountableFile.forClasspathResource("kafka-exporter.yml", 0775);
+    final MountableFile exporterConfig = MountableFile.forClasspathResource("exporters.yml", 0775);
     final String networkAlias = "zeebe";
+    final Slf4jLogConsumer logConsumer =
+        new Slf4jLogConsumer(newContainerLogger("zeebeContainer"), true);
 
     return container
-        .withNetwork(Network.SHARED)
+        .withNetwork(network)
         .withNetworkAliases(networkAlias)
         .withEnv("ZEEBE_BROKER_NETWORK_HOST", "0.0.0.0")
         .withEnv("ZEEBE_BROKER_NETWORK_ADVERTISEDHOST", networkAlias)
+        .withEnv("ZEEBE_BROKER_EXPORTERS_ELASTIC_ARGS_URL", "http://elastic:9200")
         .withEnv("ZEEBE_BROKER_EXPORTERS_KAFKA_ARGS_PRODUCER_SERVERS", "kafka:9092")
         .withCopyFileToContainer(exporterJar, "/usr/local/zeebe/lib/zeebe-kafka-exporter.jar")
-        .withCopyFileToContainer(exporterConfig, "/usr/local/zeebe/config/kafka-exporter.yml")
-        .withEnv(
-            "SPRING_CONFIG_ADDITIONAL_LOCATION", "file:/usr/local/zeebe/config/kafka-exporter.yml")
-        .withLogConsumer(new Slf4jLogConsumer(newContainerLogger("zeebeContainer"), true));
+        .withCopyFileToContainer(exporterConfig, "/usr/local/zeebe/config/exporters.yml")
+        .withEnv("SPRING_CONFIG_ADDITIONAL_LOCATION", "file:/usr/local/zeebe/config/exporters.yml")
+        .withLogConsumer(logConsumer);
   }
 
-  private static KafkaContainer newKafkaContainer() {
+  private ElasticsearchContainer newElasticContainer() {
+    final ElasticsearchContainer container = new ElasticsearchContainer("elasticsearch:6.8.13");
+    final Slf4jLogConsumer logConsumer =
+        new Slf4jLogConsumer(newContainerLogger("elasticContainer"), true);
+
+    return container
+        .withNetwork(network)
+        .withNetworkAliases("elastic")
+        .withLogConsumer(logConsumer);
+  }
+
+  private KafkaContainer newKafkaContainer() {
     final KafkaContainer container = new KafkaContainer("5.5.1");
+    final Slf4jLogConsumer logConsumer =
+        new Slf4jLogConsumer(newContainerLogger("kafkaContainer"), true);
+
     return container
         .withEmbeddedZookeeper()
-        .withNetwork(Network.SHARED)
+        .withNetwork(network)
         .withNetworkAliases("kafka")
-        .withLogConsumer(new Slf4jLogConsumer(newContainerLogger("kafkaContainer"), true));
+        .withLogConsumer(logConsumer);
   }
 
   private static Logger newContainerLogger(final String containerName) {
