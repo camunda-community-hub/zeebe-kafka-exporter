@@ -17,29 +17,13 @@ package io.zeebe.exporters.kafka.batch;
 
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.util.Objects;
-import java.util.Set;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeoutException;
-import org.apache.kafka.common.errors.CorruptRecordException;
-import org.apache.kafka.common.errors.InvalidMetadataException;
-import org.apache.kafka.common.errors.NotEnoughReplicasAfterAppendException;
-import org.apache.kafka.common.errors.NotEnoughReplicasException;
-import org.apache.kafka.common.errors.OffsetOutOfRangeException;
-import org.apache.kafka.common.errors.UnknownTopicOrPartitionException;
+import org.apache.kafka.common.errors.RetriableException;
 
 public final class BatchedRecordException extends RuntimeException {
-  private static final Set<Class<? extends Throwable>> RECOVERABLE_EXCEPTIONS =
-      Set.of(
-          CorruptRecordException.class,
-          InvalidMetadataException.class,
-          NotEnoughReplicasAfterAppendException.class,
-          NotEnoughReplicasException.class,
-          OffsetOutOfRangeException.class,
-          TimeoutException.class,
-          UnknownTopicOrPartitionException.class);
   private static final long serialVersionUID = -5912941196852862280L;
 
-  private final BatchedRecord record;
+  private final transient BatchedRecord record;
 
   public BatchedRecordException(
       final @NonNull BatchedRecord record, final @NonNull ExecutionException exception) {
@@ -52,11 +36,12 @@ public final class BatchedRecordException extends RuntimeException {
     this.record = record;
   }
 
+  @NonNull
   public BatchedRecord getRecord() {
     return record;
   }
 
   public boolean isRecoverable() {
-    return RECOVERABLE_EXCEPTIONS.contains(getCause().getClass());
+    return getCause() instanceof RetriableException;
   }
 }

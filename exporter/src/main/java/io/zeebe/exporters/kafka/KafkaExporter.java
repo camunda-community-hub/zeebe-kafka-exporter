@@ -118,7 +118,7 @@ public class KafkaExporter implements Exporter {
   @Override
   public void export(final Record record) {
     if (isClosed) {
-      logger.warn("Expected to export {}, but the exporter is already closed", record);
+      logger.debug("Expected to export {}, but the exporter is already closed", record);
       return;
     }
 
@@ -177,15 +177,10 @@ public class KafkaExporter implements Exporter {
 
   private void updatePosition(final BatchedRecord record) {
     try {
-      if (!record.wasExported()) {
-        record.awaitCompletion(config.getMaxBlockingTimeout());
-      }
-
-      if (record.wasCancelled()) {
-        logger.debug("Skipping already cancelled record as we cannot guarantee it was exported");
-        return;
-      }
-
+      // note that normally this will not block as we usually only check completed records
+      // however, it's a good way to handle the case where we do want to block (i.e. if the batch
+      // is full) while also handling errors or cancellation
+      record.awaitCompletion(config.getMaxBlockingTimeout());
       latestExportedPosition = record.getRecord().key().getPosition();
     } catch (final ExecutionException e) {
       // rethrow and let this be handled where we're expecting it; by doing this we can also ensure
@@ -194,7 +189,7 @@ public class KafkaExporter implements Exporter {
     } catch (final CancellationException e) {
       // if this occurs while we're waiting for the result, then we can safely expect that it was
       // cancelled in the context of this exporter, so there's nothing to do here
-      logger.debug("Record {} was cancelled while awaiting result", record, e);
+      logger.trace("Record {} was cancelled while awaiting result", record, e);
     } catch (final InterruptedException e) { // NOSONAR - InterruptException will re-interrupt
       // being interrupted while awaiting completion of the request most likely means the exporter
       // thread is shutting down, at which point we can expect to be closed; so simply rethrow this
@@ -230,13 +225,13 @@ public class KafkaExporter implements Exporter {
    * @param e the exception thrown
    */
   private void handleBatchedRecordException(final BatchedRecordException e) {
-    logger.warn(
+    logger.trace(
         "Cancelling all in flight records after {} and retrying them due to an exception thrown by the underlying producer",
         e.getRecord(),
         e);
 
     if (!e.isRecoverable()) {
-      logger.debug("Recreating producer due to an unrecoverable exception", e);
+      logger.warn("Recreating producer due to an unrecoverable exception", e);
       closeProducer();
       producer = producerFactory.newProducer(config);
     }

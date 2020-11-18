@@ -18,6 +18,7 @@ package io.zeebe.exporters.kafka;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 
+import edu.umd.cs.findbugs.annotations.NonNull;
 import io.zeebe.exporters.kafka.config.Config;
 import io.zeebe.exporters.kafka.config.parser.MockConfigParser;
 import io.zeebe.exporters.kafka.config.parser.RawConfigParser;
@@ -30,18 +31,31 @@ import io.zeebe.protocol.record.Record;
 import io.zeebe.test.exporter.ExporterTestHarness;
 import java.util.List;
 import java.util.stream.IntStream;
+import org.apache.kafka.clients.consumer.internals.NoAvailableBrokersException;
 import org.apache.kafka.clients.producer.MockProducer;
 import org.apache.kafka.clients.producer.ProducerRecord;
+import org.apache.kafka.common.errors.CorruptRecordException;
+import org.apache.kafka.common.errors.InvalidTopicException;
+import org.apache.kafka.common.errors.NotEnoughReplicasAfterAppendException;
+import org.apache.kafka.common.errors.NotEnoughReplicasException;
+import org.apache.kafka.common.errors.OffsetMetadataTooLarge;
+import org.apache.kafka.common.errors.OffsetOutOfRangeException;
+import org.apache.kafka.common.errors.RecordBatchTooLargeException;
+import org.apache.kafka.common.errors.RecordTooLargeException;
+import org.apache.kafka.common.errors.TimeoutException;
+import org.apache.kafka.common.errors.UnknownServerException;
+import org.apache.kafka.common.errors.UnknownTopicOrPartitionException;
 import org.apache.kafka.common.serialization.ByteArraySerializer;
 import org.junit.Before;
 import org.junit.Test;
 
-@SuppressWarnings("rawtypes")
+@SuppressWarnings({"rawtypes", "ResultOfMethodCallIgnored"})
 public class KafkaExporterTest {
   private static final String EXPORTER_ID = "kafka";
 
   private final RawConfig rawConfig = new RawConfig();
-  private final MockKafkaProducerFactory mockProducerFactory = new MockKafkaProducerFactory();
+  private final MockKafkaProducerFactory mockProducerFactory =
+      new MockKafkaProducerFactory(this::newMockProducer);
   private final MockConfigParser<RawConfig, Config> mockConfigParser =
       new MockConfigParser<>(new RawConfigParser());
   private final KafkaExporter exporter = new KafkaExporter(mockProducerFactory, mockConfigParser);
@@ -49,8 +63,6 @@ public class KafkaExporterTest {
 
   @Before
   public void setup() {
-    mockProducerFactory.mockProducer =
-        new MockProducer<>(true, new RecordIdSerializer(), new ByteArraySerializer());
     mockConfigParser.config = mockConfigParser.parse(rawConfig);
   }
 
@@ -168,7 +180,6 @@ public class KafkaExporterTest {
     assertThatCode(testHarness::close).doesNotThrowAnyException();
   }
 
-  @SuppressWarnings("ResultOfMethodCallIgnored")
   @Test
   public void shouldRetryRecordOnException() throws Exception {
     // given
@@ -184,8 +195,93 @@ public class KafkaExporterTest {
 
     // then
     assertThat(mockProducerFactory.mockProducer.history())
-        .describedAs("should not have exported more records")
+        .describedAs("should have the produced the exact amount of exported records")
         .hasSize(3);
+  }
+
+  @Test
+  public void shouldRetryRecoverableErrors() throws Exception {
+    // given
+    // this is an non exhaustive list of recoverable exceptions - see all children of
+    // org.apache.kafka.common.errors.RetriableExceptions applicable to a producer
+    final List<RuntimeException> exceptions =
+        List.of(
+            new CorruptRecordException(),
+            new NoAvailableBrokersException(),
+            new NotEnoughReplicasAfterAppendException("error"),
+            new NotEnoughReplicasException(),
+            new OffsetOutOfRangeException("error"),
+            new TimeoutException(),
+            new UnknownTopicOrPartitionException());
+    testHarness.configure(EXPORTER_ID, rawConfig);
+    testHarness.open();
+
+    // when
+    final List<Record> records = testHarness.stream().export(6);
+    exceptions.forEach(t -> mockProducerFactory.mockProducer.errorNext(t));
+    checkInFlightRequests();
+
+    // then
+    assertThat(mockProducerFactory.mockProducer.history())
+        .describedAs("should have the produced the exact amount of exported records")
+        .hasSize(6);
+    assertThat(testHarness.getLastUpdatedPosition())
+        .as("should have acknowledged the last record position")
+        .isEqualTo(records.get(records.size() - 1).getPosition());
+  }
+
+  @Test
+  public void shouldRetryUnrecoverableErrors() throws Exception {
+    // given
+    final List<RuntimeException> exceptions =
+        List.of(
+            new InvalidTopicException(),
+            new OffsetMetadataTooLarge(),
+            new RecordBatchTooLargeException(),
+            new RecordTooLargeException(),
+            new UnknownServerException());
+    // disable auto completion for better control of the retry mechanism
+    mockProducerFactory.mockProducerSupplier =
+        () -> new MockProducer<>(false, new RecordIdSerializer(), new ByteArraySerializer());
+    testHarness.configure(EXPORTER_ID, rawConfig);
+    testHarness.open();
+
+    // when
+    final List<Record> records = testHarness.stream().export(exceptions.size() + 2);
+    for (int i = 0; i < exceptions.size(); i++) {
+      final var previousMockProducer = mockProducerFactory.mockProducer;
+      mockProducerFactory.mockProducer.errorNext(exceptions.get(i));
+      checkInFlightRequests();
+      mockProducerFactory.mockProducer.completeNext();
+      checkInFlightRequests();
+
+      assertThat(mockProducerFactory.mockProducer.history())
+          .as("should have retried all records to the producer")
+          .hasSize(records.size() - i);
+      assertThat(testHarness.getLastUpdatedPosition())
+          .as("should not update position on error")
+          .isEqualTo(records.get(i).getPosition());
+      assertThat(mockProducerFactory.mockProducer)
+          .as("should close producer on unrecoverable error")
+          .isNotSameAs(previousMockProducer);
+    }
+
+    // complete the rest of the calls
+    mockProducerFactory
+        .mockProducer
+        .history()
+        .forEach(ignored -> mockProducerFactory.mockProducer.completeNext());
+    checkInFlightRequests();
+
+    // then
+    assertThat(testHarness.getLastUpdatedPosition())
+        .as("should have acknowledged the last record position")
+        .isEqualTo(records.get(records.size() - 1).getPosition());
+  }
+
+  @NonNull
+  private MockProducer<RecordId, byte[]> newMockProducer() {
+    return new MockProducer<>(true, new RecordIdSerializer(), new ByteArraySerializer());
   }
 
   private void completeNextRequests(final int requestCount) {

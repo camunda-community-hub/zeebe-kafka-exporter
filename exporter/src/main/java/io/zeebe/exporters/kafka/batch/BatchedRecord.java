@@ -65,10 +65,6 @@ public class BatchedRecord {
 
   public void awaitCompletion(final Duration timeout)
       throws InterruptedException, ExecutionException, TimeoutException {
-    if (wasExported()) {
-      return;
-    }
-
     // throws an exception if the request failed, this is interrupted, or it was not completed
     // before the given timeout
     request.get(timeout.toNanos(), TimeUnit.NANOSECONDS);
