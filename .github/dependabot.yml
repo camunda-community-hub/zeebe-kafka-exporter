@@ -13,6 +13,7 @@ updates:
     reviewers:
       - "npepinpe"
     target-branch: "master"
+    open-pull-requests-limit: 10
   # Enable version updates for stable/2.0
   - package-ecosystem: "maven"
     # Look for the root pom
@@ -26,3 +27,4 @@ updates:
     reviewers:
       - "npepinpe"
     target-branch: "stable/2.0"
+    open-pull-requests-limit: 10
