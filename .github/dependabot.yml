@@ -1,0 +1,20 @@
+# Basic dependabot.yml file with
+# minimum configuration for two package managers
+
+version: 2
+updates:
+  # Enable version updates for maven
+  - package-ecosystem: "maven"
+    # Look for the root pom
+    directory: "/"
+    schedule:
+      interval: "daily"
+    commit-message:
+      prefix: "deps(java): "
+    labels:
+      - "dependencies"
+    reviewers:
+      - "npepinpe"
+    target-branch: "master"
+    ignore:
+      - dependency_name: "io.zeebe:zeebe*" # Zeebe dependencies will be manually updated
