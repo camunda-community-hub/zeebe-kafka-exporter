@@ -52,7 +52,7 @@
     <version.kafka>2.6.0</version.kafka>
     <version.mockito>3.6.0</version.mockito>
     <version.slf4j>1.7.30</version.slf4j>
-    <version.spotbugs>3.1.12</version.spotbugs>
+    <version.spotbugs>4.1.4</version.spotbugs>
     <version.testcontainers>1.15.0</version.testcontainers>
     <version.zeebe>0.24.3</version.zeebe>
     <version.zeebe-protocol-immutables>1.0.0</version.zeebe-protocol-immutables>
