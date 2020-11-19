@@ -1,6 +1,6 @@
 version: 2
 updates:
-  # Enable version updates for maven
+  # Enable version updates for master
   - package-ecosystem: "maven"
     # Look for the root pom
     directory: "/"
@@ -13,5 +13,16 @@ updates:
     reviewers:
       - "npepinpe"
     target-branch: "master"
-    ignore:
-      - dependency-name: "io.zeebe:zeebe*" # Zeebe dependencies will be manually updated
+  # Enable version updates for stable/2.0
+  - package-ecosystem: "maven"
+    # Look for the root pom
+    directory: "/"
+    schedule:
+      interval: "daily"
+    commit-message:
+      prefix: "deps(2.0): "
+    labels:
+      - "dependencies"
+    reviewers:
+      - "npepinpe"
+    target-branch: "stable/2.0"
