@@ -63,7 +63,7 @@
     <plugin.version.javadoc>3.2.0</plugin.version.javadoc>
     <plugin.version.license>3.0</plugin.version.license>
     <plugin.version.sonar>3.7.0.1746</plugin.version.sonar>
-    <plugin.version.surefire>2.22.1</plugin.version.surefire>
+    <plugin.version.surefire>2.22.2</plugin.version.surefire>
 
     <!-- maven extensions -->
     <extension.version.os-maven-plugin>1.6.1</extension.version.os-maven-plugin>
