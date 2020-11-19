@@ -55,7 +55,7 @@
     <version.zeebe-protocol-immutables>1.0.0</version.zeebe-protocol-immutables>
 
     <!-- plugin version -->
-    <plugin.version.assembly>3.1.1</plugin.version.assembly>
+    <plugin.version.assembly>3.3.0</plugin.version.assembly>
     <plugin.version.checkstyle>3.1.1</plugin.version.checkstyle>
     <plugin.version.enforcer>3.0.0-M2</plugin.version.enforcer>
     <plugin.version.failsafe>2.22.1</plugin.version.failsafe>
