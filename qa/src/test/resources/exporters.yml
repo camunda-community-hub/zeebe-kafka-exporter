@@ -1,0 +1,51 @@
+zeebe:
+  broker:
+    exporters:
+      # configure Elastic to export everything as fast as possible
+      elastic:
+        className: io.zeebe.exporter.ElasticsearchExporter
+        args:
+          bulk:
+            delay: 1
+            size: 100
+            memoryLimit: 8388608
+          index:
+            prefix: "zeebe-record"
+            createTemplate: true
+            command: true
+            event: true
+            rejection: true
+            deployment: true
+            error: true
+            incident: true
+            job: true
+            jobBatch: true
+            message: true
+            messageSubscription: true
+            variable: true
+            variableDocument: true
+            workflowInstance: true
+            workflowInstanceCreation: true
+            workflowInstanceSubscription: true
+            ignoreVariablesAbove: 65535
+      kafka:
+        className: io.zeebe.exporters.kafka.KafkaExporter
+        args:
+          maxBatchSize: 8388608
+          maxBlockingTimeoutMs: 1000
+          inFlightRecordCheckIntervalMs: 1000
+
+          producer:
+            requestTimeoutMs: 5000
+            closeTimeoutMs: 5000
+            clientId: zeebe
+            maxConcurrentRequests: 3
+
+            config: |
+              linger.ms=5
+              buffer.memory=8388608
+              batch.size=32768
+              max.block.ms=5000
+
+          records:
+            defaults: { type: "command,event,rejection", topic: zeebe }

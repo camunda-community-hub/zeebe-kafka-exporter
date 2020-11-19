@@ -15,6 +15,7 @@
     <module>exporter</module>
     <module>qa</module>
     <module>serde</module>
+    <module>tck</module>
   </modules>
 
   <parent>
@@ -43,16 +44,19 @@
     <!-- project dependencies -->
     <version.assertj>3.18.1</version.assertj>
     <version.awaitility>4.0.3</version.awaitility>
+    <version.elasticsearch>6.8.13</version.elasticsearch>
+    <version.httpcomponents>4.4.5</version.httpcomponents>
     <version.jackson>2.11.3</version.jackson>
     <version.junit>4.13.1</version.junit>
+    <version.junit-jupiter>5.7.0</version.junit-jupiter>
     <version.kafka>2.6.0</version.kafka>
     <version.mockito>3.6.0</version.mockito>
     <version.slf4j>1.7.30</version.slf4j>
     <version.spotbugs>4.1.4</version.spotbugs>
     <version.testcontainers>1.15.0</version.testcontainers>
-    <version.zeebe>0.24.1</version.zeebe>
-    <version.zeebe-test-container>0.33.0</version.zeebe-test-container>
+    <version.zeebe>0.24.3</version.zeebe>
     <version.zeebe-protocol-immutables>1.0.0</version.zeebe-protocol-immutables>
+    <version.zeebe-test-container>0.33.0</version.zeebe-test-container>
 
     <!-- plugin version -->
     <plugin.version.assembly>3.3.0</plugin.version.assembly>
@@ -135,6 +139,12 @@
       </dependency>
 
       <dependency>
+        <groupId>org.testcontainers</groupId>
+        <artifactId>elasticsearch</artifactId>
+        <version>${version.testcontainers}</version>
+      </dependency>
+
+      <dependency>
         <groupId>io.zeebe</groupId>
         <artifactId>zeebe-test-container</artifactId>
         <version>${version.zeebe-test-container}</version>
@@ -144,6 +154,24 @@
         <groupId>junit</groupId>
         <artifactId>junit</artifactId>
         <version>${version.junit}</version>
+      </dependency>
+
+      <dependency>
+        <groupId>org.junit.jupiter</groupId>
+        <artifactId>junit-jupiter-engine</artifactId>
+        <version>${version.junit-jupiter}</version>
+      </dependency>
+
+      <dependency>
+        <groupId>org.junit.jupiter</groupId>
+        <artifactId>junit-jupiter-api</artifactId>
+        <version>${version.junit-jupiter}</version>
+      </dependency>
+
+      <dependency>
+        <groupId>org.junit.vintage</groupId>
+        <artifactId>junit-vintage-engine</artifactId>
+        <version>${version.junit-jupiter}</version>
       </dependency>
 
       <dependency>
@@ -162,6 +190,18 @@
         <groupId>org.awaitility</groupId>
         <artifactId>awaitility</artifactId>
         <version>${version.awaitility}</version>
+      </dependency>
+
+      <dependency>
+        <groupId>org.elasticsearch.client</groupId>
+        <artifactId>elasticsearch-rest-client</artifactId>
+        <version>${version.elasticsearch}</version>
+      </dependency>
+
+      <dependency>
+        <groupId>org.apache.httpcomponents</groupId>
+        <artifactId>httpcore</artifactId>
+        <version>${version.httpcomponents}</version>
       </dependency>
     </dependencies>
   </dependencyManagement>
