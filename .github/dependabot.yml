@@ -14,4 +14,4 @@ updates:
       - "npepinpe"
     target-branch: "master"
     ignore:
-      - dependency_name: "io.zeebe:zeebe*" # Zeebe dependencies will be manually updated
+      - dependency-name: "io.zeebe:zeebe*" # Zeebe dependencies will be manually updated
