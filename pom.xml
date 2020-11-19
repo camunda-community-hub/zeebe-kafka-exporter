@@ -44,7 +44,7 @@
     <version.assertj>3.18.1</version.assertj>
     <version.awaitility>4.0.3</version.awaitility>
     <version.jackson>2.11.3</version.jackson>
-    <version.junit>4.12</version.junit>
+    <version.junit>4.13.1</version.junit>
     <version.kafka>2.6.0</version.kafka>
     <version.mockito>3.6.0</version.mockito>
     <version.slf4j>1.7.30</version.slf4j>
