@@ -49,7 +49,7 @@
     <version.mockito>3.6.0</version.mockito>
     <version.slf4j>1.7.30</version.slf4j>
     <version.spotbugs>3.1.12</version.spotbugs>
-    <version.testcontainers>1.14.3</version.testcontainers>
+    <version.testcontainers>1.15.0</version.testcontainers>
     <version.zeebe>0.24.1</version.zeebe>
     <version.zeebe-test-container>0.33.0</version.zeebe-test-container>
     <version.zeebe-protocol-immutables>1.0.0</version.zeebe-protocol-immutables>
