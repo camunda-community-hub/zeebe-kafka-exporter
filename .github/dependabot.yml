@@ -7,7 +7,7 @@ updates:
     schedule:
       interval: "daily"
     commit-message:
-      prefix: "deps(java): "
+      prefix: "deps(master): "
     labels:
       - "dependencies"
     reviewers:
