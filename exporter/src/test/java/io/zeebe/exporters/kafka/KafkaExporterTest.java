@@ -39,7 +39,6 @@ import org.apache.kafka.common.errors.InvalidTopicException;
 import org.apache.kafka.common.errors.NotEnoughReplicasAfterAppendException;
 import org.apache.kafka.common.errors.NotEnoughReplicasException;
 import org.apache.kafka.common.errors.OffsetMetadataTooLarge;
-import org.apache.kafka.common.errors.OffsetOutOfRangeException;
 import org.apache.kafka.common.errors.RecordBatchTooLargeException;
 import org.apache.kafka.common.errors.RecordTooLargeException;
 import org.apache.kafka.common.errors.TimeoutException;
@@ -200,7 +199,7 @@ public class KafkaExporterTest {
   }
 
   @Test
-  public void shouldRetryRecoverableErrors() throws Exception {
+  public void shouldRetryOnRecoverableError() throws Exception {
     // given
     // this is an non exhaustive list of recoverable exceptions - see all children of
     // org.apache.kafka.common.errors.RetriableExceptions applicable to a producer
@@ -210,21 +209,48 @@ public class KafkaExporterTest {
             new NoAvailableBrokersException(),
             new NotEnoughReplicasAfterAppendException("error"),
             new NotEnoughReplicasException(),
-            new OffsetOutOfRangeException("error"),
             new TimeoutException(),
             new UnknownTopicOrPartitionException());
+    // disable auto completion for better control of the retry mechanism
+    mockProducerFactory.mockProducerSupplier =
+        () -> new MockProducer<>(false, new RecordIdSerializer(), new ByteArraySerializer());
     testHarness.configure(EXPORTER_ID, rawConfig);
     testHarness.open();
 
     // when
-    final List<Record> records = testHarness.stream().export(6);
-    exceptions.forEach(t -> mockProducerFactory.mockProducer.errorNext(t));
+    final List<Record> records = testHarness.stream().export(exceptions.size());
+    for (int i = 0; i < exceptions.size(); i++) {
+      final var previousMockProducer = mockProducerFactory.mockProducer;
+      final var producedRecordCount = previousMockProducer.history().size();
+      mockProducerFactory.mockProducer.errorNext(exceptions.get(i));
+      checkInFlightRequests();
+
+      // unfortunately cancel does nothing, so simulate it by "ignoring" the next few records so we
+      // start over; note that the exporter stopped monitoring these calls so they won't impact the
+      // rest of the test
+      for (int j = 0; j < (exceptions.size() - i) - 1; j++) {
+        mockProducerFactory.mockProducer.errorNext(new RuntimeException("cancelled"));
+      }
+      mockProducerFactory.mockProducer.completeNext();
+      checkInFlightRequests();
+
+      assertThat(mockProducerFactory.mockProducer.history())
+          .as("should have retried all remaining records")
+          .hasSize(producedRecordCount + records.size() - i);
+      assertThat(testHarness.getLastUpdatedPosition())
+          .as("should update position on retry")
+          .isEqualTo(records.get(i).getPosition());
+      assertThat(mockProducerFactory.mockProducer)
+          .as("should not have closed producer on recoverable error")
+          .isSameAs(previousMockProducer);
+    }
+
+    // check that we can export more successfully
+    records.add(testHarness.export());
+    mockProducerFactory.mockProducer.completeNext();
     checkInFlightRequests();
 
     // then
-    assertThat(mockProducerFactory.mockProducer.history())
-        .describedAs("should have the produced the exact amount of exported records")
-        .hasSize(6);
     assertThat(testHarness.getLastUpdatedPosition())
         .as("should have acknowledged the last record position")
         .isEqualTo(records.get(records.size() - 1).getPosition());
@@ -259,7 +285,7 @@ public class KafkaExporterTest {
           .as("should have retried all records to the producer")
           .hasSize(records.size() - i);
       assertThat(testHarness.getLastUpdatedPosition())
-          .as("should not update position on error")
+          .as("should update position on retry")
           .isEqualTo(records.get(i).getPosition());
       assertThat(mockProducerFactory.mockProducer)
           .as("should close producer on unrecoverable error")
