@@ -16,8 +16,7 @@
 package io.zeebe.exporters.kafka.qa;
 
 import io.zeebe.client.ZeebeClient;
-import io.zeebe.containers.ZeebeBrokerContainer;
-import io.zeebe.containers.ZeebePort;
+import io.zeebe.containers.ZeebeContainer;
 import io.zeebe.exporters.kafka.serde.RecordDeserializer;
 import io.zeebe.exporters.kafka.serde.RecordId;
 import io.zeebe.exporters.kafka.serde.RecordIdDeserializer;
@@ -32,7 +31,6 @@ import java.util.Objects;
 import java.util.Properties;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.apache.http.HttpHost;
 import org.apache.kafka.clients.consumer.Consumer;
@@ -53,6 +51,7 @@ import org.testcontainers.containers.output.Slf4jLogConsumer;
 import org.testcontainers.elasticsearch.ElasticsearchContainer;
 import org.testcontainers.lifecycle.Startable;
 import org.testcontainers.lifecycle.Startables;
+import org.testcontainers.utility.DockerImageName;
 import org.testcontainers.utility.MountableFile;
 
 /**
@@ -71,7 +70,7 @@ final class KafkaExporterIT {
   private Network network;
   private KafkaContainer kafkaContainer;
   private ElasticsearchContainer elasticContainer;
-  private ZeebeBrokerContainer zeebeContainer;
+  private ZeebeContainer zeebeContainer;
 
   private ZeebeClient client;
   private ElasticExporterClient elasticClient;
@@ -168,7 +167,7 @@ final class KafkaExporterIT {
 
   private ZeebeClient newClient() {
     return ZeebeClient.newClientBuilder()
-        .brokerContactPoint(zeebeContainer.getExternalAddress(ZeebePort.GATEWAY))
+        .brokerContactPoint(zeebeContainer.getExternalGatewayAddress())
         .usePlaintext()
         .build();
   }
@@ -193,9 +192,10 @@ final class KafkaExporterIT {
   }
 
   @SuppressWarnings("OctalInteger")
-  private ZeebeBrokerContainer newZeebeContainer() {
-    final ZeebeBrokerContainer container =
-        new ZeebeBrokerContainer(ZeebeClient.class.getPackage().getImplementationVersion());
+  private ZeebeContainer newZeebeContainer() {
+    final ZeebeContainer container =
+        new ZeebeContainer(
+            "camunda/zeebe:" + ZeebeClient.class.getPackage().getImplementationVersion());
     final MountableFile exporterJar =
         MountableFile.forClasspathResource("zeebe-kafka-exporter.jar", 0775);
     final MountableFile exporterConfig = MountableFile.forClasspathResource("exporters.yml", 0775);
@@ -217,7 +217,9 @@ final class KafkaExporterIT {
   }
 
   private ElasticsearchContainer newElasticContainer() {
-    final ElasticsearchContainer container = new ElasticsearchContainer("elasticsearch:6.8.13");
+    final ElasticsearchContainer container =
+        new ElasticsearchContainer(
+            DockerImageName.parse("docker.elastic.co/elasticsearch/elasticsearch:6.8.13"));
     final Slf4jLogConsumer logConsumer =
         new Slf4jLogConsumer(newContainerLogger("elasticContainer"), true);
 
@@ -228,7 +230,8 @@ final class KafkaExporterIT {
   }
 
   private KafkaContainer newKafkaContainer() {
-    final KafkaContainer container = new KafkaContainer("5.5.1");
+    final KafkaContainer container =
+        new KafkaContainer(DockerImageName.parse("confluentinc/cp-kafka:5.5.1"));
     final Slf4jLogConsumer logConsumer =
         new Slf4jLogConsumer(newContainerLogger("kafkaContainer"), true);
 

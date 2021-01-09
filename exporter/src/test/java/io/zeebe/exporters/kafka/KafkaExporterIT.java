@@ -49,13 +49,18 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.testcontainers.containers.KafkaContainer;
+import org.testcontainers.utility.DockerImageName;
 
 public class KafkaExporterIT {
   private static final String TOPIC = "zeebe";
   private static final int PARTITION_COUNT = 3;
 
   @Rule public RecordingExporterTestWatcher testWatcher = new RecordingExporterTestWatcher();
-  @Rule public KafkaContainer kafkaContainer = new KafkaContainer().withEmbeddedZookeeper();
+
+  @Rule
+  public KafkaContainer kafkaContainer =
+      new KafkaContainer(DockerImageName.parse("confluentinc/cp-kafka:5.5.1"))
+          .withEmbeddedZookeeper();
 
   private RawConfig exporterConfiguration;
   private ExporterIntegrationRule exporterIntegrationRule;
