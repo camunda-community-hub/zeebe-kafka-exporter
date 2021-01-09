@@ -83,7 +83,8 @@ public class KafkaExporterTest {
     final int recordsCount = 4;
 
     // control how many are completed
-    mockProducerFactory.mockProducer = new MockProducer<>(false, null, null);
+    mockProducerFactory.mockProducer =
+        new MockProducer<>(false, new RecordIdSerializer(), new RecordSerializer());
     rawConfig.maxInFlightRecords = recordsCount; // prevent blocking awaiting completion
     mockConfigParser.forceParse(rawConfig);
 
@@ -104,7 +105,8 @@ public class KafkaExporterTest {
   @Test
   public void shouldBlockIfRequestQueueFull() throws Exception {
     // given
-    mockProducerFactory.mockProducer = new MockProducer<>(false, null, null);
+    mockProducerFactory.mockProducer =
+        new MockProducer<>(false, new RecordIdSerializer(), new RecordSerializer());
     final int recordsCount = 2;
 
     // since maxInFlightRecords is less than recordsCount, it will force awaiting
@@ -167,7 +169,8 @@ public class KafkaExporterTest {
   @Test
   public void shouldUpdatePositionToLatestCompletedEventEvenIfOneRecordFails() throws Exception {
     // given
-    mockProducerFactory.mockProducer = new MockProducer<>(false, null, null);
+    mockProducerFactory.mockProducer =
+        new MockProducer<>(false, new RecordIdSerializer(), new RecordSerializer());
     rawConfig.maxInFlightRecords = 2;
     mockConfigParser.forceParse(rawConfig);
 
@@ -191,7 +194,8 @@ public class KafkaExporterTest {
   @Test
   public void shouldCloseExporterIfRecordFails() throws Exception {
     // given
-    mockProducerFactory.mockProducer = new MockProducer<>(false, null, null);
+    mockProducerFactory.mockProducer =
+        new MockProducer<>(false, new RecordIdSerializer(), new RecordSerializer());
     testHarness.configure(EXPORTER_ID, rawConfig);
     testHarness.open();
 
