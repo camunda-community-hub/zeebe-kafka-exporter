@@ -50,7 +50,7 @@
     <version.junit>4.13.1</version.junit>
     <version.junit-jupiter>5.7.0</version.junit-jupiter>
     <version.kafka>2.7.0</version.kafka>
-    <version.mockito>3.7.0</version.mockito>
+    <version.mockito>3.8.0</version.mockito>
     <version.slf4j>1.7.30</version.slf4j>
     <version.spotbugs>4.2.0</version.spotbugs>
     <version.testcontainers>1.15.1</version.testcontainers>
