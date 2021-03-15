@@ -47,7 +47,7 @@
     <version.elasticsearch>7.11.2</version.elasticsearch>
     <version.httpcomponents>4.4.14</version.httpcomponents>
     <version.jackson>2.11.3</version.jackson>
-    <version.junit>4.13.1</version.junit>
+    <version.junit>4.13.2</version.junit>
     <version.junit-jupiter>5.7.1</version.junit-jupiter>
     <version.kafka>2.6.0</version.kafka>
     <version.mockito>3.8.0</version.mockito>
