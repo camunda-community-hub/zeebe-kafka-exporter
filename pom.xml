@@ -42,31 +42,31 @@
     <license.header>com/mycila/maven/plugin/license/templates/APACHE-2.txt</license.header>
 
     <!-- project dependencies -->
-    <version.assertj>3.18.1</version.assertj>
+    <version.assertj>3.19.0</version.assertj>
     <version.awaitility>4.0.3</version.awaitility>
-    <version.elasticsearch>7.10.1</version.elasticsearch>
+    <version.elasticsearch>7.11.2</version.elasticsearch>
     <version.httpcomponents>4.4.14</version.httpcomponents>
     <version.jackson>2.11.3</version.jackson>
     <version.junit>4.13.1</version.junit>
-    <version.junit-jupiter>5.7.0</version.junit-jupiter>
+    <version.junit-jupiter>5.7.1</version.junit-jupiter>
     <version.kafka>2.6.0</version.kafka>
-    <version.mockito>3.7.0</version.mockito>
+    <version.mockito>3.8.0</version.mockito>
     <version.slf4j>1.7.30</version.slf4j>
-    <version.spotbugs>4.2.0</version.spotbugs>
+    <version.spotbugs>4.2.2</version.spotbugs>
     <version.testcontainers>1.15.1</version.testcontainers>
-    <version.zeebe>0.26.0</version.zeebe>
+    <version.zeebe>0.26.1</version.zeebe>
     <version.zeebe-protocol-immutables>1.1.1</version.zeebe-protocol-immutables>
     <version.zeebe-test-container>0.33.0</version.zeebe-test-container>
 
     <!-- plugin version -->
     <plugin.version.assembly>3.3.0</plugin.version.assembly>
-    <plugin.version.checkstyle>3.1.1</plugin.version.checkstyle>
+    <plugin.version.checkstyle>3.1.2</plugin.version.checkstyle>
     <plugin.version.enforcer>3.0.0-M2</plugin.version.enforcer>
     <plugin.version.failsafe>2.22.2</plugin.version.failsafe>
     <plugin.version.fmt>2.10</plugin.version.fmt>
     <plugin.version.javadoc>3.2.0</plugin.version.javadoc>
     <plugin.version.license>3.0</plugin.version.license>
-    <plugin.version.sonar>3.7.0.1746</plugin.version.sonar>
+    <plugin.version.sonar>3.8.0.2131</plugin.version.sonar>
     <plugin.version.surefire>2.22.2</plugin.version.surefire>
 
     <!-- maven extensions -->
