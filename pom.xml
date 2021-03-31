@@ -54,7 +54,7 @@
     <version.slf4j>1.7.30</version.slf4j>
     <version.spotbugs>4.2.2</version.spotbugs>
     <version.testcontainers>1.15.2</version.testcontainers>
-    <version.zeebe>0.26.1</version.zeebe>
+    <version.zeebe>0.26.2</version.zeebe>
     <version.zeebe-protocol-immutables>1.2.0</version.zeebe-protocol-immutables>
     <version.zeebe-test-container>1.0.1</version.zeebe-test-container>
 
