@@ -44,7 +44,7 @@
     <!-- project dependencies -->
     <version.assertj>3.19.0</version.assertj>
     <version.awaitility>4.0.3</version.awaitility>
-    <version.elasticsearch>7.11.2</version.elasticsearch>
+    <version.elasticsearch>7.12.1</version.elasticsearch>
     <version.httpcomponents>4.4.14</version.httpcomponents>
     <version.jackson>2.12.2</version.jackson>
     <version.junit>4.13.2</version.junit>
