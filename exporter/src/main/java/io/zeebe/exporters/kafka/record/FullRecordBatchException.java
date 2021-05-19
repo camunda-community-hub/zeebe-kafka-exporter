@@ -13,13 +13,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.zeebe.exporters.kafka.tck;
+package io.zeebe.exporters.kafka.record;
 
-import io.zeebe.protocol.record.Record;
-import io.zeebe.protocol.record.RecordValue;
-import java.util.stream.Stream;
+@SuppressWarnings("unused")
+public final class FullRecordBatchException extends RuntimeException {
+  private static final String MESSAGE_FORMAT =
+      "No new records can be added to the record batch with a maximum size of %d";
 
-@FunctionalInterface
-public interface RecordStreamer {
-  Stream<Record<? extends RecordValue>> streamRecords();
+  private final int maxBatchSize;
+
+  public FullRecordBatchException(final int maxBatchSize, final Throwable cause) {
+    super(String.format(MESSAGE_FORMAT, maxBatchSize), cause);
+    this.maxBatchSize = maxBatchSize;
+  }
+
+  public int getMaxBatchSize() {
+    return maxBatchSize;
+  }
 }

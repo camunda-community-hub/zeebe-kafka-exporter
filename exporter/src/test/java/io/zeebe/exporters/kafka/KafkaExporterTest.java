@@ -30,14 +30,13 @@ import io.zeebe.exporters.kafka.serde.RecordIdSerializer;
 import io.zeebe.protocol.record.Record;
 import io.zeebe.test.exporter.ExporterTestHarness;
 import java.util.List;
-import java.util.stream.IntStream;
 import org.apache.kafka.clients.producer.MockProducer;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.common.serialization.ByteArraySerializer;
 import org.junit.Before;
 import org.junit.Test;
 
-@SuppressWarnings({"rawtypes", "ResultOfMethodCallIgnored"})
+@SuppressWarnings("rawtypes")
 public class KafkaExporterTest {
   private static final String EXPORTER_ID = "kafka";
 
@@ -171,12 +170,7 @@ public class KafkaExporterTest {
     return new MockProducer<>(true, new RecordIdSerializer(), new ByteArraySerializer());
   }
 
-  private void completeNextRequests(final int requestCount) {
-    IntStream.rangeClosed(0, requestCount)
-        .forEach(i -> mockProducerFactory.mockProducer.completeNext());
-  }
-
   private void checkInFlightRequests() {
-    testHarness.runScheduledTasks(KafkaExporter.IN_FLIGHT_RECORD_CHECKER_INTERVAL);
+    testHarness.runScheduledTasks(mockConfigParser.config.getCommitInterval());
   }
 }

@@ -67,7 +67,7 @@ public final class RecordHandler {
    * @param record the record to test
    * @return true if allowed, false otherwise
    */
-  public boolean test(final @NonNull Record record) {
+  public boolean isAllowed(final @NonNull Record record) {
     final RecordConfig config = getRecordConfig(record);
     return config.getAllowedTypes().contains(record.getRecordType());
   }

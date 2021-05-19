@@ -13,10 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.zeebe.exporters.kafka.tck;
+package io.zeebe.exporters.kafka.qa;
+
+import static org.assertj.core.api.Assertions.assertThat;
 
 import edu.umd.cs.findbugs.annotations.NonNull;
-import edu.umd.cs.findbugs.annotations.Nullable;
 import io.zeebe.client.ZeebeClient;
 import io.zeebe.client.api.response.ActivatedJob;
 import io.zeebe.client.api.worker.JobClient;
@@ -25,13 +26,15 @@ import io.zeebe.client.api.worker.JobWorker;
 import io.zeebe.model.bpmn.Bpmn;
 import io.zeebe.model.bpmn.BpmnModelInstance;
 import io.zeebe.protocol.record.Record;
+import io.zeebe.protocol.record.RecordAssert;
 import io.zeebe.protocol.record.intent.IncidentIntent;
+import io.zeebe.protocol.record.intent.MessageIntent;
 import io.zeebe.protocol.record.intent.WorkflowInstanceIntent;
 import io.zeebe.protocol.record.value.BpmnElementType;
 import io.zeebe.protocol.record.value.IncidentRecordValue;
 import io.zeebe.protocol.record.value.WorkflowInstanceRecordValue;
 import java.time.Duration;
-import java.util.Comparator;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -39,18 +42,9 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
-import org.assertj.core.api.Assertions;
 import org.awaitility.Awaitility;
 
-/**
- * An experimental exporter TCK. The goal of the TCK would be to provide a simple baseline for
- * exporter authors to check the validity of their exporters, depending on certain properties of
- * said exporters (e.g. maintains order, exports all, etc.)
- *
- * <p>This is currently very much a work in a progress, so use at your own risk.
- */
-public final class ExporterTechnologyCompatibilityKit {
-
+public final class SampleWorkload {
   private static final String JOB_TYPE = "work";
   private static final String MESSAGE_NAME = "catch";
   private static final String CORRELATION_KEY = "foo-bar-123";
@@ -68,22 +62,21 @@ public final class ExporterTechnologyCompatibilityKit {
           .done();
 
   private final ZeebeClient client;
-  private final RecordStreamer recordSupplier;
+  private final DebugHttpExporterClient exporterClient;
 
-  /**
-   * @param client a configured ZeebeClient which can be used to deploy workflows, publish messages,
-   *     etc.
-   * @param recordSupplier a supplier which can return a stream to the exported records (at the time
-   *     of the call, not necessarily all exported records ever); the stream may be slightly delayed
-   */
-  public ExporterTechnologyCompatibilityKit(
-      final @NonNull ZeebeClient client, final @NonNull RecordStreamer recordSupplier) {
+  private long endMarkerKey;
+
+  public SampleWorkload(final ZeebeClient client, final DebugHttpExporterClient exporterClient) {
     this.client = Objects.requireNonNull(client);
-    this.recordSupplier = Objects.requireNonNull(recordSupplier);
+    this.exporterClient = Objects.requireNonNull(exporterClient);
+  }
+
+  public void execute() {
+    execute(() -> {});
   }
 
   /** Runs a sample workload on the broker, exporting several records of different types. */
-  public void performSampleWorkload() {
+  public void execute(final Runnable midpointHook) {
     deployWorkflow();
 
     final Map<String, Object> variables = new HashMap<>();
@@ -95,6 +88,7 @@ public final class ExporterTechnologyCompatibilityKit {
     final AtomicBoolean fail = new AtomicBoolean(true);
     final JobWorker worker = createJobWorker((jobClient, job) -> handleJob(fail, jobClient, job));
 
+    midpointHook.run();
     publishMessage();
 
     final Record<IncidentRecordValue> incident = awaitIncidentRaised(workflowInstanceKey);
@@ -104,58 +98,48 @@ public final class ExporterTechnologyCompatibilityKit {
     // wrap up
     awaitWorkflowCompletion(workflowInstanceKey);
     worker.close();
+    publishEndMarker();
   }
 
-  /**
-   * Asserts that the records given contain exactly the same records as those provided by the {@code
-   * recordSupplier} the TCK was constructed with. This allows to compare a trusted and valid
-   * exporter with the exporter under test.
-   *
-   * @param actualRecords the records exported by the exporter under test
-   * @throws AssertionError if {@code actualRecords} contain more or less records than the {@code
-   *     recordSupplier}
-   * @throws AssertionError if {@code actualRecords} contains a record which is not in the stream
-   *     provided by the {@code recordSupplier}
-   * @throws AssertionError if {@code actualRecords} is missing a record which is in the stream
-   *     provided by the {@code recordSupplier}
-   */
-  public void assertAllRecordsExported(final @Nullable List<Record<?>> actualRecords) {
-    final List<Record<?>> expectedRecords =
-        recordSupplier.streamRecords().collect(Collectors.toList());
+  public List<Record<?>> getExpectedRecords(final Duration timeout) {
+    final var records = new ArrayList<Record<?>>();
+    assertThat(endMarkerKey).as("the end marker was published so it can be looked up").isPositive();
 
-    Assertions.assertThat(expectedRecords).isNotEmpty();
-    Assertions.assertThat(actualRecords)
-        .hasSameSizeAs(expectedRecords)
-        .containsExactlyInAnyOrderElementsOf(expectedRecords);
+    Awaitility.await("until all expected records have been exported")
+        .atMost(timeout)
+        .pollInterval(Duration.ofMillis(250))
+        .pollDelay(Duration.ZERO)
+        .pollInSameThread()
+        .untilAsserted(
+            () -> {
+              records.clear();
+              records.addAll(exporterClient.streamRecords().collect(Collectors.toList()));
+              assertEndMarkerExported(records);
+            });
+
+    return records;
   }
 
-  /**
-   * Asserts that the records exported by the exporter under test are logically ordered relative to
-   * their partition ID. More specifically, that for every record of partition X, each subsequent
-   * record has a greater position than the last, regardless if there are records of partition Y
-   * with lower position in between.
-   *
-   * <p>NOTE: this assertion only makes sense for exporters which preserve ordering
-   *
-   * @param actualRecords all records exported by the exporter under test, in the order in which
-   *     they were exported
-   * @throws AssertionError if {@code actualRecords} is null or empty
-   * @throws AssertionError if {@code actualRecords} contains two records (consecutive or not) with
-   *     the same partition ID, and the first exported record has a position greater than or equal
-   *     to that of the second
-   */
-  public void assertRecordsMaintainOrderPerPartition(
-      final @Nullable List<Record<?>> actualRecords) {
-    Assertions.assertThat(actualRecords).isNotEmpty();
+  private void assertEndMarkerExported(final ArrayList<Record<?>> records) {
+    assertThat(records)
+        .last()
+        .as("exported records contain the last expected record")
+        .satisfies(
+            r -> RecordAssert.assertThat(r).hasKey(endMarkerKey).hasIntent(MessageIntent.DELETED));
+  }
 
-    final Map<Integer, List<Record<?>>> actualRecordsPerPartition =
-        Objects.requireNonNull(actualRecords).stream()
-            .collect(Collectors.groupingBy(Record::getPartitionId));
-    Assertions.assertThat(actualRecordsPerPartition)
-        .allSatisfy(
-            (partitionId, records) ->
-                Assertions.assertThat(records)
-                    .isSortedAccordingTo(Comparator.comparing(Record::getPosition)));
+  private void publishEndMarker() {
+    final var response =
+        client
+            .newPublishMessageCommand()
+            .messageName("endMarker")
+            .correlationKey("endMarker")
+            .messageId("endMarker")
+            .timeToLive(Duration.ZERO)
+            .send()
+            .join();
+
+    endMarkerKey = response.getMessageKey();
   }
 
   @NonNull
@@ -170,7 +154,7 @@ public final class ExporterTechnologyCompatibilityKit {
   @SuppressWarnings({"unchecked", "java:S1905"})
   @NonNull
   private Optional<Record<IncidentRecordValue>> findIncident(final long workflowInstanceKey) {
-    return recordSupplier
+    return exporterClient
         .streamRecords()
         .filter(r -> r.getIntent() == IncidentIntent.CREATED)
         .map(r -> (Record<IncidentRecordValue>) r)
@@ -222,14 +206,13 @@ public final class ExporterTechnologyCompatibilityKit {
     Awaitility.await("await workflow " + workflowInstanceKey + " completion")
         .pollInterval(Duration.ofMillis(200))
         .atMost(Duration.ofSeconds(5))
-        .untilAsserted(
-            () -> Assertions.assertThat(getProcessCompleted(workflowInstanceKey)).isPresent());
+        .untilAsserted(() -> assertThat(getProcessCompleted(workflowInstanceKey)).isPresent());
   }
 
   @SuppressWarnings({"unchecked", "java:S1905"})
   private Optional<Record<WorkflowInstanceRecordValue>> getProcessCompleted(
       final long workflowInstanceKey) {
-    return recordSupplier
+    return exporterClient
         .streamRecords()
         .filter(r -> r.getIntent() == WorkflowInstanceIntent.ELEMENT_COMPLETED)
         .filter(r -> r.getKey() == workflowInstanceKey)

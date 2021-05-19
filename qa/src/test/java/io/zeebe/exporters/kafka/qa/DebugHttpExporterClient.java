@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.zeebe.exporters.kafka.tck;
+package io.zeebe.exporters.kafka.qa;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -27,19 +27,30 @@ import java.util.Collections;
 import java.util.List;
 import java.util.stream.Stream;
 
-public final class DebugHttpExporterClient implements RecordStreamer {
+/**
+ * A dumb client for the DebugHttpExporter. This exporter starts a server on a single broker for all
+ * known partitions (of that broker), and simply exposes a poll mechanism for the records.
+ *
+ * <p>NOTE: the server returns records in reverse order, from newest to oldest, which is the
+ * opposite of what we typically want, i.e. sorted in causal order. The {@link #streamRecords()}
+ * method therefore returns them reversed.
+ *
+ * <p>NOTE: the streaming is "dumb", and really only returns the records from the server as is as a
+ * stream. This is fine for now since we typically don't have a lot of records, but it means you may
+ * have to call the method multiple times.
+ */
+final class DebugHttpExporterClient {
 
   private static final ObjectReader READER =
       new ObjectMapper().readerFor(new TypeReference<List<ImmutableRecord<?>>>() {});
 
   private final URL serverUrl;
 
-  public DebugHttpExporterClient(final URL serverUrl) {
+  DebugHttpExporterClient(final URL serverUrl) {
     this.serverUrl = serverUrl;
   }
 
-  @Override
-  public Stream<Record<?>> streamRecords() {
+  Stream<Record<?>> streamRecords() {
     try {
       // the HTTP exporter returns records in reversed order, so flip them before returning
       final List<ImmutableRecord<?>> records = READER.readValue(serverUrl);

@@ -38,12 +38,14 @@ public class RawProducerConfigParserTest {
 
     // then
     assertThat(parsed)
-        .extracting("servers", "clientId", "closeTimeout", "requestTimeout", "config")
+        .extracting(
+            "servers", "clientId", "closeTimeout", "requestTimeout", "maxBlockingTimeout", "config")
         .containsExactly(
             RawProducerConfigParser.DEFAULT_SERVERS,
             RawProducerConfigParser.DEFAULT_CLIENT_ID,
             RawProducerConfigParser.DEFAULT_CLOSE_TIMEOUT,
             RawProducerConfigParser.DEFAULT_REQUEST_TIMEOUT,
+            RawProducerConfigParser.DEFAULT_MAX_BLOCKING_TIMEOUT,
             new HashMap<>());
   }
 
@@ -55,6 +57,7 @@ public class RawProducerConfigParserTest {
     config.clientId = "client";
     config.closeTimeoutMs = 3000L;
     config.requestTimeoutMs = 3000L;
+    config.maxBlockingTimeoutMs = 5000L;
     config.config = "linger.ms=5\nmax.buffer.count=2";
 
     // when
@@ -62,12 +65,14 @@ public class RawProducerConfigParserTest {
 
     // then
     assertThat(parsed)
-        .extracting("servers", "clientId", "closeTimeout", "requestTimeout", "config")
+        .extracting(
+            "servers", "clientId", "closeTimeout", "requestTimeout", "maxBlockingTimeout", "config")
         .containsExactly(
             Collections.singletonList("localhost:3000"),
             "client",
             Duration.ofSeconds(3),
             Duration.ofSeconds(3),
+            Duration.ofSeconds(5),
             Map.of("linger.ms", "5", "max.buffer.count", "2"));
   }
 }

@@ -19,47 +19,38 @@ import edu.umd.cs.findbugs.annotations.NonNull;
 import io.zeebe.exporter.api.Exporter;
 import io.zeebe.exporter.api.context.Context;
 import io.zeebe.exporter.api.context.Controller;
+import io.zeebe.exporter.api.context.ScheduledTask;
 import io.zeebe.exporters.kafka.config.Config;
 import io.zeebe.exporters.kafka.config.parser.ConfigParser;
 import io.zeebe.exporters.kafka.config.parser.RawConfigParser;
 import io.zeebe.exporters.kafka.config.raw.RawConfig;
 import io.zeebe.exporters.kafka.producer.DefaultKafkaProducerFactory;
 import io.zeebe.exporters.kafka.producer.KafkaProducerFactory;
+import io.zeebe.exporters.kafka.producer.RecordBatch;
+import io.zeebe.exporters.kafka.producer.TransactionBoundedRecordBatch;
 import io.zeebe.exporters.kafka.record.KafkaRecordFilter;
-import io.zeebe.exporters.kafka.record.RecordBatch;
 import io.zeebe.exporters.kafka.record.RecordHandler;
-import io.zeebe.exporters.kafka.serde.RecordId;
 import io.zeebe.exporters.kafka.serde.RecordSerializer;
 import io.zeebe.protocol.record.Record;
-import java.time.Duration;
 import java.util.Objects;
 import java.util.UUID;
-import org.apache.kafka.clients.producer.Producer;
-import org.apache.kafka.clients.producer.ProducerRecord;
-import org.apache.kafka.common.KafkaException;
-import org.apache.kafka.common.errors.InterruptException;
-import org.apache.kafka.common.errors.TimeoutException;
-import org.apache.kafka.common.serialization.Serializer;
 import org.slf4j.Logger;
 
 /** Implementation of a Zeebe exporter producing serialized records to a given Kafka topic. */
-public class KafkaExporter implements Exporter {
-  static final Duration IN_FLIGHT_RECORD_CHECKER_INTERVAL = Duration.ofSeconds(1);
-  private static final int UNSET_POSITION = -1;
-
+public final class KafkaExporter implements Exporter {
   private final KafkaProducerFactory producerFactory;
   private final ConfigParser<RawConfig, Config> configParser;
   private final String producerId;
 
-  private boolean isClosed = true;
-  private String id;
   private Controller controller;
   private Logger logger;
-  private Producer<RecordId, byte[]> producer;
   private Config config;
   private RecordHandler recordHandler;
+  private ScheduledTask flushTask;
   private RecordBatch recordBatch;
 
+  // the constructor is used by the Zeebe broker to instantiate it
+  @SuppressWarnings("unused")
   public KafkaExporter() {
     this(new DefaultKafkaProducerFactory(), new RawConfigParser());
   }
@@ -81,169 +72,84 @@ public class KafkaExporter implements Exporter {
 
   @Override
   public void configure(final Context context) {
-    this.logger = context.getLogger();
-    this.id = context.getConfiguration().getId();
+    logger = context.getLogger();
 
-    final RawConfig rawConfig = context.getConfiguration().instantiate(RawConfig.class);
-    this.config = this.configParser.parse(rawConfig);
-    this.recordHandler = new RecordHandler(this.config.getRecords(), newSerializer());
+    final var rawConfig = context.getConfiguration().instantiate(RawConfig.class);
+    config = configParser.parse(rawConfig);
 
-    context.setFilter(new KafkaRecordFilter(this.config.getRecords()));
-    this.logger.debug("Configured exporter {}", this.id);
+    final var serializer = new RecordSerializer();
+    serializer.configure(config.getProducer().getConfig(), false);
+    recordHandler = new RecordHandler(config.getRecords(), serializer);
+
+    context.setFilter(new KafkaRecordFilter(config.getRecords()));
+
+    if (logger.isDebugEnabled()) {
+      logger.debug("Configured Kafka exporter: {}", config);
+    } else {
+      logger.info("Configured Kafka exporter");
+    }
   }
 
   @Override
   public void open(final Controller controller) {
     this.controller = controller;
-    this.isClosed = false;
-    this.recordBatch = new RecordBatch(this.config.getMaxBatchSize());
-    this.controller.scheduleTask(
-        this.config.getInFlightRecordCheckInterval(), this::periodicallyUpdateAcknowledgedPosition);
+    recordBatch =
+        new TransactionBoundedRecordBatch(
+            producerFactory,
+            config.getProducer(),
+            producerId,
+            config.getMaxBatchSize(),
+            this::updatePosition,
+            logger);
 
-    this.logger.debug("Opened exporter {}", this.id);
+    scheduleFlushBatchTask();
+
+    if (logger.isDebugEnabled()) {
+      logger.debug("Opened Kafka exporter with configuration: {}", config);
+    } else {
+      logger.info("Opened Kafka exporter");
+    }
   }
 
   @Override
   public void close() {
-    if (isClosed) {
-      return;
+    if (flushTask != null) {
+      flushTask.cancel();
     }
 
-    isClosed = true;
-    updateAcknowledgedPosition();
-    recordBatch.clear();
-    closeProducer();
+    recordBatch.flush();
+    recordBatch.close();
 
-    logger.debug("Closed exporter {}", id);
+    logger.info("Closed Kafka exporter");
   }
 
   @Override
   public void export(final Record record) {
-    if (isClosed) {
-      logger.debug("Expected to export {}, but the exporter is already closed", record);
-      return;
-    }
-
-    if (!recordHandler.test(record)) {
+    if (!recordHandler.isAllowed(record)) {
       logger.trace("Ignoring record {}", record);
       return;
     }
 
-    try {
-      batchRecord(record);
-    } catch (final TimeoutException e) {
-      logger.debug("Timed out while exporting record, retrying", e);
-    } catch (final InterruptException e) {
-      Thread.currentThread().interrupt();
-      logger.debug("Interrupted while exporting record, retrying", e);
-    } catch (final KafkaException | IllegalStateException e) {
-      logger.warn(
-          "Non-recoverable error occurred while exporting record, retrying with new producer", e);
-      closeProducer();
-    }
-  }
-
-  @SuppressWarnings("rawtypes")
-  private void batchRecord(final Record record) {
-    if (producer == null) {
-      initializeProducer();
-    }
-
-    if (recordBatch.isFull()) {
-      logger.trace(
-          "Too many in flight records, blocking at most {} until transaction completes...",
-          Duration.ofSeconds(1));
-      updateAcknowledgedPosition();
-    }
-
-    final ProducerRecord<RecordId, byte[]> producerRecord = recordHandler.transform(record);
-    if (recordBatch.isEmpty()) {
-      producer.beginTransaction();
-    }
-
+    final var producerRecord = recordHandler.transform(record);
     recordBatch.add(producerRecord);
-    producer.send(producerRecord);
-    logger.trace("Batched record {}", record);
   }
 
-  /* assumes it is called strictly as a scheduled task or during close */
-  private void periodicallyUpdateAcknowledgedPosition() {
-    updateAcknowledgedPosition();
-
-    if (!isClosed) {
-      controller.scheduleTask(
-          IN_FLIGHT_RECORD_CHECKER_INTERVAL, this::periodicallyUpdateAcknowledgedPosition);
-    }
+  private void scheduleFlushBatchTask() {
+    logger.trace("Rescheduling flush task in {}", config.getCommitInterval());
+    flushTask =
+        controller.scheduleCancellableTask(config.getCommitInterval(), this::flushBatchTask);
   }
 
-  private void updateAcknowledgedPosition() {
-    if (producer == null) {
-      initializeProducer();
-    }
-
-    // nothing to commit in this case
-    if (recordBatch.isEmpty()) {
-      return;
-    }
-
+  private void flushBatchTask() {
     try {
-      commitBatch();
-    } catch (final TimeoutException e) {
-      logger.debug("Timed out while committing, retrying", e);
-    } catch (final InterruptException e) {
-      Thread.currentThread().interrupt();
-      logger.debug("Interrupted while committing, retrying", e);
-    } catch (final KafkaException | IllegalStateException e) {
-      logger.warn("Non-recoverable error occurred while committing, retrying with new producer", e);
-      closeProducer();
+      recordBatch.flush();
+    } finally {
+      scheduleFlushBatchTask();
     }
   }
 
-  private void commitBatch() {
-    final long highestAcknowledgedPosition = recordBatch.getHighestPosition();
-    producer.commitTransaction();
-    recordBatch.clear();
-
-    if (highestAcknowledgedPosition != UNSET_POSITION) {
-      controller.updateLastExportedRecordPosition(highestAcknowledgedPosition);
-      logger.trace("Updated last exported record position to {}", highestAcknowledgedPosition);
-    }
-  }
-
-  @SuppressWarnings("rawtypes")
-  private Serializer<Record> newSerializer() {
-    final Serializer<Record> serializer = new RecordSerializer();
-    serializer.configure(config.getProducer().getConfig(), false);
-
-    return serializer;
-  }
-
-  private void initializeProducer() {
-    logger.debug("Initializing new producer with {} records to retry", recordBatch.recordsCount());
-    producer = producerFactory.newProducer(config, producerId);
-    producer.initTransactions();
-
-    if (!recordBatch.isEmpty()) {
-      retryBatch();
-    }
-  }
-
-  private void retryBatch() {
-    producer.beginTransaction();
-
-    for (final var record : recordBatch) {
-      producer.send(record);
-    }
-  }
-
-  private void closeProducer() {
-    if (producer == null) {
-      return;
-    }
-
-    final Duration closeTimeout = config.getProducer().getCloseTimeout();
-    logger.debug("Closing producer with timeout {}", closeTimeout);
-    producer.close(closeTimeout);
-    producer = null;
+  private void updatePosition(final long position) {
+    controller.updateLastExportedRecordPosition(position);
+    logger.trace("Flushed batch and updated last exported record position to {}", position);
   }
 }

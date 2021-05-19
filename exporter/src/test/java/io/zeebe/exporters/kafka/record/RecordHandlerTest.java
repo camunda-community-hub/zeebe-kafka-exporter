@@ -65,7 +65,7 @@ public class RecordHandlerTest {
     final RecordHandler recordHandler = new RecordHandler(newRecordsConfig(RecordType.EVENT));
 
     // when - then
-    assertThat(recordHandler.test(record)).isFalse();
+    assertThat(recordHandler.isAllowed(record)).isFalse();
   }
 
   @Test
@@ -76,7 +76,7 @@ public class RecordHandlerTest {
     final RecordHandler recordHandler = new RecordHandler(newRecordsConfig(RecordType.EVENT));
 
     // when - then
-    assertThat(recordHandler.test(record)).isTrue();
+    assertThat(recordHandler.isAllowed(record)).isTrue();
   }
 
   private RecordsConfig newRecordsConfig(final RecordType allowedType) {

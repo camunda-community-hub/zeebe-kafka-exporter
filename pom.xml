@@ -13,9 +13,8 @@
 
   <modules>
     <module>exporter</module>
-    <module>qa</module>
     <module>serde</module>
-    <module>tck</module>
+    <module>qa</module>
   </modules>
 
   <parent>
@@ -84,6 +83,14 @@
       </dependency>
 
       <dependency>
+        <groupId>org.testcontainers</groupId>
+        <artifactId>testcontainers-bom</artifactId>
+        <version>${version.testcontainers}</version>
+        <scope>import</scope>
+        <type>pom</type>
+      </dependency>
+
+      <dependency>
         <groupId>io.zeebe</groupId>
         <artifactId>zeebe-protocol-immutables</artifactId>
         <version>${version.zeebe-protocol-immutables}</version>
@@ -130,24 +137,6 @@
         <artifactId>spotbugs-annotations</artifactId>
         <version>${version.spotbugs}</version>
         <scope>compile</scope>
-      </dependency>
-
-      <dependency>
-        <groupId>org.testcontainers</groupId>
-        <artifactId>testcontainers</artifactId>
-        <version>${version.testcontainers}</version>
-      </dependency>
-
-      <dependency>
-        <groupId>org.testcontainers</groupId>
-        <artifactId>kafka</artifactId>
-        <version>${version.testcontainers}</version>
-      </dependency>
-
-      <dependency>
-        <groupId>org.testcontainers</groupId>
-        <artifactId>elasticsearch</artifactId>
-        <version>${version.testcontainers}</version>
       </dependency>
 
       <dependency>

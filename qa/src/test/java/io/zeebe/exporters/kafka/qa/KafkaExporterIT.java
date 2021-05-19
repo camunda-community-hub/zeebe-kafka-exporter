@@ -15,29 +15,36 @@
  */
 package io.zeebe.exporters.kafka.qa;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 import io.zeebe.client.ZeebeClient;
 import io.zeebe.containers.ZeebeContainer;
 import io.zeebe.exporters.kafka.serde.RecordDeserializer;
 import io.zeebe.exporters.kafka.serde.RecordId;
 import io.zeebe.exporters.kafka.serde.RecordIdDeserializer;
-import io.zeebe.exporters.kafka.tck.DebugHttpExporterClient;
-import io.zeebe.exporters.kafka.tck.ExporterTechnologyCompatibilityKit;
 import io.zeebe.protocol.record.Record;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
-import java.util.Objects;
-import java.util.Properties;
+import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
-import java.util.stream.Stream;
+import java.util.stream.Collectors;
+import org.agrona.CloseHelper;
+import org.apache.kafka.clients.admin.AdminClient;
+import org.apache.kafka.clients.admin.AdminClientConfig;
+import org.apache.kafka.clients.admin.NewTopic;
 import org.apache.kafka.clients.consumer.Consumer;
-import org.apache.kafka.clients.consumer.ConsumerRecords;
+import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
+import org.awaitility.Awaitility;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.parallel.Execution;
@@ -47,8 +54,7 @@ import org.slf4j.LoggerFactory;
 import org.testcontainers.containers.KafkaContainer;
 import org.testcontainers.containers.Network;
 import org.testcontainers.containers.output.Slf4jLogConsumer;
-import org.testcontainers.lifecycle.Startable;
-import org.testcontainers.lifecycle.Startables;
+import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.utility.DockerImageName;
 import org.testcontainers.utility.MountableFile;
 
@@ -57,152 +63,262 @@ import org.testcontainers.utility.MountableFile;
  * possible, by starting a Zeebe container and deploying the exporter as one normally would.
  *
  * <p>In order to verify certain properties - i.e. all records were exported correctly, order was
- * maintained on a per partition basis, etc. - we use the Elasticsearch Exporter, which is official
- * and trusted, to compare results.
+ * maintained on a per partition basis, etc. - we use an exporter deemed "reliable", the
+ * DebugHttpExporter, to compare results.
  */
-@Execution(ExecutionMode.SAME_THREAD)
+@Testcontainers
+@Timeout(value = 5, unit = TimeUnit.MINUTES)
+@Execution(ExecutionMode.CONCURRENT)
 final class KafkaExporterIT {
   private static final Pattern TOPIC_SUBSCRIPTION_PATTERN = Pattern.compile("zeebe.*");
-  private static final Logger LOGGER = LoggerFactory.getLogger(KafkaExporterIT.class);
 
-  private Network network;
-  private KafkaContainer kafkaContainer;
-  private ZeebeContainer zeebeContainer;
+  private final Network network = Network.newNetwork();
+  private KafkaContainer kafkaContainer = newKafkaContainer();
+  private final ZeebeContainer zeebeContainer = newZeebeContainer();
 
-  private ZeebeClient client;
-
-  @BeforeEach
-  void setUp() {
-    network = Network.newNetwork();
-    kafkaContainer = newKafkaContainer();
-    zeebeContainer = newZeebeContainer();
-
-    final Stream<Startable> containers = Stream.of(kafkaContainer, zeebeContainer);
-    Startables.deepStart(containers).join();
-
-    client = newClient();
-  }
+  private ZeebeClient zeebeClient;
+  private DebugHttpExporterClient debugExporter;
 
   @AfterEach
   void tearDown() {
-    if (client != null) {
-      client.close();
-    }
-
-    // safely close as many containers as possible
-    Stream.of(zeebeContainer, kafkaContainer)
-        .filter(Objects::nonNull)
-        .parallel()
-        .forEach(
-            container -> {
-              try {
-                container.stop();
-              } catch (final Exception e) {
-                LOGGER.error("Failed to stop container {}", container);
-              }
-            });
-
-    if (network != null) {
-      network.close();
-    }
+    CloseHelper.quietCloseAll(zeebeClient, zeebeContainer, kafkaContainer, network);
   }
 
-  @Timeout(value = 5, unit = TimeUnit.MINUTES)
   @Test
   void shouldExportToKafka() throws MalformedURLException {
     // given
-    final URL debugHttpServerUrl =
-        new URL(
-            String.format(
-                "http://%s:%d/records.json",
-                zeebeContainer.getContainerIpAddress(), zeebeContainer.getMappedPort(8000)));
-    final ExporterTechnologyCompatibilityKit tck =
-        new ExporterTechnologyCompatibilityKit(
-            client, new DebugHttpExporterClient((debugHttpServerUrl)));
+    startKafka();
+    zeebeContainer.start();
+    final var sampleWorkload = newSampleWorkload();
 
     // when
-    tck.performSampleWorkload();
+    sampleWorkload.execute();
 
     // then
-    final List<Record<?>> records = consumeAllExportedRecords();
-    tck.assertAllRecordsExported(records);
-    tck.assertRecordsMaintainOrderPerPartition(records);
+    assertRecordsExported(sampleWorkload);
   }
 
-  private List<Record<?>> consumeAllExportedRecords() {
-    final List<Record<?>> records = new ArrayList<>();
-    final Duration timeout = Duration.ofSeconds(5);
-    ConsumerRecords<RecordId, Record<?>> consumedRecords;
+  @Test
+  void shouldExportEvenIfKafkaStartedLater() throws MalformedURLException {
+    // given
+    zeebeContainer.start();
+    final var sampleWorkload = newSampleWorkload();
 
-    do {
-      try (Consumer<RecordId, Record<?>> consumer = newConsumer()) {
-        consumedRecords = consumer.poll(timeout);
-        consumedRecords.forEach(r -> records.add(r.value()));
-      }
-    } while (!consumedRecords.isEmpty());
+    // when
+    sampleWorkload.execute();
+    startKafka();
+
+    // then
+    assertRecordsExported(sampleWorkload);
+  }
+
+  @Test
+  void shouldExportEvenIfKafkaRestartedInTheMiddle()
+      throws MalformedURLException, InterruptedException {
+    // given
+    startKafka();
+    zeebeContainer.start();
+    final var sampleWorkload = newSampleWorkload();
+
+    // when
+    final var latch = new CountDownLatch(1);
+    final var workloadFinished =
+        CompletableFuture.runAsync(() -> sampleWorkload.execute(latch::countDown));
+
+    assertThat(latch.await(15, TimeUnit.SECONDS))
+        .as("midpoint hook was called to stop kafka")
+        .isTrue();
+    kafkaContainer.stop();
+    kafkaContainer = newKafkaContainer();
+    startKafka();
+    workloadFinished.join();
+
+    // then
+    assertRecordsExported(sampleWorkload);
+  }
+
+  private SampleWorkload newSampleWorkload() throws MalformedURLException {
+    return new SampleWorkload(getLazyZeebeClient(), getLazyDebugExporter());
+  }
+
+  /**
+   * Asserts that the expected records have been correctly exported.
+   *
+   * <p>The properties asserted are the following for every partition:
+   *
+   * <ol>
+   *   <li>every record for partition X was exported to Kafka
+   *   <li>every record for partition X was exported to the same Kafka partition Y
+   *   <li>every record for partition X is consumed in the order in which they were written (i.e. by
+   *       position)
+   * </ol>
+   *
+   * The first property is self explanatory - just ensure all records can be consumed from the
+   * expected Kafka topic.
+   *
+   * <p>The second property checks the partitioning logic - Zeebe records are causally linked, and
+   * exporting them to different partitions will result in them being consumed out of order. So this
+   * ensures that all records from a given Zeebe partition are exported to the same Kafka partition
+   * in order to preserve ordering.
+   *
+   * <p>The third property is an extension of this, and checks that they are indeed ordered by
+   * position.
+   */
+  private void assertRecordsExported(final SampleWorkload workload) {
+    final var expectedRecords = workload.getExpectedRecords(Duration.ofSeconds(5));
+    final var expectedRecordsPerPartition =
+        expectedRecords.stream().collect(Collectors.groupingBy(Record::getPartitionId));
+    final var actualRecords = awaitAllExportedRecords(expectedRecordsPerPartition);
+
+    assertThat(expectedRecords).as("there should have been some records exported").isNotEmpty();
+    assertThat(actualRecords)
+        .allSatisfy(
+            (partitionId, records) -> {
+              assertExportedRecordsPerPartition(
+                  partitionId, records, expectedRecordsPerPartition.get(partitionId));
+            });
+  }
+
+  @SuppressWarnings("rawtypes")
+  private void assertExportedRecordsPerPartition(
+      final Integer partitionId,
+      final List<ConsumerRecord<RecordId, Record<?>>> exportedRecords,
+      final List<Record<?>> expectedRecords) {
+    final var expectedKafkaPartition = exportedRecords.get(0).partition();
+    assertThat(exportedRecords)
+        .as(
+            "all exported records from Zeebe partition %d were exported to the same Kafka partition %d",
+            partitionId, expectedKafkaPartition)
+        .allMatch(r -> r.partition() == expectedKafkaPartition)
+        // cast to raw type to be able to compare the containers
+        .map(r -> (Record) r.value())
+        .as(
+            "the records for partition %d are the same as those reported by the DebugHttpExporter",
+            partitionId)
+        .containsExactlyInAnyOrderElementsOf(expectedRecords)
+        .as("the records for partition %d are sorted by position", partitionId)
+        .isSortedAccordingTo(Comparator.comparing(Record::getPosition));
+  }
+
+  /**
+   * A wrapper around {@link #consumeExportedRecords(Map)} to avoid race conditions where we poll
+   * too early and receive less records. Doing this avoids any potential flakiness at the cost of a
+   * bit more complexity/unreadability.
+   */
+  private Map<Integer, List<ConsumerRecord<RecordId, Record<?>>>> awaitAllExportedRecords(
+      final Map<Integer, List<Record<?>>> expectedRecords) {
+    final var records = new HashMap<Integer, List<ConsumerRecord<RecordId, Record<?>>>>();
+
+    Awaitility.await("until the expected number of records has been consumed")
+        .atMost(Duration.ofSeconds(30))
+        .pollDelay(Duration.ZERO)
+        .pollInterval(Duration.ofMillis(100))
+        .pollInSameThread()
+        .untilAsserted(
+            () -> {
+              consumeExportedRecords(records);
+              assertThat(records)
+                  .allSatisfy(
+                      (partitionId, list) -> {
+                        assertThat(list.size())
+                            .as("records consumed for partition %d", partitionId)
+                            .isEqualTo(expectedRecords.get(partitionId).size());
+                      });
+            });
 
     return records;
   }
 
-  private Consumer<RecordId, Record<?>> newConsumer() {
-    final Properties config = newConsumerConfig();
-    final Consumer<RecordId, Record<?>> consumer =
-        new KafkaConsumer<>(config, new RecordIdDeserializer(), new RecordDeserializer());
-    consumer.subscribe(TOPIC_SUBSCRIPTION_PATTERN);
+  private void consumeExportedRecords(
+      final Map<Integer, List<ConsumerRecord<RecordId, Record<?>>>> records) {
+    final var timeout = Duration.ofSeconds(5);
 
-    return consumer;
+    try (final Consumer<RecordId, Record<?>> consumer = newConsumer()) {
+      final var consumedRecords = consumer.poll(timeout);
+      for (final var consumedRecord : consumedRecords) {
+        final var perPartitionRecords =
+            records.computeIfAbsent(
+                consumedRecord.value().getPartitionId(), ignored -> new ArrayList<>());
+
+        perPartitionRecords.add(consumedRecord);
+        perPartitionRecords.sort(Comparator.comparing(ConsumerRecord::offset, Long::compareTo));
+      }
+    }
   }
 
-  private ZeebeClient newClient() {
-    return ZeebeClient.newClientBuilder()
-        .brokerContactPoint(zeebeContainer.getExternalGatewayAddress())
-        .usePlaintext()
-        .build();
+  private ZeebeClient getLazyZeebeClient() {
+    if (zeebeClient == null) {
+      zeebeClient =
+          ZeebeClient.newClientBuilder()
+              .gatewayAddress(zeebeContainer.getExternalGatewayAddress())
+              .usePlaintext()
+              .build();
+    }
+
+    return zeebeClient;
   }
 
-  private Properties newConsumerConfig() {
-    final Properties properties = new Properties();
-    properties.put("auto.offset.reset", "earliest");
-    properties.put("bootstrap.servers", kafkaContainer.getBootstrapServers());
-    properties.put("enable.auto.commit", "true");
-    properties.put("group.id", this.getClass().getName());
-    properties.put("max.poll.records", String.valueOf(Integer.MAX_VALUE));
-    properties.put("metadata.max.age.ms", "500");
+  private DebugHttpExporterClient getLazyDebugExporter() throws MalformedURLException {
+    if (debugExporter == null) {
+      final var exporterServerUrl =
+          new URL(String.format("http://%s/records.json", zeebeContainer.getExternalAddress(8000)));
+      debugExporter = new DebugHttpExporterClient((exporterServerUrl));
+    }
 
-    return properties;
+    return debugExporter;
   }
 
   @SuppressWarnings("OctalInteger")
   private ZeebeContainer newZeebeContainer() {
-    final DockerImageName zeebeImageName =
+    final var zeebeImageName =
         DockerImageName.parse("camunda/zeebe")
             .withTag(ZeebeClient.class.getPackage().getImplementationVersion());
-    final ZeebeContainer container = new ZeebeContainer(zeebeImageName.asCanonicalNameString());
-    final MountableFile exporterJar =
-        MountableFile.forClasspathResource("zeebe-kafka-exporter.jar", 0775);
-    final MountableFile exporterConfig = MountableFile.forClasspathResource("exporters.yml", 0775);
-    final String networkAlias = "zeebe";
-    final Slf4jLogConsumer logConsumer =
-        new Slf4jLogConsumer(newContainerLogger("zeebeContainer"), true);
+    final var container = new ZeebeContainer(zeebeImageName.asCanonicalNameString());
+    final var exporterJar = MountableFile.forClasspathResource("zeebe-kafka-exporter.jar", 0775);
+    final var exporterConfig = MountableFile.forClasspathResource("exporters.yml", 0775);
+    final var loggingConfig = MountableFile.forClasspathResource("log4j2.xml", 0775);
+    final var networkAlias = "zeebe";
+    final var logConsumer = new Slf4jLogConsumer(newContainerLogger("zeebeContainer"), true);
 
     container.addExposedPort(8000);
     return container
         .withNetwork(network)
         .withNetworkAliases(networkAlias)
         .withEnv("ZEEBE_BROKER_NETWORK_ADVERTISEDHOST", networkAlias)
+        .withEnv("ZEEBE_BROKER_CLUSTER_PARTITIONSCOUNT", "3")
         .withEnv("ZEEBE_BROKER_EXPORTERS_KAFKA_ARGS_PRODUCER_SERVERS", "kafka:9092")
+        .withEnv("ZEEBE_LOG_LEVEL", "info")
+        .withEnv(
+            "LOG4J_CONFIGURATION_FILE",
+            "/usr/local/zeebe/config/log4j2.xml,/usr/local/zeebe/config/log4j2-exporter.xml")
         .withCopyFileToContainer(exporterJar, "/usr/local/zeebe/lib/zeebe-kafka-exporter.jar")
         .withCopyFileToContainer(exporterConfig, "/usr/local/zeebe/config/exporters.yml")
+        .withCopyFileToContainer(loggingConfig, "/usr/local/zeebe/config/log4j2-exporter.xml")
         .withEnv("SPRING_CONFIG_ADDITIONAL_LOCATION", "file:/usr/local/zeebe/config/exporters.yml")
         .withLogConsumer(logConsumer);
   }
 
+  private Consumer<RecordId, Record<?>> newConsumer() {
+    final var config = new HashMap<String, Object>();
+    config.put("auto.offset.reset", "earliest");
+    config.put("bootstrap.servers", kafkaContainer.getBootstrapServers());
+    config.put("enable.auto.commit", true);
+    config.put("group.id", this.getClass().getName());
+    config.put("max.poll.records", Integer.MAX_VALUE);
+    config.put("metadata.max.age.ms", 500);
+    config.put("isolation.level", "read_committed");
+
+    final var consumer =
+        new KafkaConsumer<>(config, new RecordIdDeserializer(), new RecordDeserializer());
+    consumer.subscribe(TOPIC_SUBSCRIPTION_PATTERN);
+
+    return consumer;
+  }
+
   private KafkaContainer newKafkaContainer() {
-    final DockerImageName kafkaImage =
-        DockerImageName.parse("confluentinc/cp-kafka").withTag("5.5.1");
-    final KafkaContainer container = new KafkaContainer(kafkaImage);
-    final Slf4jLogConsumer logConsumer =
-        new Slf4jLogConsumer(newContainerLogger("kafkaContainer"), true);
+    final var kafkaImage = DockerImageName.parse("confluentinc/cp-kafka").withTag("5.5.1");
+    final var container = new KafkaContainer(kafkaImage);
+    final var logConsumer = new Slf4jLogConsumer(newContainerLogger("kafkaContainer"), true);
 
     return container
         .withEnv("KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR", "1")
@@ -211,6 +327,21 @@ final class KafkaExporterIT {
         .withNetwork(network)
         .withNetworkAliases("kafka")
         .withLogConsumer(logConsumer);
+  }
+
+  private void startKafka() {
+    kafkaContainer.start();
+
+    // provision Kafka topics - this is difficult at the moment to achieve purely via
+    // configuration, so we do it as a pre-step
+    final NewTopic topic = new NewTopic("zeebe", 3, (short) 1);
+    try (final AdminClient admin =
+        AdminClient.create(
+            Map.of(
+                AdminClientConfig.BOOTSTRAP_SERVERS_CONFIG,
+                kafkaContainer.getBootstrapServers()))) {
+      admin.createTopics(List.of(topic));
+    }
   }
 
   private static Logger newContainerLogger(final String containerName) {

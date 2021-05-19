@@ -16,7 +16,7 @@
 package io.zeebe.exporters.kafka.producer;
 
 import edu.umd.cs.findbugs.annotations.NonNull;
-import io.zeebe.exporters.kafka.config.Config;
+import io.zeebe.exporters.kafka.config.ProducerConfig;
 import io.zeebe.exporters.kafka.serde.RecordId;
 import java.util.Objects;
 import java.util.function.Supplier;
@@ -41,7 +41,7 @@ public class MockKafkaProducerFactory implements KafkaProducerFactory {
 
   @Override
   public @NonNull Producer<RecordId, byte[]> newProducer(
-      final @NonNull Config config, final @NonNull String producerId) {
+      final @NonNull ProducerConfig config, final @NonNull String producerId) {
     this.producerId = producerId;
     if (mockProducer == null || mockProducer.closed()) {
       mockProducer = mockProducerSupplier.get();

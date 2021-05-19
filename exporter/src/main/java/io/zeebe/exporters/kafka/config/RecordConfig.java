@@ -64,4 +64,9 @@ public final class RecordConfig {
     return Objects.equals(getAllowedTypes(), that.getAllowedTypes())
         && Objects.equals(getTopic(), that.getTopic());
   }
+
+  @Override
+  public String toString() {
+    return "RecordConfig{" + "allowedTypes=" + allowedTypes + ", topic='" + topic + '\'' + '}';
+  }
 }

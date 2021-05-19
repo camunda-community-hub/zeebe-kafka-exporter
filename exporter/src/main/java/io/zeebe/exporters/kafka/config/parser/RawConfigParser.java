@@ -37,8 +37,7 @@ import java.util.Objects;
  */
 public final class RawConfigParser implements ConfigParser<RawConfig, Config> {
   static final int DEFAULT_MAX_BATCH_SIZE = 8 * 1024 * 1024;
-  static final Duration DEFAULT_MAX_BLOCKING_TIMEOUT = Duration.ofSeconds(1);
-  static final Duration DEFAULT_IN_FLIGHT_RECORD_CHECK_INTERVAL = Duration.ofSeconds(1);
+  static final Duration DEFAULT_COMMIT_INTERVAL_MS = Duration.ofSeconds(1);
 
   private final ConfigParser<RawRecordsConfig, RecordsConfig> recordsConfigParser;
   private final ConfigParser<RawProducerConfig, ProducerConfig> producerConfigParser;
@@ -63,19 +62,10 @@ public final class RawConfigParser implements ConfigParser<RawConfig, Config> {
     final RecordsConfig recordsConfig =
         recordsConfigParser.parse(config.records, RawRecordsConfig::new);
     final Integer maxBatchSize = get(config.maxBatchSize, DEFAULT_MAX_BATCH_SIZE);
-    final Duration maxBlockingTimeout =
-        get(config.maxBlockingTimeoutMs, DEFAULT_MAX_BLOCKING_TIMEOUT, Duration::ofMillis);
-    final Duration inFlightRecordCheckInterval =
-        get(
-            config.inFlightRecordCheckIntervalMs,
-            DEFAULT_IN_FLIGHT_RECORD_CHECK_INTERVAL,
-            Duration::ofMillis);
+    final Duration commitInterval =
+        get(config.commitIntervalMs, DEFAULT_COMMIT_INTERVAL_MS, Duration::ofMillis);
 
     return new Config(
-        producerConfig,
-        recordsConfig,
-        maxBatchSize,
-        maxBlockingTimeout,
-        inFlightRecordCheckInterval);
+        producerConfig, recordsConfig, maxBatchSize, commitInterval);
   }
 }

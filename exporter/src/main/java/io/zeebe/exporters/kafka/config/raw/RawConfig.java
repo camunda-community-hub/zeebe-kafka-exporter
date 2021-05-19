@@ -26,17 +26,10 @@ public class RawConfig {
   public Integer maxBatchSize;
 
   /**
-   * The maximum time to block when the batch is full. If the batch is full, and a new record comes
-   * in, the exporter will block until there is space in the batch, or {@code maxBlockingTimeoutMs}
-   * milliseconds elapse.
+   * How often should the current batch be committed to Kafka, regardless of whether its full or
+   * not.
    */
-  public Long maxBlockingTimeoutMs;
-
-  /**
-   * How often should the exporter drain the in flight records' queue of completed requests and
-   * update the broker with the guaranteed latest exported position
-   */
-  public Long inFlightRecordCheckIntervalMs;
+  public Long commitIntervalMs;
 
   /** Producer specific configuration; see {@link RawProducerConfig}. */
   public RawProducerConfig producer;

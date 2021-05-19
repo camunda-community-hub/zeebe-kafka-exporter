@@ -30,20 +30,17 @@ public class Config {
   private final ProducerConfig producer;
   private final RecordsConfig records;
   private final int maxBatchSize;
-  private final Duration maxBlockingTimeout;
-  private final Duration inFlightRecordCheckInterval;
+  private final Duration commitInterval;
 
   public Config(
       final @NonNull ProducerConfig producer,
       final @NonNull RecordsConfig records,
       final int maxBatchSize,
-      final @NonNull Duration maxBlockingTimeout,
-      final @NonNull Duration inFlightRecordCheckInterval) {
+      final @NonNull Duration commitInterval) {
     this.producer = Objects.requireNonNull(producer);
     this.records = Objects.requireNonNull(records);
     this.maxBatchSize = maxBatchSize;
-    this.maxBlockingTimeout = Objects.requireNonNull(maxBlockingTimeout);
-    this.inFlightRecordCheckInterval = Objects.requireNonNull(inFlightRecordCheckInterval);
+    this.commitInterval = Objects.requireNonNull(commitInterval);
   }
 
   public @NonNull ProducerConfig getProducer() {
@@ -58,17 +55,13 @@ public class Config {
     return maxBatchSize;
   }
 
-  public @NonNull Duration getMaxBlockingTimeout() {
-    return maxBlockingTimeout;
-  }
-
-  public @NonNull Duration getInFlightRecordCheckInterval() {
-    return inFlightRecordCheckInterval;
+  public @NonNull Duration getCommitInterval() {
+    return commitInterval;
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(producer, records, maxBatchSize, inFlightRecordCheckInterval);
+    return Objects.hash(producer, records, maxBatchSize, commitInterval);
   }
 
   @Override
@@ -83,7 +76,21 @@ public class Config {
     return getMaxBatchSize() == config.getMaxBatchSize()
         && Objects.equals(getProducer(), config.getProducer())
         && Objects.equals(getRecords(), config.getRecords())
-        && Objects.equals(
-            getInFlightRecordCheckInterval(), config.getInFlightRecordCheckInterval());
+        && Objects.equals(getMaxBatchSize(), config.getMaxBatchSize())
+        && Objects.equals(getCommitInterval(), config.getCommitInterval());
+  }
+
+  @Override
+  public String toString() {
+    return "Config{"
+        + "producer="
+        + producer
+        + ", records="
+        + records
+        + ", maxBatchSize="
+        + maxBatchSize
+        + ", commitInterval="
+        + commitInterval
+        + '}';
   }
 }

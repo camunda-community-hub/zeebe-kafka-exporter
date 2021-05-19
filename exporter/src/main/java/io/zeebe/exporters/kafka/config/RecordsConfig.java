@@ -71,4 +71,9 @@ public final class RecordsConfig {
     return Objects.equals(getTypeMap(), that.getTypeMap())
         && Objects.equals(getDefaults(), that.getDefaults());
   }
+
+  @Override
+  public String toString() {
+    return "RecordsConfig{" + "typeMap=" + typeMap + ", defaults=" + defaults + '}';
+  }
 }

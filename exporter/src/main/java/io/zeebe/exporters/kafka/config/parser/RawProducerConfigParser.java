@@ -41,6 +41,8 @@ import java.util.Properties;
  * a properties file, delegating this to {@link Properties#load(Reader)}.
  */
 public class RawProducerConfigParser implements ConfigParser<RawProducerConfig, ProducerConfig> {
+
+  public static final Duration DEFAULT_MAX_BLOCKING_TIMEOUT = Duration.ofSeconds(2);
   static final List<String> DEFAULT_SERVERS = Collections.singletonList("localhost:9092");
   static final String DEFAULT_CLIENT_ID = "zeebe";
   static final Duration DEFAULT_CLOSE_TIMEOUT = Duration.ofSeconds(20);
@@ -57,10 +59,13 @@ public class RawProducerConfigParser implements ConfigParser<RawProducerConfig, 
         get(config.closeTimeoutMs, DEFAULT_CLOSE_TIMEOUT, Duration::ofMillis);
     final Duration requestTimeout =
         get(config.requestTimeoutMs, DEFAULT_REQUEST_TIMEOUT, Duration::ofMillis);
+    final Duration maxBlockingTimeout =
+        get(config.maxBlockingTimeoutMs, DEFAULT_MAX_BLOCKING_TIMEOUT, Duration::ofMillis);
     final Map<String, Object> producerConfig =
         get(config.config, new HashMap<>(), this::parseProperties);
 
-    return new ProducerConfig(clientId, closeTimeout, producerConfig, requestTimeout, servers);
+    return new ProducerConfig(
+        clientId, closeTimeout, producerConfig, requestTimeout, maxBlockingTimeout, servers);
   }
 
   private @NonNull Map<String, Object> parseProperties(final @NonNull String propertiesString) {
