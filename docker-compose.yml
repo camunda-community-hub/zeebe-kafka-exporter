@@ -2,7 +2,7 @@ version: '3.3'
 
 services:
   zeebe:
-    image: ${ZEEBE_IMAGE:-camunda/zeebe}:${ZEEBE_VERSION:-0.24.1}
+    image: ${ZEEBE_IMAGE:-camunda/zeebe}:${ZEEBE_VERSION:-1.0.0}
     container_name: zeebe
     hostname: zeebe
     depends_on:
