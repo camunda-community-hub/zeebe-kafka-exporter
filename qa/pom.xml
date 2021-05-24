@@ -13,53 +13,69 @@
   <parent>
     <artifactId>zeebe-kafka-exporter-root</artifactId>
     <groupId>io.zeebe</groupId>
-    <version>2.1.0-SNAPSHOT</version>
-    <relativePath>../</relativePath>
+    <version>3.0.0-SNAPSHOT</version>
+    <relativePath>../pom.xml</relativePath>
   </parent>
 
   <dependencies>
+    <!-- enforce a dependency on the exporter to ensure we always install/package it first -->
     <dependency>
       <groupId>io.zeebe</groupId>
-      <artifactId>zeebe-kafka-exporter-tck</artifactId>
-      <version>${project.version}</version>
+      <artifactId>zeebe-kafka-exporter</artifactId>
       <scope>test</scope>
     </dependency>
 
     <dependency>
       <groupId>io.zeebe</groupId>
       <artifactId>zeebe-kafka-exporter-serde</artifactId>
-      <version>${project.version}</version>
       <scope>test</scope>
     </dependency>
 
     <dependency>
       <groupId>io.zeebe</groupId>
-      <artifactId>zeebe-kafka-exporter</artifactId>
-      <version>${project.version}</version>
+      <artifactId>zeebe-protocol-immutables</artifactId>
       <scope>test</scope>
     </dependency>
 
     <dependency>
-      <groupId>io.zeebe</groupId>
-      <artifactId>zeebe-exporter-api</artifactId>
+      <groupId>com.fasterxml.jackson.core</groupId>
+      <artifactId>jackson-core</artifactId>
       <scope>test</scope>
     </dependency>
 
     <dependency>
-      <groupId>io.zeebe</groupId>
+      <groupId>com.fasterxml.jackson.core</groupId>
+      <artifactId>jackson-databind</artifactId>
+      <scope>test</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>io.camunda</groupId>
       <artifactId>zeebe-client-java</artifactId>
       <scope>test</scope>
     </dependency>
 
     <dependency>
-      <groupId>io.zeebe</groupId>
+      <groupId>io.camunda</groupId>
       <artifactId>zeebe-bpmn-model</artifactId>
       <scope>test</scope>
     </dependency>
 
     <dependency>
-      <groupId>io.zeebe</groupId>
+      <groupId>io.camunda</groupId>
+      <artifactId>zeebe-protocol</artifactId>
+      <scope>test</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>io.camunda</groupId>
       <artifactId>zeebe-protocol-asserts</artifactId>
+      <scope>test</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>org.agrona</groupId>
+      <artifactId>agrona</artifactId>
       <scope>test</scope>
     </dependency>
 
@@ -95,7 +111,7 @@
 
     <dependency>
       <groupId>org.testcontainers</groupId>
-      <artifactId>elasticsearch</artifactId>
+      <artifactId>junit-jupiter</artifactId>
       <scope>test</scope>
     </dependency>
 
@@ -155,6 +171,17 @@
             </configuration>
           </execution>
         </executions>
+        <configuration>
+          <ignoredUnusedDeclaredDependencies>
+            <!--
+              ignore as we want to enforce a fake dependency to ensure we always package the
+              exporter first
+              -->
+            <unusedDeclaredDependency>io.zeebe:zeebe-kafka-exporter</unusedDeclaredDependency>
+            <!-- false positive, used as logging output in tests -->
+            <unusedDeclaredDependency>org.slf4j:slf4j-simple</unusedDeclaredDependency>
+          </ignoredUnusedDeclaredDependencies>
+        </configuration>
       </plugin>
 
       <plugin>

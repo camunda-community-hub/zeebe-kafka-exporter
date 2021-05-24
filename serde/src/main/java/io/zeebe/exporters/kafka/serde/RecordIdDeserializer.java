@@ -15,55 +15,24 @@
  */
 package io.zeebe.exporters.kafka.serde;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectReader;
-import edu.umd.cs.findbugs.annotations.NonNull;
-import java.util.Map;
-import org.apache.kafka.common.errors.SerializationException;
 import org.apache.kafka.common.serialization.Deserializer;
-import org.apache.kafka.common.serialization.StringDeserializer;
 
 /**
- * A {@link Deserializer} implementations for {@link RecordId} objects, which first uses a wrapped
- * {@link StringDeserializer} to deserialize bytes into a JSON string. This is done to accomodate
- * different byte encodings which you can configure via the {@link StringDeserializer}. If you
- * configure a non standard byte encoding, make sure that you do the same on the serializer and the
- * deserializer.
+ * A {@link Deserializer} implementations for {@link RecordId} objects, which uses a pre-configured
+ * * {@link ObjectReader} for that type.
  */
-public final class RecordIdDeserializer implements Deserializer<RecordId> {
-  private static final ObjectReader READER = new ObjectMapper().readerFor(RecordId.class);
-  private final StringDeserializer delegate;
-
+public final class RecordIdDeserializer extends JacksonDeserializer<RecordId> {
   public RecordIdDeserializer() {
-    this(new StringDeserializer());
+    this(new ObjectMapper());
   }
 
-  public RecordIdDeserializer(final @NonNull StringDeserializer delegate) {
-    this.delegate = delegate;
+  public RecordIdDeserializer(final ObjectMapper objectMapper) {
+    this(objectMapper.readerFor(RecordId.class));
   }
 
-  @Override
-  public void configure(final Map<String, ?> configs, final boolean isKey) {
-    delegate.configure(configs, isKey);
-  }
-
-  @Override
-  public RecordId deserialize(final String topic, final byte[] data) {
-    final String decoded = delegate.deserialize(topic, data);
-    try {
-      return READER.readValue(decoded);
-    } catch (final JsonProcessingException e) {
-      throw new SerializationException(
-          String.format(
-              "Expected to deserialize JSON data from topic [%s] into a RecordId instance, but failed",
-              topic),
-          e);
-    }
-  }
-
-  @Override
-  public void close() {
-    delegate.close();
+  public RecordIdDeserializer(final ObjectReader objectReader) {
+    super(objectReader);
   }
 }

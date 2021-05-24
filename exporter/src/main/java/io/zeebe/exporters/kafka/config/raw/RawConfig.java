@@ -16,19 +16,31 @@
 package io.zeebe.exporters.kafka.config.raw;
 
 @SuppressWarnings("squid:ClassVariableVisibilityCheck")
-public class RawConfig {
+public final class RawConfig {
   /**
-   * Controls how many records can have been sent to the Kafka broker without any acknowledgment.
-   * Once the limit is reached the exporter will block and wait until either one record is
-   * acknowledged
+   * Controls the number of records to buffer in a single record batch before forcing a flush. Note
+   * that a flush may occur before anyway due to periodic flushing. This setting should help you
+   * estimate a soft upper bound to the memory consumption of the exporter. If you assume a worst
+   * case scenario where every record is the size of your zeebe.broker.network.maxMessageSize, then
+   * the memory required by the exporter would be at least: (maxBatchSize *
+   * zeebe.broker.network.maxMessageSize * 2)
+   *
+   * <p>We multiply by 2 as the records are buffered twice - once in the exporter itself, and once
+   * in the producer's network buffers (but serialized at that point). There's some additional
+   * memory overhead used by the producer as well for compression/encryption/etc., so you have to
+   * add a bit, but that one is not proportional to the number of records and is more or less
+   * constant.
+   *
+   * <p>Once the batch has reached this size, a flush is automatically triggered. Too small a number
+   * here would cause many flush, which is not good for performance, but would mean you will see
+   * your records faster/sooner.
    */
-  public Integer maxInFlightRecords;
+  public Integer maxBatchSize;
 
   /**
-   * How often should the exporter drain the in flight records' queue of completed requests and
-   * update the broker with the guaranteed latest exported position
+   * How often should the current batch be flushed to Kafka, regardless of whether its full or not.
    */
-  public Long inFlightRecordCheckIntervalMs;
+  public Long flushIntervalMs;
 
   /** Producer specific configuration; see {@link RawProducerConfig}. */
   public RawProducerConfig producer;

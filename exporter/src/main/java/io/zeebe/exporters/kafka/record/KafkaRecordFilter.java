@@ -15,10 +15,11 @@
  */
 package io.zeebe.exporters.kafka.record;
 
-import io.zeebe.exporter.api.context.Context.RecordFilter;
+import io.camunda.zeebe.exporter.api.context.Context.RecordFilter;
+import io.camunda.zeebe.protocol.record.RecordType;
+import io.camunda.zeebe.protocol.record.ValueType;
 import io.zeebe.exporters.kafka.config.RecordsConfig;
-import io.zeebe.protocol.record.RecordType;
-import io.zeebe.protocol.record.ValueType;
+import java.util.Objects;
 import java.util.Optional;
 
 /**
@@ -29,7 +30,7 @@ public final class KafkaRecordFilter implements RecordFilter {
   private final RecordsConfig config;
 
   public KafkaRecordFilter(final RecordsConfig config) {
-    this.config = config;
+    this.config = Objects.requireNonNull(config);
   }
 
   /**

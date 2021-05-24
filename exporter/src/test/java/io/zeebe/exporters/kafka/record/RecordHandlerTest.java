@@ -17,28 +17,32 @@ package io.zeebe.exporters.kafka.record;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import io.camunda.zeebe.protocol.record.Record;
+import io.camunda.zeebe.protocol.record.RecordType;
+import io.camunda.zeebe.protocol.record.ValueType;
+import io.camunda.zeebe.protocol.record.intent.DeploymentIntent;
+import io.camunda.zeebe.protocol.record.value.DeploymentRecordValue;
 import io.zeebe.exporters.kafka.config.RecordConfig;
 import io.zeebe.exporters.kafka.config.RecordsConfig;
 import io.zeebe.exporters.kafka.serde.RecordId;
-import io.zeebe.protocol.immutables.record.ImmutableDeploymentRecordValue;
-import io.zeebe.protocol.immutables.record.ImmutableRecord;
-import io.zeebe.protocol.record.Record;
-import io.zeebe.protocol.record.RecordType;
-import io.zeebe.protocol.record.ValueType;
-import io.zeebe.protocol.record.value.DeploymentRecordValue;
+import io.zeebe.protocol.immutables.record.value.ImmutableDeploymentRecordValue;
+import io.zeebe.protocol.immutables.record.value.ImmutableRecord;
+import java.nio.charset.StandardCharsets;
 import java.util.EnumSet;
 import java.util.Map;
 import org.apache.kafka.clients.producer.ProducerRecord;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.parallel.Execution;
+import org.junit.jupiter.api.parallel.ExecutionMode;
 
-@SuppressWarnings("rawtypes")
-public class RecordHandlerTest {
+@Execution(ExecutionMode.CONCURRENT)
+final class RecordHandlerTest {
 
   private static final RecordConfig DEFAULT_RECORD_CONFIG =
       new RecordConfig(EnumSet.allOf(RecordType.class), "zeebe");
 
   @Test
-  public void shouldTransformRecord() {
+  void shouldTransformRecord() {
     // given
     final Record<DeploymentRecordValue> record =
         buildDeploymentRecord().recordType(RecordType.COMMAND).build();
@@ -47,35 +51,35 @@ public class RecordHandlerTest {
     final RecordHandler recordHandler = new RecordHandler(newRecordsConfig(RecordType.COMMAND));
 
     // when
-    final ProducerRecord<RecordId, Record> transformed = recordHandler.transform(record);
+    final ProducerRecord<RecordId, byte[]> transformed = recordHandler.transform(record);
 
     // then
     assertThat(transformed.topic()).isEqualTo(deploymentRecordConfig.getTopic());
     assertThat(transformed.key())
         .isEqualTo(new RecordId(record.getPartitionId(), record.getPosition()));
-    assertThat(transformed.value()).isEqualTo(record);
+    assertThat(transformed.value()).isEqualTo(record.toJson().getBytes(StandardCharsets.UTF_8));
   }
 
   @Test
-  public void shouldTestRecordAsNotAllowed() {
+  void shouldTestRecordAsNotAllowed() {
     // given
     final Record<DeploymentRecordValue> record =
         buildDeploymentRecord().recordType(RecordType.COMMAND).build();
     final RecordHandler recordHandler = new RecordHandler(newRecordsConfig(RecordType.EVENT));
 
     // when - then
-    assertThat(recordHandler.test(record)).isFalse();
+    assertThat(recordHandler.isAllowed(record)).isFalse();
   }
 
   @Test
-  public void shouldTestRecordAsAllowed() {
+  void shouldTestRecordAsAllowed() {
     // given
     final Record<DeploymentRecordValue> record =
         buildDeploymentRecord().recordType(RecordType.EVENT).build();
     final RecordHandler recordHandler = new RecordHandler(newRecordsConfig(RecordType.EVENT));
 
     // when - then
-    assertThat(recordHandler.test(record)).isTrue();
+    assertThat(recordHandler.isAllowed(record)).isTrue();
   }
 
   private RecordsConfig newRecordsConfig(final RecordType allowedType) {
@@ -88,6 +92,7 @@ public class RecordHandlerTest {
         .valueType(ValueType.DEPLOYMENT)
         .recordType(RecordType.EVENT)
         .timestamp(System.currentTimeMillis())
+        .intent(DeploymentIntent.CREATE)
         .value(ImmutableDeploymentRecordValue.builder().build())
         .partitionId(1)
         .position(1);

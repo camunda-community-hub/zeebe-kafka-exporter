@@ -18,17 +18,20 @@ package io.zeebe.exporters.kafka.config.parser;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import io.camunda.zeebe.protocol.record.RecordType;
 import io.zeebe.exporters.kafka.config.RecordConfig;
 import io.zeebe.exporters.kafka.config.raw.RawRecordConfig;
-import io.zeebe.protocol.record.RecordType;
 import java.util.EnumSet;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.parallel.Execution;
+import org.junit.jupiter.api.parallel.ExecutionMode;
 
-public class RawRecordConfigParserTest {
+@Execution(ExecutionMode.CONCURRENT)
+final class RawRecordConfigParserTest {
   private final RawRecordConfigParser parser = new RawRecordConfigParser();
 
   @Test
-  public void shouldParseAllowedTypes() {
+  void shouldParseAllowedTypes() {
     // given
     final RawRecordConfig config = new RawRecordConfig();
     config.type =
@@ -43,7 +46,7 @@ public class RawRecordConfigParserTest {
   }
 
   @Test
-  public void shouldParseTopic() {
+  void shouldParseTopic() {
     // given
     final RawRecordConfig config = new RawRecordConfig();
     config.topic = "something";
@@ -56,7 +59,7 @@ public class RawRecordConfigParserTest {
   }
 
   @Test
-  public void shouldSetDefaultsIfNull() {
+  void shouldSetDefaultsIfNull() {
     // given
     final RawRecordConfig config = new RawRecordConfig();
 
@@ -69,7 +72,7 @@ public class RawRecordConfigParserTest {
   }
 
   @Test
-  public void shouldSetExplicitDefaultsIfNull() {
+  void shouldSetExplicitDefaultsIfNull() {
     // given
     final RecordConfig defaults = new RecordConfig(EnumSet.allOf(RecordType.class), "topic");
     final RawRecordConfigParser explicitParser = new RawRecordConfigParser(defaults);
@@ -84,12 +87,26 @@ public class RawRecordConfigParserTest {
   }
 
   @Test
-  public void shouldThrowExceptionIfAllowedTypeIsUnknown() {
+  void shouldThrowExceptionIfAllowedTypeIsUnknown() {
     // given
     final RawRecordConfig config = new RawRecordConfig();
     config.type = "something unlikely";
 
     // when - then
     assertThatThrownBy(() -> parser.parse(config)).isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  void shouldDisallowOnEmptyString() {
+    // given
+    final RawRecordConfigParser explicitParser = new RawRecordConfigParser();
+    final RawRecordConfig config = new RawRecordConfig();
+    config.type = "";
+
+    // when
+    final RecordConfig parsed = explicitParser.parse(config);
+
+    // then
+    assertThat(parsed.getAllowedTypes()).isEmpty();
   }
 }

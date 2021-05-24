@@ -15,8 +15,6 @@
  */
 package io.zeebe.exporters.kafka.config.parser;
 
-import edu.umd.cs.findbugs.annotations.NonNull;
-import edu.umd.cs.findbugs.annotations.Nullable;
 import java.util.Objects;
 
 /**
@@ -29,25 +27,26 @@ import java.util.Objects;
  * @param <T> {@inheritDoc}
  * @param <R> {@inheritDoc}
  */
-public class MockConfigParser<T, R> implements ConfigParser<T, R> {
+public final class MockConfigParser<T, R> implements ConfigParser<T, R> {
   public R config;
+
   private final ConfigParser<T, R> delegate;
 
-  public MockConfigParser(final @NonNull ConfigParser<T, R> delegate) {
+  public MockConfigParser(final ConfigParser<T, R> delegate) {
     this.delegate = Objects.requireNonNull(delegate);
   }
 
   @Override
-  public @NonNull R parse(final @Nullable T config) {
+  public R parse(final T config) {
     if (this.config == null) {
-      return delegate.parse(config);
+      this.config = delegate.parse(config);
     }
 
     return this.config;
   }
 
   /** A helper method in tests to force re-parsing an updated configuration. */
-  public void forceParse(final @Nullable T config) {
+  public void forceParse(final T config) {
     this.config = null;
     parse(config);
   }

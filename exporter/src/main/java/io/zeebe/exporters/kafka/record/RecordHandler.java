@@ -15,13 +15,13 @@
  */
 package io.zeebe.exporters.kafka.record;
 
-import edu.umd.cs.findbugs.annotations.NonNull;
+import io.camunda.zeebe.protocol.record.Record;
 import io.zeebe.exporters.kafka.config.RecordConfig;
 import io.zeebe.exporters.kafka.config.RecordsConfig;
 import io.zeebe.exporters.kafka.serde.RecordId;
-import io.zeebe.protocol.record.Record;
 import java.util.Objects;
 import org.apache.kafka.clients.producer.ProducerRecord;
+import org.apache.kafka.common.serialization.Serializer;
 
 /**
  * {@link RecordHandler} is responsible for testing if certain records are allowed, and if so,
@@ -29,12 +29,17 @@ import org.apache.kafka.clients.producer.ProducerRecord;
  *
  * <p>Should be refactored into two for single responsibility.
  */
-@SuppressWarnings("rawtypes")
 public final class RecordHandler {
   private final RecordsConfig configuration;
+  private final Serializer<Record<?>> serializer;
 
-  public RecordHandler(final @NonNull RecordsConfig configuration) {
+  public RecordHandler(final RecordsConfig configuration) {
+    this(configuration, new RecordSerializer());
+  }
+
+  public RecordHandler(final RecordsConfig configuration, final Serializer<Record<?>> serializer) {
     this.configuration = Objects.requireNonNull(configuration);
+    this.serializer = Objects.requireNonNull(serializer);
   }
 
   /**
@@ -43,10 +48,13 @@ public final class RecordHandler {
    * @param record the record to transform
    * @return the transformed record
    */
-  public @NonNull ProducerRecord<RecordId, Record> transform(final @NonNull Record record) {
+  public ProducerRecord<RecordId, byte[]> transform(final Record record) {
     final RecordConfig config = getRecordConfig(record);
+    final byte[] serializedRecord = serializer.serialize(config.getTopic(), record);
     return new ProducerRecord<>(
-        config.getTopic(), new RecordId(record.getPartitionId(), record.getPosition()), record);
+        config.getTopic(),
+        new RecordId(record.getPartitionId(), record.getPosition()),
+        serializedRecord);
   }
 
   /**
@@ -55,12 +63,12 @@ public final class RecordHandler {
    * @param record the record to test
    * @return true if allowed, false otherwise
    */
-  public boolean test(final @NonNull Record record) {
+  public boolean isAllowed(final Record<?> record) {
     final RecordConfig config = getRecordConfig(record);
     return config.getAllowedTypes().contains(record.getRecordType());
   }
 
-  private @NonNull RecordConfig getRecordConfig(final @NonNull Record record) {
+  private RecordConfig getRecordConfig(final Record<?> record) {
     return configuration.forType(Objects.requireNonNull(record).getValueType());
   }
 }

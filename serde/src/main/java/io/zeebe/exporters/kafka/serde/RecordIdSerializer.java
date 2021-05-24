@@ -15,49 +15,25 @@
  */
 package io.zeebe.exporters.kafka.serde;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectWriter;
-import edu.umd.cs.findbugs.annotations.NonNull;
-import java.util.Map;
-import org.apache.kafka.common.errors.SerializationException;
 import org.apache.kafka.common.serialization.Serializer;
-import org.apache.kafka.common.serialization.StringSerializer;
 
 /**
- * A {@link Serializer} implementations for {@link RecordId} objects, which first uses a wrapped
- * {@link StringSerializer} to serialize {@link RecordId} to JSON. You can specify your encoding of
- * preference via {@link StringSerializer} configuration. Any configuration given to this serializer
- * is also passed to the wrapped {@link StringSerializer}.
+ * A {@link Serializer} implementations for {@link RecordId} objects which uses a pre-configured
+ * {@link ObjectWriter} for that type.
  */
-public final class RecordIdSerializer implements Serializer<RecordId> {
-  private static final ObjectWriter WRITER = new ObjectMapper().writerFor(RecordId.class);
-  private final StringSerializer delegate;
+public final class RecordIdSerializer extends JacksonSerializer<RecordId> {
 
   public RecordIdSerializer() {
-    this(new StringSerializer());
+    this(new ObjectMapper());
   }
 
-  public RecordIdSerializer(final @NonNull StringSerializer delegate) {
-    this.delegate = delegate;
+  protected RecordIdSerializer(final ObjectMapper objectMapper) {
+    this(objectMapper.writerFor(RecordId.class));
   }
 
-  @Override
-  public void configure(final Map<String, ?> configs, final boolean isKey) {
-    delegate.configure(configs, isKey);
-  }
-
-  @Override
-  public byte[] serialize(final String topic, final RecordId data) {
-    try {
-      return delegate.serialize(topic, WRITER.writeValueAsString(data));
-    } catch (final JsonProcessingException e) {
-      throw new SerializationException(e);
-    }
-  }
-
-  @Override
-  public void close() {
-    delegate.close();
+  protected RecordIdSerializer(final ObjectWriter writer) {
+    super(writer);
   }
 }

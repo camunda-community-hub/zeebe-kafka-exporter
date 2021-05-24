@@ -17,8 +17,6 @@ package io.zeebe.exporters.kafka.config.parser;
 
 import static io.zeebe.exporters.kafka.config.parser.ConfigParserUtil.get;
 
-import edu.umd.cs.findbugs.annotations.NonNull;
-import edu.umd.cs.findbugs.annotations.Nullable;
 import io.zeebe.exporters.kafka.config.Config;
 import io.zeebe.exporters.kafka.config.ProducerConfig;
 import io.zeebe.exporters.kafka.config.RecordsConfig;
@@ -36,8 +34,8 @@ import java.util.Objects;
  * to overwrite the parsing for nested types.
  */
 public final class RawConfigParser implements ConfigParser<RawConfig, Config> {
-  static final int DEFAULT_MAX_IN_FLIGHT_RECORDS = 100;
-  static final Duration DEFAULT_IN_FLIGHT_RECORD_CHECK_INTERVAL = Duration.ofSeconds(1);
+  static final int DEFAULT_MAX_BATCH_SIZE = 100;
+  static final Duration DEFAULT_FLUSH_INTERVAL_MS = Duration.ofSeconds(1);
 
   private final ConfigParser<RawRecordsConfig, RecordsConfig> recordsConfigParser;
   private final ConfigParser<RawProducerConfig, ProducerConfig> producerConfigParser;
@@ -47,29 +45,24 @@ public final class RawConfigParser implements ConfigParser<RawConfig, Config> {
   }
 
   RawConfigParser(
-      final @NonNull ConfigParser<RawRecordsConfig, RecordsConfig> recordsConfigParser,
-      final @NonNull ConfigParser<RawProducerConfig, ProducerConfig> producerConfigParser) {
+      final ConfigParser<RawRecordsConfig, RecordsConfig> recordsConfigParser,
+      final ConfigParser<RawProducerConfig, ProducerConfig> producerConfigParser) {
     this.recordsConfigParser = Objects.requireNonNull(recordsConfigParser);
     this.producerConfigParser = Objects.requireNonNull(producerConfigParser);
   }
 
   @Override
-  public @NonNull Config parse(final @Nullable RawConfig config) {
+  public Config parse(final RawConfig config) {
     Objects.requireNonNull(config);
 
     final ProducerConfig producerConfig =
         producerConfigParser.parse(config.producer, RawProducerConfig::new);
     final RecordsConfig recordsConfig =
         recordsConfigParser.parse(config.records, RawRecordsConfig::new);
-    final Integer maxInFlightRecords =
-        get(config.maxInFlightRecords, DEFAULT_MAX_IN_FLIGHT_RECORDS);
-    final Duration inFlightRecordCheckInterval =
-        get(
-            config.inFlightRecordCheckIntervalMs,
-            DEFAULT_IN_FLIGHT_RECORD_CHECK_INTERVAL,
-            Duration::ofMillis);
+    final Integer maxBatchSize = get(config.maxBatchSize, DEFAULT_MAX_BATCH_SIZE);
+    final Duration flushInterval =
+        get(config.flushIntervalMs, DEFAULT_FLUSH_INTERVAL_MS, Duration::ofMillis);
 
-    return new Config(
-        producerConfig, recordsConfig, maxInFlightRecords, inFlightRecordCheckInterval);
+    return new Config(producerConfig, recordsConfig, maxBatchSize, flushInterval);
   }
 }

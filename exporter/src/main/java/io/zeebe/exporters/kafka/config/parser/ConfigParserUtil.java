@@ -15,8 +15,6 @@
  */
 package io.zeebe.exporters.kafka.config.parser;
 
-import edu.umd.cs.findbugs.annotations.NonNull;
-import edu.umd.cs.findbugs.annotations.Nullable;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
@@ -30,18 +28,15 @@ import java.util.stream.Collectors;
 final class ConfigParserUtil {
   private ConfigParserUtil() {}
 
-  static @NonNull <T> T get(final @Nullable T property, final @NonNull T fallback) {
+  static <T> T get(final T property, final T fallback) {
     return Optional.ofNullable(property).orElse(fallback);
   }
 
-  static @NonNull <T, R> R get(
-      final @Nullable T property,
-      final @NonNull R fallback,
-      final @NonNull Function<T, R> transformer) {
+  static <T, R> R get(final T property, final R fallback, final Function<T, R> transformer) {
     return Optional.ofNullable(property).map(transformer).orElse(fallback);
   }
 
-  static @NonNull List<String> splitCommaSeparatedString(final @NonNull String value) {
+  static List<String> splitCommaSeparatedString(final String value) {
     return Arrays.stream(value.split(",")).map(String::trim).collect(Collectors.toList());
   }
 }

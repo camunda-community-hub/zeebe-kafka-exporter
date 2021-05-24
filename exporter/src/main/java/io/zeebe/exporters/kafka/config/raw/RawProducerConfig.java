@@ -16,15 +16,19 @@
 package io.zeebe.exporters.kafka.config.raw;
 
 @SuppressWarnings("squid:ClassVariableVisibilityCheck")
-public class RawProducerConfig {
+public final class RawProducerConfig {
 
   /**
-   * Producer client identifier; maps to {@link
-   * org.apache.kafka.clients.producer.ProducerConfig#CLIENT_ID_CONFIG}
+   * Producer client identifier.
+   *
+   * @see org.apache.kafka.clients.producer.ProducerConfig#CLIENT_ID_CONFIG
    */
   public String clientId;
 
-  /** Grace period when shutting down the producer in milliseconds. */
+  /**
+   * Grace period when shutting down the producer in milliseconds. A period which is too short could
+   * result in possible resource leaks, but generally should be fine.
+   */
   public Long closeTimeoutMs;
 
   /**
@@ -40,14 +44,29 @@ public class RawProducerConfig {
 
   /**
    * Controls how long the producer will wait for a request to be acknowledged by the Kafka broker
-   * before retrying it. Maps to ProducerConfig.REQUEST_TIMEOUT_MS_CONFIG
+   * before retrying it.
+   *
+   * @see org.apache.kafka.clients.producer.ProducerConfig#REQUEST_TIMEOUT_MS_CONFIG
    */
   public Long requestTimeoutMs;
 
   /**
+   * The maximum time to block for all blocking requests, e.g. beginTransaction, commitTransaction.
+   * It's recommended to keep this low, around a second, as it's also the time the exporter will
+   * block if the batch is full when trying to commit/flush it. Keeping it low isn't a big issue, as
+   * even if it times out the first time, Kafka will still commit the transaction in the background,
+   * and on the next try the transaction will commit much faster (e.g. if it's already committed as
+   * far as the brokers are concerned, then it should be really fast).
+   *
+   * @see org.apache.kafka.clients.producer.ProducerConfig#MAX_BLOCK_MS_CONFIG
+   */
+  public Long maxBlockingTimeoutMs;
+
+  /**
    * The comma separated list of initial Kafka broker contact points. The format should be the same
    * one as the {@link org.apache.kafka.clients.producer.ProducerConfig} expects, i.e. "host:port".
-   * Maps to ProducerConfig.BOOTSTRAP_SERVERS_CONFIG
+   *
+   * @see org.apache.kafka.clients.producer.ProducerConfig#BOOTSTRAP_SERVERS_CONFIG
    */
   public String servers;
 }

@@ -15,7 +15,6 @@
  */
 package io.zeebe.exporters.kafka.config;
 
-import edu.umd.cs.findbugs.annotations.NonNull;
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;
@@ -37,6 +36,7 @@ public final class ProducerConfig {
   private final Duration closeTimeout;
   private final Map<String, Object> config;
   private final Duration requestTimeout;
+  private final Duration maxBlockingTimeout;
   private final List<String> servers;
 
   public ProducerConfig(
@@ -44,37 +44,44 @@ public final class ProducerConfig {
       final Duration closeTimeout,
       final Map<String, Object> config,
       final Duration requestTimeout,
+      final Duration maxBlockingTimeout,
       final List<String> servers) {
     this.clientId = Objects.requireNonNull(clientId);
     this.closeTimeout = Objects.requireNonNull(closeTimeout);
     this.config = Objects.requireNonNull(config);
     this.requestTimeout = Objects.requireNonNull(requestTimeout);
+    this.maxBlockingTimeout = Objects.requireNonNull(maxBlockingTimeout);
     this.servers = Objects.requireNonNull(servers);
   }
 
-  public @NonNull String getClientId() {
+  public String getClientId() {
     return clientId;
   }
 
-  public @NonNull Duration getCloseTimeout() {
+  public Duration getCloseTimeout() {
     return closeTimeout;
   }
 
-  public @NonNull Map<String, Object> getConfig() {
+  public Map<String, Object> getConfig() {
     return config;
   }
 
-  public @NonNull Duration getRequestTimeout() {
+  public Duration getRequestTimeout() {
     return requestTimeout;
   }
 
-  public @NonNull List<String> getServers() {
+  public Duration getMaxBlockingTimeout() {
+    return maxBlockingTimeout;
+  }
+
+  public List<String> getServers() {
     return servers;
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(clientId, closeTimeout, config, requestTimeout, servers);
+    return Objects.hash(
+        clientId, closeTimeout, config, requestTimeout, maxBlockingTimeout, servers);
   }
 
   @Override
@@ -90,6 +97,26 @@ public final class ProducerConfig {
         && Objects.equals(getCloseTimeout(), that.getCloseTimeout())
         && Objects.equals(getConfig(), that.getConfig())
         && Objects.equals(getRequestTimeout(), that.getRequestTimeout())
+        && Objects.equals(getMaxBlockingTimeout(), that.getMaxBlockingTimeout())
         && Objects.equals(getServers(), that.getServers());
+  }
+
+  @Override
+  public String toString() {
+    return "ProducerConfig{"
+        + "clientId='"
+        + clientId
+        + '\''
+        + ", closeTimeout="
+        + closeTimeout
+        + ", config="
+        + config
+        + ", requestTimeout="
+        + requestTimeout
+        + ", maxBlockingTimeout="
+        + maxBlockingTimeout
+        + ", servers="
+        + servers
+        + '}';
   }
 }

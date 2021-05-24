@@ -18,12 +18,12 @@ package io.zeebe.exporters.kafka.serde;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonGetter;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import io.zeebe.protocol.record.Record;
+import io.camunda.zeebe.protocol.record.Record;
 import java.util.Objects;
 
 /**
  * {@link RecordId} represents a unique identifier for a given Zeebe {@link
- * io.zeebe.protocol.record.Record}. On a single partition (identified via {@link
+ * io.camunda.zeebe.protocol.record.Record}. On a single partition (identified via {@link
  * Record#getPartitionId()}), every record has a unique position (identified via {@link
  * Record#getPosition()}).
  */

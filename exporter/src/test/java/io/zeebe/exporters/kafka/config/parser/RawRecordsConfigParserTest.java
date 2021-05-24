@@ -17,23 +17,26 @@ package io.zeebe.exporters.kafka.config.parser;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import io.camunda.zeebe.protocol.record.RecordType;
+import io.camunda.zeebe.protocol.record.ValueType;
 import io.zeebe.exporters.kafka.config.RecordsConfig;
 import io.zeebe.exporters.kafka.config.raw.RawRecordConfig;
 import io.zeebe.exporters.kafka.config.raw.RawRecordsConfig;
-import io.zeebe.protocol.record.RecordType;
-import io.zeebe.protocol.record.ValueType;
 import java.util.EnumSet;
 import java.util.Set;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.parallel.Execution;
+import org.junit.jupiter.api.parallel.ExecutionMode;
 
-public class RawRecordsConfigParserTest {
+@Execution(ExecutionMode.CONCURRENT)
+final class RawRecordsConfigParserTest {
   private static final Set<ValueType> EXPECTED_VALUE_TYPES =
       EnumSet.complementOf(EnumSet.of(ValueType.NULL_VAL, ValueType.SBE_UNKNOWN));
 
   private final RawRecordsConfigParser parser = new RawRecordsConfigParser();
 
   @Test
-  public void shouldParseDefaultsWithDefaultValue() {
+  void shouldParseDefaultsWithDefaultValue() {
     // given
     final RawRecordsConfig config = new RawRecordsConfig();
 
@@ -47,10 +50,11 @@ public class RawRecordsConfigParserTest {
   }
 
   @Test
-  public void shouldParseRecordConfigUnderCorrectValueType() {
+  void shouldParseRecordConfigUnderCorrectValueType() {
     // given
     final RawRecordsConfig config = new RawRecordsConfig();
     config.deployment = newConfigFromType(ValueType.DEPLOYMENT);
+    config.deploymentDistribution = newConfigFromType(ValueType.DEPLOYMENT_DISTRIBUTION);
     config.error = newConfigFromType(ValueType.ERROR);
     config.incident = newConfigFromType(ValueType.INCIDENT);
     config.job = newConfigFromType(ValueType.JOB);
@@ -59,14 +63,15 @@ public class RawRecordsConfigParserTest {
     config.messageSubscription = newConfigFromType(ValueType.MESSAGE_SUBSCRIPTION);
     config.messageStartEventSubscription =
         newConfigFromType(ValueType.MESSAGE_START_EVENT_SUBSCRIPTION);
+    config.process = newConfigFromType(ValueType.PROCESS);
+    config.processEvent = newConfigFromType(ValueType.PROCESS_EVENT);
+    config.processInstance = newConfigFromType(ValueType.PROCESS_INSTANCE);
+    config.processInstanceCreation = newConfigFromType(ValueType.PROCESS_INSTANCE_CREATION);
+    config.processInstanceResult = newConfigFromType(ValueType.PROCESS_INSTANCE_RESULT);
+    config.processMessageSubscription = newConfigFromType(ValueType.PROCESS_MESSAGE_SUBSCRIPTION);
     config.timer = newConfigFromType(ValueType.TIMER);
     config.variable = newConfigFromType(ValueType.VARIABLE);
     config.variableDocument = newConfigFromType(ValueType.VARIABLE_DOCUMENT);
-    config.workflowInstance = newConfigFromType(ValueType.WORKFLOW_INSTANCE);
-    config.workflowInstanceCreation = newConfigFromType(ValueType.WORKFLOW_INSTANCE_CREATION);
-    config.workflowInstanceResult = newConfigFromType(ValueType.WORKFLOW_INSTANCE_RESULT);
-    config.workflowInstanceSubscription =
-        newConfigFromType(ValueType.WORKFLOW_INSTANCE_SUBSCRIPTION);
 
     // when
     final RecordsConfig parsed = parser.parse(config);
@@ -78,7 +83,7 @@ public class RawRecordsConfigParserTest {
   }
 
   @Test
-  public void shouldUseDefaultsOnMissingProperties() {
+  void shouldUseDefaultsOnMissingProperties() {
     // given
     final RawRecordsConfig config = new RawRecordsConfig();
     config.defaults = new RawRecordConfig();

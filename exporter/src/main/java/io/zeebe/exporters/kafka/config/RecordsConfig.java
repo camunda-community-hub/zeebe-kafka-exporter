@@ -15,8 +15,7 @@
  */
 package io.zeebe.exporters.kafka.config;
 
-import edu.umd.cs.findbugs.annotations.NonNull;
-import io.zeebe.protocol.record.ValueType;
+import io.camunda.zeebe.protocol.record.ValueType;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -29,17 +28,16 @@ public final class RecordsConfig {
   private final Map<ValueType, RecordConfig> typeMap;
   private final RecordConfig defaults;
 
-  public RecordsConfig(
-      final @NonNull Map<ValueType, RecordConfig> typeMap, @NonNull final RecordConfig defaults) {
+  public RecordsConfig(final Map<ValueType, RecordConfig> typeMap, final RecordConfig defaults) {
     this.typeMap = Objects.requireNonNull(typeMap);
     this.defaults = Objects.requireNonNull(defaults);
   }
 
-  public @NonNull Map<ValueType, RecordConfig> getTypeMap() {
+  public Map<ValueType, RecordConfig> getTypeMap() {
     return typeMap;
   }
 
-  public @NonNull RecordConfig getDefaults() {
+  public RecordConfig getDefaults() {
     return defaults;
   }
 
@@ -50,7 +48,7 @@ public final class RecordsConfig {
    * @param type the value type to get the {@link RecordConfig} of
    * @return the configured {@link RecordConfig} for this type, or {@link #getDefaults()}
    */
-  public @NonNull RecordConfig forType(final @NonNull ValueType type) {
+  public RecordConfig forType(final ValueType type) {
     return Optional.ofNullable(typeMap.get(type)).orElse(defaults);
   }
 
@@ -70,5 +68,10 @@ public final class RecordsConfig {
     final RecordsConfig that = (RecordsConfig) o;
     return Objects.equals(getTypeMap(), that.getTypeMap())
         && Objects.equals(getDefaults(), that.getDefaults());
+  }
+
+  @Override
+  public String toString() {
+    return "RecordsConfig{" + "typeMap=" + typeMap + ", defaults=" + defaults + '}';
   }
 }

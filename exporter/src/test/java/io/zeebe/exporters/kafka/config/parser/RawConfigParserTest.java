@@ -24,9 +24,12 @@ import io.zeebe.exporters.kafka.config.raw.RawConfig;
 import io.zeebe.exporters.kafka.config.raw.RawProducerConfig;
 import io.zeebe.exporters.kafka.config.raw.RawRecordsConfig;
 import java.time.Duration;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.parallel.Execution;
+import org.junit.jupiter.api.parallel.ExecutionMode;
 
-public class RawConfigParserTest {
+@Execution(ExecutionMode.CONCURRENT)
+final class RawConfigParserTest {
   private final MockConfigParser<RawRecordsConfig, RecordsConfig> recordsConfigParser =
       new MockConfigParser<>(new RawRecordsConfigParser());
   private final MockConfigParser<RawProducerConfig, ProducerConfig> producerConfigParser =
@@ -35,7 +38,7 @@ public class RawConfigParserTest {
       new RawConfigParser(recordsConfigParser, producerConfigParser);
 
   @Test
-  public void shouldUseDefaultValues() {
+  void shouldUseDefaultValues() {
     // given
     final RawConfig config = new RawConfig();
 
@@ -45,20 +48,18 @@ public class RawConfigParserTest {
     // then
     assertThat(parsed.getRecords()).isEqualTo(recordsConfigParser.parse(new RawRecordsConfig()));
     assertThat(parsed.getProducer()).isEqualTo(producerConfigParser.parse(new RawProducerConfig()));
-    assertThat(parsed.getMaxInFlightRecords())
-        .isEqualTo(RawConfigParser.DEFAULT_MAX_IN_FLIGHT_RECORDS);
-    assertThat(parsed.getInFlightRecordCheckInterval())
-        .isEqualTo(RawConfigParser.DEFAULT_IN_FLIGHT_RECORD_CHECK_INTERVAL);
+    assertThat(parsed.getMaxBatchSize()).isEqualTo(RawConfigParser.DEFAULT_MAX_BATCH_SIZE);
+    assertThat(parsed.getFlushInterval()).isEqualTo(RawConfigParser.DEFAULT_FLUSH_INTERVAL_MS);
   }
 
   @Test
-  public void shouldParse() {
+  void shouldParse() {
     // given
     final RawConfig config = new RawConfig();
     final ProducerConfig producerConfig = producerConfigParser.parse(new RawProducerConfig());
     final RecordsConfig recordsConfig = recordsConfigParser.parse(new RawRecordsConfig());
-    config.maxInFlightRecords = 2;
-    config.inFlightRecordCheckIntervalMs = 500L;
+    config.maxBatchSize = 2;
+    config.flushIntervalMs = 500L;
 
     // when
     final Config parsed = parser.parse(config);
@@ -66,7 +67,7 @@ public class RawConfigParserTest {
     // then
     assertThat(parsed.getProducer()).isEqualTo(producerConfig);
     assertThat(parsed.getRecords()).isEqualTo(recordsConfig);
-    assertThat(parsed.getMaxInFlightRecords()).isEqualTo(2);
-    assertThat(parsed.getInFlightRecordCheckInterval()).isEqualTo(Duration.ofMillis(500));
+    assertThat(parsed.getMaxBatchSize()).isEqualTo(2);
+    assertThat(parsed.getFlushInterval()).isEqualTo(Duration.ofMillis(500));
   }
 }

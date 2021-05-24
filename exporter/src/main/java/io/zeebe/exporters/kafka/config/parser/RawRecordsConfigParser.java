@@ -15,13 +15,11 @@
  */
 package io.zeebe.exporters.kafka.config.parser;
 
-import edu.umd.cs.findbugs.annotations.NonNull;
-import edu.umd.cs.findbugs.annotations.Nullable;
+import io.camunda.zeebe.protocol.record.ValueType;
 import io.zeebe.exporters.kafka.config.RecordConfig;
 import io.zeebe.exporters.kafka.config.RecordsConfig;
 import io.zeebe.exporters.kafka.config.raw.RawRecordConfig;
 import io.zeebe.exporters.kafka.config.raw.RawRecordsConfig;
-import io.zeebe.protocol.record.ValueType;
 import java.util.EnumMap;
 import java.util.Map;
 import java.util.Objects;
@@ -42,7 +40,7 @@ public class RawRecordsConfigParser implements ConfigParser<RawRecordsConfig, Re
 
   @SuppressWarnings("java:S138")
   @Override
-  public @NonNull RecordsConfig parse(final @Nullable RawRecordsConfig config) {
+  public RecordsConfig parse(final RawRecordsConfig config) {
     Objects.requireNonNull(config);
 
     final Map<ValueType, RecordConfig> typeMap = new EnumMap<>(ValueType.class);
@@ -54,6 +52,9 @@ public class RawRecordsConfigParser implements ConfigParser<RawRecordsConfig, Re
     Optional.ofNullable(config.deployment)
         .map(recordConfigParser::parse)
         .ifPresent(c -> typeMap.put(ValueType.DEPLOYMENT, c));
+    Optional.ofNullable(config.deploymentDistribution)
+        .map(recordConfigParser::parse)
+        .ifPresent(c -> typeMap.put(ValueType.DEPLOYMENT_DISTRIBUTION, c));
     Optional.ofNullable(config.error)
         .map(recordConfigParser::parse)
         .ifPresent(c -> typeMap.put(ValueType.ERROR, c));
@@ -75,6 +76,24 @@ public class RawRecordsConfigParser implements ConfigParser<RawRecordsConfig, Re
     Optional.ofNullable(config.messageStartEventSubscription)
         .map(recordConfigParser::parse)
         .ifPresent(c -> typeMap.put(ValueType.MESSAGE_START_EVENT_SUBSCRIPTION, c));
+    Optional.ofNullable(config.processInstance)
+        .map(recordConfigParser::parse)
+        .ifPresent(c -> typeMap.put(ValueType.PROCESS_INSTANCE, c));
+    Optional.ofNullable(config.processInstanceCreation)
+        .map(recordConfigParser::parse)
+        .ifPresent(c -> typeMap.put(ValueType.PROCESS_INSTANCE_CREATION, c));
+    Optional.ofNullable(config.processInstanceResult)
+        .map(recordConfigParser::parse)
+        .ifPresent(c -> typeMap.put(ValueType.PROCESS_INSTANCE_RESULT, c));
+    Optional.ofNullable(config.processMessageSubscription)
+        .map(recordConfigParser::parse)
+        .ifPresent(c -> typeMap.put(ValueType.PROCESS_MESSAGE_SUBSCRIPTION, c));
+    Optional.ofNullable(config.process)
+        .map(recordConfigParser::parse)
+        .ifPresent(c -> typeMap.put(ValueType.PROCESS, c));
+    Optional.ofNullable(config.processEvent)
+        .map(recordConfigParser::parse)
+        .ifPresent(c -> typeMap.put(ValueType.PROCESS_EVENT, c));
     Optional.ofNullable(config.timer)
         .map(recordConfigParser::parse)
         .ifPresent(c -> typeMap.put(ValueType.TIMER, c));
@@ -84,18 +103,6 @@ public class RawRecordsConfigParser implements ConfigParser<RawRecordsConfig, Re
     Optional.ofNullable(config.variableDocument)
         .map(recordConfigParser::parse)
         .ifPresent(c -> typeMap.put(ValueType.VARIABLE_DOCUMENT, c));
-    Optional.ofNullable(config.workflowInstance)
-        .map(recordConfigParser::parse)
-        .ifPresent(c -> typeMap.put(ValueType.WORKFLOW_INSTANCE, c));
-    Optional.ofNullable(config.workflowInstanceCreation)
-        .map(recordConfigParser::parse)
-        .ifPresent(c -> typeMap.put(ValueType.WORKFLOW_INSTANCE_CREATION, c));
-    Optional.ofNullable(config.workflowInstanceResult)
-        .map(recordConfigParser::parse)
-        .ifPresent(c -> typeMap.put(ValueType.WORKFLOW_INSTANCE_RESULT, c));
-    Optional.ofNullable(config.workflowInstanceSubscription)
-        .map(recordConfigParser::parse)
-        .ifPresent(c -> typeMap.put(ValueType.WORKFLOW_INSTANCE_SUBSCRIPTION, c));
 
     return new RecordsConfig(typeMap, defaults);
   }

@@ -15,7 +15,6 @@
  */
 package io.zeebe.exporters.kafka.config;
 
-import edu.umd.cs.findbugs.annotations.NonNull;
 import java.time.Duration;
 import java.util.Objects;
 
@@ -26,42 +25,42 @@ import java.util.Objects;
  * io.zeebe.exporters.kafka.config.parser.RawConfigParser} for more on how the external
  * configuration is parsed into an instance of this class.
  */
-public class Config {
+public final class Config {
   private final ProducerConfig producer;
   private final RecordsConfig records;
-  private final int maxInFlightRecords;
-  private final Duration inFlightRecordCheckInterval;
+  private final int maxBatchSize;
+  private final Duration flushInterval;
 
   public Config(
-      final @NonNull ProducerConfig producer,
-      final @NonNull RecordsConfig records,
-      final int maxInFlightRecords,
-      final @NonNull Duration inFlightRecordCheckInterval) {
+      final ProducerConfig producer,
+      final RecordsConfig records,
+      final int maxBatchSize,
+      final Duration flushInterval) {
     this.producer = Objects.requireNonNull(producer);
     this.records = Objects.requireNonNull(records);
-    this.maxInFlightRecords = maxInFlightRecords;
-    this.inFlightRecordCheckInterval = inFlightRecordCheckInterval;
+    this.maxBatchSize = maxBatchSize;
+    this.flushInterval = Objects.requireNonNull(flushInterval);
   }
 
-  public @NonNull ProducerConfig getProducer() {
+  public ProducerConfig getProducer() {
     return producer;
   }
 
-  public @NonNull RecordsConfig getRecords() {
+  public RecordsConfig getRecords() {
     return records;
   }
 
-  public int getMaxInFlightRecords() {
-    return maxInFlightRecords;
+  public int getMaxBatchSize() {
+    return maxBatchSize;
   }
 
-  public @NonNull Duration getInFlightRecordCheckInterval() {
-    return inFlightRecordCheckInterval;
+  public Duration getFlushInterval() {
+    return flushInterval;
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(producer, records, maxInFlightRecords, inFlightRecordCheckInterval);
+    return Objects.hash(producer, records, maxBatchSize, flushInterval);
   }
 
   @Override
@@ -73,10 +72,24 @@ public class Config {
       return false;
     }
     final Config config = (Config) o;
-    return getMaxInFlightRecords() == config.getMaxInFlightRecords()
+    return getMaxBatchSize() == config.getMaxBatchSize()
         && Objects.equals(getProducer(), config.getProducer())
         && Objects.equals(getRecords(), config.getRecords())
-        && Objects.equals(
-            getInFlightRecordCheckInterval(), config.getInFlightRecordCheckInterval());
+        && Objects.equals(getMaxBatchSize(), config.getMaxBatchSize())
+        && Objects.equals(getFlushInterval(), config.getFlushInterval());
+  }
+
+  @Override
+  public String toString() {
+    return "Config{"
+        + "producer="
+        + producer
+        + ", records="
+        + records
+        + ", maxBatchSize="
+        + maxBatchSize
+        + ", commitInterval="
+        + flushInterval
+        + '}';
   }
 }
