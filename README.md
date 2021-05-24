@@ -4,7 +4,7 @@ Zeebe Kafka Exporter
 [![](https://img.shields.io/badge/Community%20Extension-An%20open%20source%20community%20maintained%20project-FF4700)](https://github.com/camunda-community-hub/community)
 [![](https://img.shields.io/badge/Lifecycle-Incubating-blue)](https://github.com/Camunda-Community-Hub/community/blob/main/extension-lifecycle.md#incubating-)
 [![](https://img.shields.io/github/v/release/camunda-community-hub/zeebe-kafka-exporter?sort=semver)](https://github.com/camunda-community-hub/zeebe-kafka-exporter/releases/latest)
-[![Java CI](https://github.com/camunda-communit-hub/zeebe-kafka-exporter/actions/workflows/ci.yml/badge.svg)](https://github.com/camunda-community-hub/zeebe-kafka-exporter/actions/workflows/ci.yml)
+[![Java CI](https://github.com/camunda-community-hub/zeebe-kafka-exporter/actions/workflows/ci.yml/badge.svg)](https://github.com/camunda-community-hub/zeebe-kafka-exporter/actions/workflows/ci.yml)
 
 An easy to use exporter which will export Zeebe records to a configured Kafka topic.
 
