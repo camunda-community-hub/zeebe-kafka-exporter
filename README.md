@@ -11,6 +11,30 @@ An easy to use exporter which will export Zeebe records to a configured Kafka to
 > For more information about the exporters please read the
 > [Exporter documentation](https://docs.zeebe.io/basics/exporters.html).
 
+- [Zeebe Kafka Exporter](#zeebe-kafka-exporter)
+  * [Supported Zeebe versions](#supported-zeebe-versions)
+  * [Backwards compatibility](#backwards-compatibility)
+  * [Quick start](#quick-start)
+  * [Usage](#usage)
+    + [Kafka configuration](#kafka-configuration)
+      - [Transactions](#transactions)
+      - [Partitioning](#partitioning)
+    + [Advanced configuration](#advanced-configuration)
+  * [Examples](#examples)
+    + [Consuming Zeebe records](#consuming-zeebe-records)
+    + [Docker](#docker)
+  * [Reference](#reference)
+  * [Configuration](#configuration)
+- [Contributing](#contributing)
+  * [Build from source](#build-from-source)
+    + [Prerequisites](#prerequisites)
+    + [Building](#building)
+  * [Backwards compatibility](#backwards-compatibility-1)
+  * [Report issues or contact developers](#report-issues-or-contact-developers)
+  * [Create a Pull Request](#create-a-pull-request)
+  * [Commit Message Guidelines](#commit-message-guidelines)
+  * [Contributor License Agreement](#contributor-license-agreement)
+
 ## Supported Zeebe versions
 
 Version 1.x and 2.x is compatible with the following Zeebe versions:
