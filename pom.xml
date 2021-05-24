@@ -448,7 +448,7 @@
                 <shadedArtifactAttached>true</shadedArtifactAttached>
                 <shadedClassifierName>jar-with-dependencies</shadedClassifierName>
                 <minimizeJar>true</minimizeJar>
-                <finalName>${build.finalName}</finalName>
+                <finalName>${project.build.finalName}</finalName>
                 <createDependencyReducedPom>true</createDependencyReducedPom>
                 <promoteTransitiveDependencies>false</promoteTransitiveDependencies>
               </configuration>
