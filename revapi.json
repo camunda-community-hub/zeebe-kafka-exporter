@@ -1,0 +1,30 @@
+[
+  {
+    "extension": "revapi.filter",
+    "configuration": {
+      "enabled": true,
+      "elements": {
+        "exclude": [
+          {
+            "matcher": "java",
+            "match": "@org.apiguardian.api.API(status != org.apiguardian.api.API.Status.STABLE) ^*;"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "extension": "revapi.semver.ignore",
+    "configuration": {
+      "enabled": true,
+      "versionIncreaseAllows": {
+        "major": "breaking",
+        "minor": "nonBreaking",
+        "patch": "equivalent"
+      },
+      "passThroughDifferences": [
+        "java.class.nonPublicPartOfAPI"
+      ]
+    }
+  }
+]
