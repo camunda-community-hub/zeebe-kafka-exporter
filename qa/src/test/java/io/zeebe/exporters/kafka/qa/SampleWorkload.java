@@ -17,22 +17,21 @@ package io.zeebe.exporters.kafka.qa;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import edu.umd.cs.findbugs.annotations.NonNull;
-import io.zeebe.client.ZeebeClient;
-import io.zeebe.client.api.response.ActivatedJob;
-import io.zeebe.client.api.worker.JobClient;
-import io.zeebe.client.api.worker.JobHandler;
-import io.zeebe.client.api.worker.JobWorker;
-import io.zeebe.model.bpmn.Bpmn;
-import io.zeebe.model.bpmn.BpmnModelInstance;
-import io.zeebe.protocol.record.Record;
-import io.zeebe.protocol.record.RecordAssert;
-import io.zeebe.protocol.record.intent.IncidentIntent;
-import io.zeebe.protocol.record.intent.MessageIntent;
-import io.zeebe.protocol.record.intent.WorkflowInstanceIntent;
-import io.zeebe.protocol.record.value.BpmnElementType;
-import io.zeebe.protocol.record.value.IncidentRecordValue;
-import io.zeebe.protocol.record.value.WorkflowInstanceRecordValue;
+import io.camunda.zeebe.client.ZeebeClient;
+import io.camunda.zeebe.client.api.response.ActivatedJob;
+import io.camunda.zeebe.client.api.worker.JobClient;
+import io.camunda.zeebe.client.api.worker.JobHandler;
+import io.camunda.zeebe.client.api.worker.JobWorker;
+import io.camunda.zeebe.model.bpmn.Bpmn;
+import io.camunda.zeebe.model.bpmn.BpmnModelInstance;
+import io.camunda.zeebe.protocol.record.Record;
+import io.camunda.zeebe.protocol.record.RecordAssert;
+import io.camunda.zeebe.protocol.record.intent.IncidentIntent;
+import io.camunda.zeebe.protocol.record.intent.MessageIntent;
+import io.camunda.zeebe.protocol.record.intent.ProcessInstanceIntent;
+import io.camunda.zeebe.protocol.record.value.BpmnElementType;
+import io.camunda.zeebe.protocol.record.value.IncidentRecordValue;
+import io.camunda.zeebe.protocol.record.value.ProcessInstanceRecordValue;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -51,7 +50,7 @@ public final class SampleWorkload {
   private static final String PROCESS_NAME = "testProcess";
   private static final String PROCESS_FILE_NAME = "sample_workflow.bpmn";
   private static final String TASK_NAME = "task";
-  private static final BpmnModelInstance SAMPLE_WORKFLOW =
+  private static final BpmnModelInstance SAMPLE_PROCESS =
       Bpmn.createExecutableProcess(PROCESS_NAME)
           .startEvent()
           .intermediateCatchEvent(
@@ -125,7 +124,7 @@ public final class SampleWorkload {
         .last()
         .as("exported records contain the last expected record")
         .satisfies(
-            r -> RecordAssert.assertThat(r).hasKey(endMarkerKey).hasIntent(MessageIntent.DELETED));
+            r -> RecordAssert.assertThat(r).hasKey(endMarkerKey).hasIntent(MessageIntent.EXPIRED));
   }
 
   private void publishEndMarker() {
@@ -142,31 +141,27 @@ public final class SampleWorkload {
     endMarkerKey = response.getMessageKey();
   }
 
-  @NonNull
   private Record<IncidentRecordValue> awaitIncidentRaised(final long workflowInstanceKey) {
     return Awaitility.await("await incident to be raised")
         .pollInterval(Duration.ofMillis(200))
-        .atMost(Duration.ofSeconds(10))
+        .atMost(Duration.ofSeconds(30))
         .until(() -> findIncident(workflowInstanceKey), Optional::isPresent)
         .orElseThrow();
   }
 
   @SuppressWarnings({"unchecked", "java:S1905"})
-  @NonNull
-  private Optional<Record<IncidentRecordValue>> findIncident(final long workflowInstanceKey) {
+  private Optional<Record<IncidentRecordValue>> findIncident(final long processInstanceKey) {
     return exporterClient
         .streamRecords()
         .filter(r -> r.getIntent() == IncidentIntent.CREATED)
         .map(r -> (Record<IncidentRecordValue>) r)
-        .filter(r -> r.getValue().getWorkflowInstanceKey() == workflowInstanceKey)
+        .filter(r -> r.getValue().getProcessInstanceKey() == processInstanceKey)
         .filter(r -> r.getValue().getElementId().equals(TASK_NAME))
         .findFirst();
   }
 
   private void handleJob(
-      final @NonNull AtomicBoolean fail,
-      final @NonNull JobClient jobClient,
-      final @NonNull ActivatedJob job) {
+      final AtomicBoolean fail, final JobClient jobClient, final ActivatedJob job) {
     if (fail.getAndSet(false)) {
       jobClient.newFailCommand(job.getKey()).retries(0).errorMessage("failed").send().join();
     } else {
@@ -175,10 +170,10 @@ public final class SampleWorkload {
   }
 
   private void deployWorkflow() {
-    client.newDeployCommand().addWorkflowModel(SAMPLE_WORKFLOW, PROCESS_FILE_NAME).send().join();
+    client.newDeployCommand().addProcessModel(SAMPLE_PROCESS, PROCESS_FILE_NAME).send().join();
   }
 
-  private long createWorkflowInstance(final @NonNull Map<String, Object> variables) {
+  private long createWorkflowInstance(final Map<String, Object> variables) {
     return client
         .newCreateInstanceCommand()
         .bpmnProcessId(PROCESS_NAME)
@@ -186,10 +181,10 @@ public final class SampleWorkload {
         .variables(variables)
         .send()
         .join()
-        .getWorkflowInstanceKey();
+        .getProcessInstanceKey();
   }
 
-  private JobWorker createJobWorker(final @NonNull JobHandler handler) {
+  private JobWorker createJobWorker(final JobHandler handler) {
     return client.newWorker().jobType(JOB_TYPE).handler(handler).open();
   }
 
@@ -205,18 +200,18 @@ public final class SampleWorkload {
   private void awaitWorkflowCompletion(final long workflowInstanceKey) {
     Awaitility.await("await workflow " + workflowInstanceKey + " completion")
         .pollInterval(Duration.ofMillis(200))
-        .atMost(Duration.ofSeconds(5))
+        .atMost(Duration.ofSeconds(30))
         .untilAsserted(() -> assertThat(getProcessCompleted(workflowInstanceKey)).isPresent());
   }
 
   @SuppressWarnings({"unchecked", "java:S1905"})
-  private Optional<Record<WorkflowInstanceRecordValue>> getProcessCompleted(
+  private Optional<Record<ProcessInstanceRecordValue>> getProcessCompleted(
       final long workflowInstanceKey) {
     return exporterClient
         .streamRecords()
-        .filter(r -> r.getIntent() == WorkflowInstanceIntent.ELEMENT_COMPLETED)
+        .filter(r -> r.getIntent() == ProcessInstanceIntent.ELEMENT_COMPLETED)
         .filter(r -> r.getKey() == workflowInstanceKey)
-        .map(r -> (Record<WorkflowInstanceRecordValue>) r)
+        .map(r -> (Record<ProcessInstanceRecordValue>) r)
         .filter(r -> r.getValue().getBpmnElementType() == BpmnElementType.PROCESS)
         .findFirst();
   }

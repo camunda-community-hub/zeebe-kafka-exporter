@@ -17,12 +17,12 @@ package io.zeebe.exporters.kafka.qa;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import io.zeebe.client.ZeebeClient;
+import io.camunda.zeebe.client.ZeebeClient;
+import io.camunda.zeebe.protocol.record.Record;
 import io.zeebe.containers.ZeebeContainer;
 import io.zeebe.exporters.kafka.serde.RecordDeserializer;
 import io.zeebe.exporters.kafka.serde.RecordId;
 import io.zeebe.exporters.kafka.serde.RecordIdDeserializer;
-import io.zeebe.protocol.record.Record;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.time.Duration;
@@ -41,6 +41,7 @@ import org.apache.kafka.clients.admin.AdminClient;
 import org.apache.kafka.clients.admin.AdminClientConfig;
 import org.apache.kafka.clients.admin.NewTopic;
 import org.apache.kafka.clients.consumer.Consumer;
+import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.awaitility.Awaitility;
@@ -270,10 +271,7 @@ final class KafkaExporterIT {
 
   @SuppressWarnings("OctalInteger")
   private ZeebeContainer newZeebeContainer() {
-    final var zeebeImageName =
-        DockerImageName.parse("camunda/zeebe")
-            .withTag(ZeebeClient.class.getPackage().getImplementationVersion());
-    final var container = new ZeebeContainer(zeebeImageName.asCanonicalNameString());
+    final var container = new ZeebeContainer();
     final var exporterJar = MountableFile.forClasspathResource("zeebe-kafka-exporter.jar", 0775);
     final var exporterConfig = MountableFile.forClasspathResource("exporters.yml", 0775);
     final var loggingConfig = MountableFile.forClasspathResource("log4j2.xml", 0775);
@@ -300,13 +298,13 @@ final class KafkaExporterIT {
 
   private Consumer<RecordId, Record<?>> newConsumer() {
     final var config = new HashMap<String, Object>();
-    config.put("auto.offset.reset", "earliest");
-    config.put("bootstrap.servers", kafkaContainer.getBootstrapServers());
-    config.put("enable.auto.commit", true);
-    config.put("group.id", this.getClass().getName());
-    config.put("max.poll.records", Integer.MAX_VALUE);
-    config.put("metadata.max.age.ms", 500);
-    config.put("isolation.level", "read_committed");
+    config.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
+    config.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, kafkaContainer.getBootstrapServers());
+    config.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, true);
+    config.put(ConsumerConfig.GROUP_ID_CONFIG, this.getClass().getName());
+    config.put(ConsumerConfig.MAX_POLL_RECORDS_CONFIG, Integer.MAX_VALUE);
+    config.put(ConsumerConfig.METADATA_MAX_AGE_CONFIG, 500);
+    config.put(ConsumerConfig.ISOLATION_LEVEL_CONFIG, "read_committed");
 
     final var consumer =
         new KafkaConsumer<>(config, new RecordIdDeserializer(), new RecordDeserializer());

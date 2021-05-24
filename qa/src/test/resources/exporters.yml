@@ -2,13 +2,13 @@ zeebe:
   broker:
     exporters:
       debug:
-        className: io.zeebe.broker.exporter.debug.DebugHttpExporter
+        className: io.camunda.zeebe.broker.exporter.debug.DebugHttpExporter
         args:
           port: 8000
       kafka:
         className: io.zeebe.exporters.kafka.KafkaExporter
         args:
-          maxBatchSize: 8388608
+          maxBatchSize: 100
           maxBlockingTimeoutMs: 1000
           inFlightRecordCheckIntervalMs: 1000
 
