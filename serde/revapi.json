@@ -1,0 +1,19 @@
+[
+  {
+    "extension": "revapi.differences",
+    "configuration": {
+      "justification": "The serializers depend on Jackson, so exposing its types is fine",
+      "ignore": true,
+      "differences": [
+        {
+          "code": "java.class.externalClassExposedInAPI",
+          "oldArchive": "com.fasterxml.jackson.core:*:jar"
+        },
+        {
+          "code": "java.class.nonPublicPartOfAPI",
+          "oldArchive": "com.fasterxml.jackson.core:*:jar"
+        }
+      ]
+    }
+  }
+]

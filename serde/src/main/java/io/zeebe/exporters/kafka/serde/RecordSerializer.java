@@ -15,42 +15,32 @@
  */
 package io.zeebe.exporters.kafka.serde;
 
-import edu.umd.cs.findbugs.annotations.NonNull;
-import io.zeebe.protocol.record.Record;
-import java.util.Map;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.ObjectWriter;
+import io.camunda.zeebe.protocol.record.Record;
+import io.zeebe.protocol.immutables.ImmutableRecordTypeReference;
 import org.apache.kafka.common.serialization.Serializer;
-import org.apache.kafka.common.serialization.StringSerializer;
 
 /**
- * A {@link Serializer} implementations for {@link Record} objects, which first uses a wrapped
- * {@link StringSerializer} to serialize {@link Record} to JSON. You can specify your encoding of
- * preference via {@link StringSerializer} configuration. Any configuration given to this serializer
- * is also passed to the wrapped {@link StringSerializer}.
+ * A {@link Serializer} implementations for {@link Record} objects which uses a pre-configured
+ * {@link ObjectWriter} for that type.
+ *
+ * <p>NOTE: this serializer is not used by the exporter itself. The exporter uses a custom
+ * serializer which piggybacks on Zeebe's built-in {@link Record#toJson()} method which does not
+ * allow customization of the underlying {@link ObjectWriter}. It's provided here for testing
+ * purposes, and potentially for users who would like to produce records to the same topics but
+ * separately.
  */
-@SuppressWarnings("rawtypes")
-public final class RecordSerializer implements Serializer<Record> {
-  private final StringSerializer delegate;
-
+public final class RecordSerializer extends JacksonSerializer<Record<?>> {
   public RecordSerializer() {
-    this(new StringSerializer());
+    this(new ObjectMapper());
   }
 
-  public RecordSerializer(final @NonNull StringSerializer delegate) {
-    this.delegate = delegate;
+  protected RecordSerializer(final ObjectMapper objectMapper) {
+    this(objectMapper.writerFor(new ImmutableRecordTypeReference<>()));
   }
 
-  @Override
-  public void configure(final Map<String, ?> configs, final boolean isKey) {
-    delegate.configure(configs, isKey);
-  }
-
-  @Override
-  public byte[] serialize(final String topic, final Record data) {
-    return delegate.serialize(topic, data.toJson());
-  }
-
-  @Override
-  public void close() {
-    delegate.close();
+  protected RecordSerializer(final ObjectWriter writer) {
+    super(writer);
   }
 }

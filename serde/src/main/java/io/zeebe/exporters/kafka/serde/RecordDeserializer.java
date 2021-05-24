@@ -15,58 +15,29 @@
  */
 package io.zeebe.exporters.kafka.serde;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectReader;
-import edu.umd.cs.findbugs.annotations.NonNull;
-import io.zeebe.protocol.immutables.record.RecordTypeReference;
-import io.zeebe.protocol.record.Record;
-import java.util.Map;
-import org.apache.kafka.common.errors.SerializationException;
+import io.camunda.zeebe.protocol.record.Record;
+import io.zeebe.protocol.immutables.ImmutableRecordTypeReference;
 import org.apache.kafka.common.serialization.Deserializer;
-import org.apache.kafka.common.serialization.StringDeserializer;
 
 /**
- * A {@link Deserializer} implementations for {@link Record} objects, which first uses a wrapped
- * {@link StringDeserializer} to deserialize bytes into a JSON string. This is done to accomodate
- * different byte encodings which you can configure via the {@link StringDeserializer}. If you
- * configure a non standard byte encoding, make sure that you do the same on the serializer and the
- * deserializer.
+ * A {@link Deserializer} implementations for {@link Record} objects, which uses a pre-configured *
+ * {@link ObjectReader} for that type, and {@link
+ * io.zeebe.protocol.immutables.record.value.ImmutableRecord} as the concrete {@link Record}
+ * implementation.
  */
-public final class RecordDeserializer implements Deserializer<Record<?>> {
-  private static final ObjectReader READER =
-      new ObjectMapper().readerFor(new RecordTypeReference<>());
-  private final StringDeserializer delegate;
+public final class RecordDeserializer extends JacksonDeserializer<Record<?>> {
 
   public RecordDeserializer() {
-    this(new StringDeserializer());
+    this(new ObjectMapper());
   }
 
-  public RecordDeserializer(final @NonNull StringDeserializer delegate) {
-    this.delegate = delegate;
+  public RecordDeserializer(final ObjectMapper objectMapper) {
+    this(objectMapper.readerFor(new ImmutableRecordTypeReference<>()));
   }
 
-  @Override
-  public void configure(final Map<String, ?> configs, final boolean isKey) {
-    delegate.configure(configs, isKey);
-  }
-
-  @Override
-  public Record<?> deserialize(final String topic, final byte[] data) {
-    final String decoded = delegate.deserialize(topic, data);
-    try {
-      return READER.readValue(decoded);
-    } catch (final JsonProcessingException e) {
-      throw new SerializationException(
-          String.format(
-              "Expected to deserialize JSON data from topic [%s] into a Record instance, but failed",
-              topic),
-          e);
-    }
-  }
-
-  @Override
-  public void close() {
-    delegate.close();
+  public RecordDeserializer(final ObjectReader objectReader) {
+    super(objectReader);
   }
 }
