@@ -37,6 +37,7 @@
     <license.header>com/mycila/maven/plugin/license/templates/APACHE-2.txt</license.header>
 
     <!-- project dependencies -->
+    <version.agrona>1.10.0</version.agrona>
     <version.apiguardian>1.1.1</version.apiguardian>
     <version.assertj>3.18.1</version.assertj>
     <version.awaitility>4.0.3</version.awaitility>
@@ -161,6 +162,13 @@
         <groupId>org.slf4j</groupId>
         <artifactId>slf4j-simple</artifactId>
         <version>${version.slf4j}</version>
+      </dependency>
+
+      <!-- Data structures -->
+      <dependency>
+        <groupId>org.agrona</groupId>
+        <artifactId>agrona</artifactId>
+        <version>${version.agrona}</version>
       </dependency>
 
       <!-- Kafka -->
