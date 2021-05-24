@@ -16,7 +16,7 @@
 package io.zeebe.exporters.kafka.config.raw;
 
 @SuppressWarnings("squid:ClassVariableVisibilityCheck")
-public class RawRecordConfig {
+public final class RawRecordConfig {
 
   /**
    * Type is a comma separated string of accepted record types, allowing you to filter if you want

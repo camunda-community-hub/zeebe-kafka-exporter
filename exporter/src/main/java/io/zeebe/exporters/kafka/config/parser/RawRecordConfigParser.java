@@ -17,16 +17,15 @@ package io.zeebe.exporters.kafka.config.parser;
 
 import static io.zeebe.exporters.kafka.config.parser.ConfigParserUtil.get;
 
-import edu.umd.cs.findbugs.annotations.NonNull;
-import edu.umd.cs.findbugs.annotations.Nullable;
+import io.camunda.zeebe.protocol.record.RecordType;
 import io.zeebe.exporters.kafka.config.RecordConfig;
 import io.zeebe.exporters.kafka.config.raw.RawRecordConfig;
-import io.zeebe.protocol.record.RecordType;
 import java.util.Collections;
 import java.util.EnumSet;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.function.Predicate;
 
 /**
  * {@link RawRecordConfigParser} parses instances of {@link RawRecordConfig} into valid instances of
@@ -48,12 +47,12 @@ public class RawRecordConfigParser implements ConfigParser<RawRecordConfig, Reco
     this(new RecordConfig(DEFAULT_ALLOWED_TYPES, DEFAULT_TOPIC_NAME));
   }
 
-  public RawRecordConfigParser(final @NonNull RecordConfig defaults) {
+  public RawRecordConfigParser(final RecordConfig defaults) {
     this.defaults = defaults;
   }
 
   @Override
-  public @NonNull RecordConfig parse(final @Nullable RawRecordConfig config) {
+  public RecordConfig parse(final RawRecordConfig config) {
     Objects.requireNonNull(config);
 
     final Set<RecordType> allowedTypes;
@@ -62,6 +61,8 @@ public class RawRecordConfigParser implements ConfigParser<RawRecordConfig, Reco
     if (config.type != null) {
       allowedTypes = EnumSet.noneOf(RecordType.class);
       get(config.type, Collections.<String>emptyList(), ConfigParserUtil::splitCommaSeparatedString)
+          .stream()
+          .filter(Predicate.not(String::isBlank))
           .forEach(t -> allowedTypes.add(AllowedType.forName(t).getRecordType()));
     } else {
       allowedTypes = defaults.getAllowedTypes();

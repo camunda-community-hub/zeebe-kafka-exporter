@@ -4,21 +4,32 @@ zeebe:
       kafka:
         className: io.zeebe.exporters.kafka.KafkaExporter
         args:
-          # Controls the maximum size in bytes that an exporter instance will buffer before waiting
-          # for at least one record to complete. Note that this is a soft upper bound - in order to
-          # accommodate potentially large records which would exceed a single batch size, the
-          # exporter will always accept a record whose size would cause the batch to spill over,
-          # but will stop after.
+          # Controls the number of records to buffer in a single record batch before forcing a flush. Note
+          # that a flush may occur before anyway due to periodic flushing. This setting should help you
+          # estimate a soft upper bound to the memory consumption of the exporter. If you assume a worst
+          # case scenario where every record is the size of your zeebe.broker.network.maxMessageSize, then
+          # the memory required by the exporter would be at least:
+          #   (maxBatchSize * zeebe.broker.network.maxMessageSize * 2)
           #
-          # Default is 8MB
-          maxBatchSize: 8388608
+          # We multiply by 2 as the records are buffered twice - once in the exporter itself, and once
+          # in the producer's network buffers (but serialized at that point). There's some additional
+          # memory overhead used by the producer as well for compression/encryption/etc., so you have to
+          # add a bit, but that one is not proportional to the number of records and is more or less
+          # constant.
+          #
+          # Once the batch has reached this size, a flush is automatically triggered. Too small a number
+          # here would cause many flush, which is not good for performance, but would mean you will see
+          # your records faster/sooner.
+          #
+          # Default is 100
+          maxBatchSize: 100
           # The maximum time to block when the batch is full. If the batch is full, and a new
           # record comes in, the exporter will block until there is space in the batch, or until
           # maxBlockingTimeoutMs milliseconds elapse.
           maxBlockingTimeoutMs: 1000
-          # How often should the exporter drain the in flight records' queue of completed
-          # requests and update the broker with the guaranteed latest exported position
-          inFlightRecordCheckIntervalMs: 1000
+          # How often should pending batches be flushed to the Kafka broker. Too low a value will
+          # cause more load on the broker, but means your records will be visible faster.
+          flushIntervalMs: 1000
 
           # Producer specific configuration
           producer:
@@ -36,10 +47,6 @@ zeebe:
             closeTimeoutMs: 5000
             # Producer client identifier
             clientId: zeebe
-            # Max concurrent requests to the Kafka broker; note that in flight records are batched such that
-            # in one request you can easily have a thousand records, depending on the producer's batch
-            # configuration.
-            maxConcurrentRequests: 3
 
             # Any setting under the following section will be passed verbatim to
             # ProducerConfig; you can use this to configure authentication, compression,
@@ -73,6 +80,8 @@ zeebe:
             defaults: { type: "event", topic: zeebe }
             # For records with a value of type DEPLOYMENT
             deployment: { topic: zeebe-deployment }
+            # For records with a value of type DEPLOYMENT_DISTRIBUTION
+            deploymentDistribution: { topic: zeebe-deployment-distribution }
             # For records with a value of type ERROR
             error: { topic: zeebe-error }
             # For records with a value of type INCIDENT
@@ -87,13 +96,17 @@ zeebe:
             messageSubscription: { topic: zeebe-message-subscription }
             # For records with a value of type MESSAGE_START_EVENT_SUBSCRIPTION
             messageStartEventSubscription: { topic: zeebe-message-subscription-start-event }
+            # For records with a value of type PROCESS
+            process: { topic: zeebe-process }
+            # For records with a value of type PROCESS_EVENT
+            processEvent: { topic: zeebe-process-event }
+            # For records with a value of type PROCESS_INSTANCE
+            processInstance: { topic: zeebe-process-instance }
+            # For records with a value of type PROCESS_INSTANCE_RESULT
+            processInstanceResult: { topic: zeebe-process-instance-result }
+            # For records with a value of type PROCESS_MESSAGE_SUBSCRIPTION
+            processMessageSubscription: { topic: zeebe-process-message-subscription }
             # For records with a value of type TIMER
             timer: { topic: zeebe-timer }
             # For records with a value of type VARIABLE
             variable: { topic: zeebe-variable }
-            # For records with a value of type WORKFLOW_INSTANCE
-            workflowInstance: { topic: zeebe-workflow }
-            # For records with a value of type WORKFLOW_INSTANCE_RESULT
-            workflowInstanceResult: { topic: zeebe-workflow-result }
-            # For records with a value of type WORKFLOW_INSTANCE_SUBSCRIPTION
-            workflowInstanceSubscription: { topic: zeebe-workflow-subscription }

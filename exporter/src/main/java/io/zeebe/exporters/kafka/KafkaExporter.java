@@ -15,32 +15,27 @@
  */
 package io.zeebe.exporters.kafka;
 
-import edu.umd.cs.findbugs.annotations.NonNull;
-import io.zeebe.exporter.api.Exporter;
-import io.zeebe.exporter.api.context.Context;
-import io.zeebe.exporter.api.context.Controller;
-import io.zeebe.exporter.api.context.ScheduledTask;
+import io.camunda.zeebe.exporter.api.Exporter;
+import io.camunda.zeebe.exporter.api.context.Context;
+import io.camunda.zeebe.exporter.api.context.Controller;
+import io.camunda.zeebe.exporter.api.context.ScheduledTask;
+import io.camunda.zeebe.protocol.record.Record;
 import io.zeebe.exporters.kafka.config.Config;
 import io.zeebe.exporters.kafka.config.parser.ConfigParser;
 import io.zeebe.exporters.kafka.config.parser.RawConfigParser;
 import io.zeebe.exporters.kafka.config.raw.RawConfig;
-import io.zeebe.exporters.kafka.producer.DefaultKafkaProducerFactory;
-import io.zeebe.exporters.kafka.producer.KafkaProducerFactory;
 import io.zeebe.exporters.kafka.producer.RecordBatch;
-import io.zeebe.exporters.kafka.producer.TransactionBoundedRecordBatch;
+import io.zeebe.exporters.kafka.producer.RecordBatchFactory;
 import io.zeebe.exporters.kafka.record.KafkaRecordFilter;
 import io.zeebe.exporters.kafka.record.RecordHandler;
-import io.zeebe.exporters.kafka.serde.RecordSerializer;
-import io.zeebe.protocol.record.Record;
+import io.zeebe.exporters.kafka.record.RecordSerializer;
 import java.util.Objects;
-import java.util.UUID;
 import org.slf4j.Logger;
 
 /** Implementation of a Zeebe exporter producing serialized records to a given Kafka topic. */
 public final class KafkaExporter implements Exporter {
-  private final KafkaProducerFactory producerFactory;
+  private final RecordBatchFactory recordBatchFactory;
   private final ConfigParser<RawConfig, Config> configParser;
-  private final String producerId;
 
   private Controller controller;
   private Logger logger;
@@ -52,29 +47,22 @@ public final class KafkaExporter implements Exporter {
   // the constructor is used by the Zeebe broker to instantiate it
   @SuppressWarnings("unused")
   public KafkaExporter() {
-    this(new DefaultKafkaProducerFactory(), new RawConfigParser());
+    this(RecordBatchFactory.defaultFactory(), new RawConfigParser());
   }
 
   public KafkaExporter(
-      final @NonNull KafkaProducerFactory producerFactory,
-      final @NonNull ConfigParser<RawConfig, Config> configParser) {
-    this(producerFactory, configParser, UUID.randomUUID().toString());
-  }
-
-  public KafkaExporter(
-      final @NonNull KafkaProducerFactory producerFactory,
-      final @NonNull ConfigParser<RawConfig, Config> configParser,
-      final @NonNull String producerId) {
-    this.producerFactory = Objects.requireNonNull(producerFactory);
+      final RecordBatchFactory recordBatchFactory,
+      final ConfigParser<RawConfig, Config> configParser) {
+    this.recordBatchFactory = Objects.requireNonNull(recordBatchFactory);
     this.configParser = Objects.requireNonNull(configParser);
-    this.producerId = producerId;
   }
 
   @Override
   public void configure(final Context context) {
-    logger = context.getLogger();
+    logger = Objects.requireNonNull(context.getLogger());
 
-    final var rawConfig = context.getConfiguration().instantiate(RawConfig.class);
+    final var rawConfig =
+        Objects.requireNonNull(context.getConfiguration().instantiate(RawConfig.class));
     config = configParser.parse(rawConfig);
 
     final var serializer = new RecordSerializer();
@@ -94,13 +82,8 @@ public final class KafkaExporter implements Exporter {
   public void open(final Controller controller) {
     this.controller = controller;
     recordBatch =
-        new TransactionBoundedRecordBatch(
-            producerFactory,
-            config.getProducer(),
-            producerId,
-            config.getMaxBatchSize(),
-            this::updatePosition,
-            logger);
+        recordBatchFactory.newRecordBatch(
+            config.getProducer(), config.getMaxBatchSize(), this::updatePosition, logger);
 
     scheduleFlushBatchTask();
 
@@ -117,10 +100,14 @@ public final class KafkaExporter implements Exporter {
       flushTask.cancel();
     }
 
-    recordBatch.flush();
-    recordBatch.close();
+    if (recordBatch != null) {
+      recordBatch.flush();
+      recordBatch.close();
+    }
 
-    logger.info("Closed Kafka exporter");
+    if (logger != null) {
+      logger.info("Closed Kafka exporter");
+    }
   }
 
   @Override
@@ -132,12 +119,12 @@ public final class KafkaExporter implements Exporter {
 
     final var producerRecord = recordHandler.transform(record);
     recordBatch.add(producerRecord);
+    logger.trace("Added {} to the batch", producerRecord);
   }
 
   private void scheduleFlushBatchTask() {
-    logger.trace("Rescheduling flush task in {}", config.getCommitInterval());
-    flushTask =
-        controller.scheduleCancellableTask(config.getCommitInterval(), this::flushBatchTask);
+    logger.trace("Rescheduling flush task in {}", config.getFlushInterval());
+    flushTask = controller.scheduleCancellableTask(config.getFlushInterval(), this::flushBatchTask);
   }
 
   private void flushBatchTask() {

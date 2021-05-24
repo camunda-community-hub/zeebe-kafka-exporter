@@ -15,8 +15,6 @@
  */
 package io.zeebe.exporters.kafka.config.parser;
 
-import edu.umd.cs.findbugs.annotations.NonNull;
-import edu.umd.cs.findbugs.annotations.Nullable;
 import java.util.function.Supplier;
 
 /**
@@ -28,10 +26,10 @@ import java.util.function.Supplier;
  */
 @FunctionalInterface
 public interface ConfigParser<T, R> {
-  @NonNull
-  R parse(@Nullable T config);
 
-  default R parse(@Nullable T config, final @NonNull Supplier<T> defaultValue) {
+  R parse(T config);
+
+  default R parse(T config, final Supplier<T> defaultValue) {
     if (config == null) {
       config = defaultValue.get();
     }

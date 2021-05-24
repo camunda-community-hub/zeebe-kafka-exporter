@@ -23,13 +23,16 @@ import java.time.Duration;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.parallel.Execution;
+import org.junit.jupiter.api.parallel.ExecutionMode;
 
-public class RawProducerConfigParserTest {
+@Execution(ExecutionMode.CONCURRENT)
+final class RawProducerConfigParserTest {
   private final RawProducerConfigParser parser = new RawProducerConfigParser();
 
   @Test
-  public void shouldUseDefaultValuesForMissingProperties() {
+  void shouldUseDefaultValuesForMissingProperties() {
     // given
     final RawProducerConfig config = new RawProducerConfig();
 
@@ -50,7 +53,7 @@ public class RawProducerConfigParserTest {
   }
 
   @Test
-  public void shouldParse() {
+  void shouldParse() {
     // given
     final RawProducerConfig config = new RawProducerConfig();
     config.servers = "localhost:3000";

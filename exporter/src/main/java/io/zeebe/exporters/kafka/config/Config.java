@@ -15,7 +15,6 @@
  */
 package io.zeebe.exporters.kafka.config;
 
-import edu.umd.cs.findbugs.annotations.NonNull;
 import java.time.Duration;
 import java.util.Objects;
 
@@ -26,28 +25,28 @@ import java.util.Objects;
  * io.zeebe.exporters.kafka.config.parser.RawConfigParser} for more on how the external
  * configuration is parsed into an instance of this class.
  */
-public class Config {
+public final class Config {
   private final ProducerConfig producer;
   private final RecordsConfig records;
   private final int maxBatchSize;
-  private final Duration commitInterval;
+  private final Duration flushInterval;
 
   public Config(
-      final @NonNull ProducerConfig producer,
-      final @NonNull RecordsConfig records,
+      final ProducerConfig producer,
+      final RecordsConfig records,
       final int maxBatchSize,
-      final @NonNull Duration commitInterval) {
+      final Duration flushInterval) {
     this.producer = Objects.requireNonNull(producer);
     this.records = Objects.requireNonNull(records);
     this.maxBatchSize = maxBatchSize;
-    this.commitInterval = Objects.requireNonNull(commitInterval);
+    this.flushInterval = Objects.requireNonNull(flushInterval);
   }
 
-  public @NonNull ProducerConfig getProducer() {
+  public ProducerConfig getProducer() {
     return producer;
   }
 
-  public @NonNull RecordsConfig getRecords() {
+  public RecordsConfig getRecords() {
     return records;
   }
 
@@ -55,13 +54,13 @@ public class Config {
     return maxBatchSize;
   }
 
-  public @NonNull Duration getCommitInterval() {
-    return commitInterval;
+  public Duration getFlushInterval() {
+    return flushInterval;
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(producer, records, maxBatchSize, commitInterval);
+    return Objects.hash(producer, records, maxBatchSize, flushInterval);
   }
 
   @Override
@@ -77,7 +76,7 @@ public class Config {
         && Objects.equals(getProducer(), config.getProducer())
         && Objects.equals(getRecords(), config.getRecords())
         && Objects.equals(getMaxBatchSize(), config.getMaxBatchSize())
-        && Objects.equals(getCommitInterval(), config.getCommitInterval());
+        && Objects.equals(getFlushInterval(), config.getFlushInterval());
   }
 
   @Override
@@ -90,7 +89,7 @@ public class Config {
         + ", maxBatchSize="
         + maxBatchSize
         + ", commitInterval="
-        + commitInterval
+        + flushInterval
         + '}';
   }
 }

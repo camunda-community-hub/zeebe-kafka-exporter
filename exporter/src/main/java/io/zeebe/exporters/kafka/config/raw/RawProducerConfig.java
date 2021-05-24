@@ -16,7 +16,7 @@
 package io.zeebe.exporters.kafka.config.raw;
 
 @SuppressWarnings("squid:ClassVariableVisibilityCheck")
-public class RawProducerConfig {
+public final class RawProducerConfig {
 
   /**
    * Producer client identifier.
@@ -28,7 +28,6 @@ public class RawProducerConfig {
   /**
    * Grace period when shutting down the producer in milliseconds. A period which is too short could
    * result in possible resource leaks, but generally should be fine.
-   *
    */
   public Long closeTimeoutMs;
 

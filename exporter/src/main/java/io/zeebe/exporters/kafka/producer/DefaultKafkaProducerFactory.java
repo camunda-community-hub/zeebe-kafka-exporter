@@ -15,7 +15,6 @@
  */
 package io.zeebe.exporters.kafka.producer;
 
-import edu.umd.cs.findbugs.annotations.NonNull;
 import io.zeebe.exporters.kafka.config.Config;
 import io.zeebe.exporters.kafka.serde.RecordId;
 import io.zeebe.exporters.kafka.serde.RecordIdSerializer;
@@ -39,11 +38,10 @@ import org.apache.kafka.common.serialization.ByteArraySerializer;
  * something you feel more comfortable with via {@link
  * io.zeebe.exporters.kafka.config.raw.RawProducerConfig#config}.
  */
-public final class DefaultKafkaProducerFactory implements KafkaProducerFactory {
+final class DefaultKafkaProducerFactory implements KafkaProducerFactory {
   @Override
-  public @NonNull Producer<RecordId, byte[]> newProducer(
-      final @NonNull io.zeebe.exporters.kafka.config.ProducerConfig config,
-      final String producerId) {
+  public Producer<RecordId, byte[]> newProducer(
+      final io.zeebe.exporters.kafka.config.ProducerConfig config, final String producerId) {
     final var options = new HashMap<String, Object>();
     final var clientId = String.format("%s-%s", config.getClientId(), producerId);
 

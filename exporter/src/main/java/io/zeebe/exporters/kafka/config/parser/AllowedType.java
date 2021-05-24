@@ -15,7 +15,8 @@
  */
 package io.zeebe.exporters.kafka.config.parser;
 
-import io.zeebe.protocol.record.RecordType;
+import io.camunda.zeebe.protocol.record.RecordType;
+import java.util.Objects;
 
 /**
  * {@link AllowedType} maps string values to {@link RecordType} values, and is used purely for
@@ -30,8 +31,8 @@ public enum AllowedType {
   private final RecordType recordType;
 
   AllowedType(final String typeName, final RecordType recordType) {
-    this.typeName = typeName;
-    this.recordType = recordType;
+    this.typeName = Objects.requireNonNull(typeName);
+    this.recordType = Objects.requireNonNull(recordType);
   }
 
   public String getTypeName() {

@@ -16,7 +16,7 @@
 package io.zeebe.exporters.kafka.config.raw;
 
 @SuppressWarnings("squid:ClassVariableVisibilityCheck")
-public class RawRecordsConfig {
+public final class RawRecordsConfig {
 
   /**
    * If a record value type is omitted in your configuration file, it will fall back to whatever is
@@ -24,67 +24,92 @@ public class RawRecordsConfig {
    */
   public RawRecordConfig defaults;
 
-  /** For records with a value of type {@link io.zeebe.protocol.record.ValueType#DEPLOYMENT} */
+  /**
+   * For records with a value of type {@link io.camunda.zeebe.protocol.record.ValueType#DEPLOYMENT}
+   */
   public RawRecordConfig deployment;
 
-  /** For records with a value of type {@link io.zeebe.protocol.record.ValueType#ERROR} */
+  /**
+   * For records with a value of type {@link
+   * io.camunda.zeebe.protocol.record.ValueType#DEPLOYMENT_DISTRIBUTION}
+   */
+  public RawRecordConfig deploymentDistribution;
+
+  /** For records with a value of type {@link io.camunda.zeebe.protocol.record.ValueType#ERROR} */
   public RawRecordConfig error;
 
-  /** For records with a value of type {@link io.zeebe.protocol.record.ValueType#INCIDENT} */
+  /**
+   * For records with a value of type {@link io.camunda.zeebe.protocol.record.ValueType#INCIDENT}
+   */
   public RawRecordConfig incident;
 
-  /** For records with a value of type {@link io.zeebe.protocol.record.ValueType#JOB_BATCH} */
+  /**
+   * For records with a value of type {@link io.camunda.zeebe.protocol.record.ValueType#JOB_BATCH}
+   */
   public RawRecordConfig jobBatch;
 
-  /** For records with a value of type {@link io.zeebe.protocol.record.ValueType#JOB} */
+  /** For records with a value of type {@link io.camunda.zeebe.protocol.record.ValueType#JOB} */
   public RawRecordConfig job;
 
-  /** For records with a value of type {@link io.zeebe.protocol.record.ValueType#MESSAGE} */
+  /** For records with a value of type {@link io.camunda.zeebe.protocol.record.ValueType#MESSAGE} */
   public RawRecordConfig message;
 
   /**
    * For records with a value of type {@link
-   * io.zeebe.protocol.record.ValueType#MESSAGE_SUBSCRIPTION}
+   * io.camunda.zeebe.protocol.record.ValueType#MESSAGE_SUBSCRIPTION}
    */
   public RawRecordConfig messageSubscription;
 
   /**
    * For records with a value of type {@link
-   * io.zeebe.protocol.record.ValueType#MESSAGE_START_EVENT_SUBSCRIPTION}
+   * io.camunda.zeebe.protocol.record.ValueType#MESSAGE_START_EVENT_SUBSCRIPTION}
    */
   public RawRecordConfig messageStartEventSubscription;
 
-  /** For records with a value of type {@link io.zeebe.protocol.record.ValueType#TIMER} */
+  /** For records with a value of type {@link io.camunda.zeebe.protocol.record.ValueType#PROCESS} */
+  public RawRecordConfig process;
+
+  /**
+   * For records with a value of type {@link
+   * io.camunda.zeebe.protocol.record.ValueType#PROCESS_EVENT}
+   */
+  public RawRecordConfig processEvent;
+
+  /**
+   * For records with a value of type {@link
+   * io.camunda.zeebe.protocol.record.ValueType#PROCESS_INSTANCE}
+   */
+  public RawRecordConfig processInstance;
+
+  /**
+   * For records with a value of type {@link
+   * io.camunda.zeebe.protocol.record.ValueType#PROCESS_INSTANCE_CREATION}
+   */
+  public RawRecordConfig processInstanceCreation;
+
+  /**
+   * For records with a value of type {@link
+   * io.camunda.zeebe.protocol.record.ValueType#PROCESS_INSTANCE_RESULT}
+   */
+  public RawRecordConfig processInstanceResult;
+
+  /**
+   * For records with a value of type {@link
+   * io.camunda.zeebe.protocol.record.ValueType#PROCESS_MESSAGE_SUBSCRIPTION}
+   */
+  public RawRecordConfig processMessageSubscription;
+
+  /** For records with a value of type {@link io.camunda.zeebe.protocol.record.ValueType#TIMER} */
   public RawRecordConfig timer;
 
-  /** For records with a value of type {@link io.zeebe.protocol.record.ValueType#VARIABLE} */
+  /**
+   * For records with a value of type {@link io.camunda.zeebe.protocol.record.ValueType#VARIABLE}
+   */
   public RawRecordConfig variable;
 
   /**
-   * For records with a value of type {@link io.zeebe.protocol.record.ValueType#VARIABLE_DOCUMENT}
+   * For records with a value of type {@link
+   * io.camunda.zeebe.protocol.record.ValueType#VARIABLE_DOCUMENT}
    */
   public RawRecordConfig variableDocument;
-
-  /**
-   * For records with a value of type {@link io.zeebe.protocol.record.ValueType#WORKFLOW_INSTANCE}
-   */
-  public RawRecordConfig workflowInstance;
-
-  /**
-   * For records with a value of type {@link
-   * io.zeebe.protocol.record.ValueType#WORKFLOW_INSTANCE_CREATION}
-   */
-  public RawRecordConfig workflowInstanceCreation;
-
-  /**
-   * For records with a value of type {@link
-   * io.zeebe.protocol.record.ValueType#WORKFLOW_INSTANCE_RESULT}
-   */
-  public RawRecordConfig workflowInstanceResult;
-
-  /**
-   * For records with a value of type {@link
-   * io.zeebe.protocol.record.ValueType#WORKFLOW_INSTANCE_SUBSCRIPTION}
-   */
-  public RawRecordConfig workflowInstanceSubscription;
 }

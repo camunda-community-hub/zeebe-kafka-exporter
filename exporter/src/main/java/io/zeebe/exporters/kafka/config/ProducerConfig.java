@@ -15,7 +15,6 @@
  */
 package io.zeebe.exporters.kafka.config;
 
-import edu.umd.cs.findbugs.annotations.NonNull;
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;
@@ -41,12 +40,12 @@ public final class ProducerConfig {
   private final List<String> servers;
 
   public ProducerConfig(
-      final @NonNull String clientId,
-      final @NonNull Duration closeTimeout,
-      final @NonNull Map<String, Object> config,
-      final @NonNull Duration requestTimeout,
-      final @NonNull Duration maxBlockingTimeout,
-      final @NonNull List<String> servers) {
+      final String clientId,
+      final Duration closeTimeout,
+      final Map<String, Object> config,
+      final Duration requestTimeout,
+      final Duration maxBlockingTimeout,
+      final List<String> servers) {
     this.clientId = Objects.requireNonNull(clientId);
     this.closeTimeout = Objects.requireNonNull(closeTimeout);
     this.config = Objects.requireNonNull(config);
@@ -55,19 +54,19 @@ public final class ProducerConfig {
     this.servers = Objects.requireNonNull(servers);
   }
 
-  public @NonNull String getClientId() {
+  public String getClientId() {
     return clientId;
   }
 
-  public @NonNull Duration getCloseTimeout() {
+  public Duration getCloseTimeout() {
     return closeTimeout;
   }
 
-  public @NonNull Map<String, Object> getConfig() {
+  public Map<String, Object> getConfig() {
     return config;
   }
 
-  public @NonNull Duration getRequestTimeout() {
+  public Duration getRequestTimeout() {
     return requestTimeout;
   }
 
@@ -75,7 +74,7 @@ public final class ProducerConfig {
     return maxBlockingTimeout;
   }
 
-  public @NonNull List<String> getServers() {
+  public List<String> getServers() {
     return servers;
   }
 

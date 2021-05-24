@@ -1,9 +1,26 @@
+/*
+ * Copyright © 2019 camunda services GmbH (info@camunda.com)
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package io.zeebe.exporters.kafka.producer;
 
 import io.zeebe.exporters.kafka.config.ProducerConfig;
 import io.zeebe.exporters.kafka.record.FullRecordBatchException;
 import io.zeebe.exporters.kafka.serde.RecordId;
 import java.util.LinkedList;
+import java.util.Objects;
+import java.util.UUID;
 import java.util.function.LongConsumer;
 import org.apache.kafka.clients.producer.Producer;
 import org.apache.kafka.clients.producer.ProducerRecord;
@@ -17,6 +34,10 @@ import org.slf4j.Logger;
  * of the flush operation. When records are added, it will first add them to a linked list before
  * immediately forwarding them to the producer. If there was no transaction yet, it will be started
  * before. On flush, the transaction is committed.
+ *
+ * <p>NOTE: while atomicity could still be guaranteed without transactions, they make the whole
+ * error handling much simpler. I do realize that we cannot use the exactly-once semantics due to
+ * Zeebe's own at-least-once semantics, but it still seems useful to simplify error handling.
  *
  * <p>NOTE: whenever an error occurs, if it is recoverable, it will be logged and the batch remains
  * as is - the operation will be retried either by adding a new record or by attempting to flush the
@@ -34,7 +55,7 @@ import org.slf4j.Logger;
  * isolation level, otherwise they may see uncommitted records. This isn't too big of a deal as
  * these records are anyway committed on the Zeebe side, but they may show up as duplicates.
  */
-public final class TransactionBoundedRecordBatch implements RecordBatch {
+final class BoundedTransactionalRecordBatch implements RecordBatch {
   private final LinkedList<ProducerRecord<RecordId, byte[]>> records = new LinkedList<>();
 
   private final KafkaProducerFactory producerFactory;
@@ -49,19 +70,34 @@ public final class TransactionBoundedRecordBatch implements RecordBatch {
   private boolean transactionBegan = false;
   private int nextSendIndex = 0;
 
-  public TransactionBoundedRecordBatch(
-      final KafkaProducerFactory producerFactory,
+  public BoundedTransactionalRecordBatch(
       final ProducerConfig config,
-      final String producerId,
       final int maxBatchSize,
       final LongConsumer onFlushCallback,
-      final Logger logger) {
-    this.producerFactory = producerFactory;
-    this.config = config;
-    this.producerId = producerId;
+      final Logger logger,
+      final KafkaProducerFactory producerFactory) {
+    this(
+        config,
+        maxBatchSize,
+        onFlushCallback,
+        logger,
+        producerFactory,
+        UUID.randomUUID().toString());
+  }
+
+  public BoundedTransactionalRecordBatch(
+      final ProducerConfig config,
+      final int maxBatchSize,
+      final LongConsumer onFlushCallback,
+      final Logger logger,
+      final KafkaProducerFactory producerFactory,
+      final String producerId) {
+    this.config = Objects.requireNonNull(config);
     this.maxBatchSize = maxBatchSize;
-    this.onFlushCallback = onFlushCallback;
-    this.logger = logger;
+    this.onFlushCallback = Objects.requireNonNull(onFlushCallback);
+    this.logger = Objects.requireNonNull(logger);
+    this.producerFactory = Objects.requireNonNull(producerFactory);
+    this.producerId = Objects.requireNonNull(producerId);
   }
 
   @Override
@@ -146,7 +182,10 @@ public final class TransactionBoundedRecordBatch implements RecordBatch {
   }
 
   private void commitTransaction() {
-    assert transactionBegan : "should not commit if no transaction is ongoing";
+    if (!transactionBegan) {
+      throw new IllegalStateException(
+          "Expected to be in transaction, but no transaction is in flight");
+    }
 
     producer.commitTransaction();
     transactionBegan = false;
@@ -158,7 +197,6 @@ public final class TransactionBoundedRecordBatch implements RecordBatch {
     final var unsentRecords = Math.max(0, records.size() - nextSendIndex);
     logger.trace("Sending {} remaining unsent records from the current batch", unsentRecords);
 
-    ensureProducerInitialized();
     ensureWithinTransaction();
 
     while (nextSendIndex < records.size()) {
@@ -169,11 +207,17 @@ public final class TransactionBoundedRecordBatch implements RecordBatch {
     }
   }
 
-  private void ensureProducerInitialized() {
-    if (producer == null) {
-      producer = producerFactory.newProducer(config, producerId);
-      logger.trace("Created new producer");
+  private void ensureProducer() {
+    if (producer != null) {
+      return;
     }
+
+    producer = producerFactory.newProducer(config, producerId);
+    logger.trace("Created new producer");
+  }
+
+  private void ensureProducerInitialized() {
+    ensureProducer();
 
     if (!producerInitialized) {
       producer.initTransactions();
@@ -183,6 +227,8 @@ public final class TransactionBoundedRecordBatch implements RecordBatch {
   }
 
   private void ensureWithinTransaction() {
+    ensureProducerInitialized();
+
     if (!transactionBegan) {
       producer.beginTransaction();
       transactionBegan = true;

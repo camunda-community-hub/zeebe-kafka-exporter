@@ -17,8 +17,6 @@ package io.zeebe.exporters.kafka.config.parser;
 
 import static io.zeebe.exporters.kafka.config.parser.ConfigParserUtil.get;
 
-import edu.umd.cs.findbugs.annotations.NonNull;
-import edu.umd.cs.findbugs.annotations.Nullable;
 import io.zeebe.exporters.kafka.config.ProducerConfig;
 import io.zeebe.exporters.kafka.config.raw.RawProducerConfig;
 import java.io.IOException;
@@ -49,7 +47,7 @@ public class RawProducerConfigParser implements ConfigParser<RawProducerConfig, 
   static final Duration DEFAULT_REQUEST_TIMEOUT = Duration.ofSeconds(5);
 
   @Override
-  public @NonNull ProducerConfig parse(final @Nullable RawProducerConfig config) {
+  public ProducerConfig parse(final RawProducerConfig config) {
     Objects.requireNonNull(config);
 
     final List<String> servers =
@@ -68,7 +66,7 @@ public class RawProducerConfigParser implements ConfigParser<RawProducerConfig, 
         clientId, closeTimeout, producerConfig, requestTimeout, maxBlockingTimeout, servers);
   }
 
-  private @NonNull Map<String, Object> parseProperties(final @NonNull String propertiesString) {
+  private Map<String, Object> parseProperties(final String propertiesString) {
     final Properties properties = new Properties();
     final Map<String, Object> parsed = new HashMap<>();
 

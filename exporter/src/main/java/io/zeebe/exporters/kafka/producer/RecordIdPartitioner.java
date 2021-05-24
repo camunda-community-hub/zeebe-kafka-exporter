@@ -58,7 +58,7 @@ import org.slf4j.LoggerFactory;
  *   <li>RecordId{partitionId=2, position=2} => Kafka partition 2
  * </ul>
  */
-public class RecordIdPartitioner implements Partitioner {
+public final class RecordIdPartitioner implements Partitioner {
   private static final Logger LOGGER = LoggerFactory.getLogger(RecordIdPartitioner.class);
 
   private final DefaultPartitioner defaultPartitioner = new DefaultPartitioner();
