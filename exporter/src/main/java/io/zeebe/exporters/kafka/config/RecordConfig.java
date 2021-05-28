@@ -23,7 +23,7 @@ import java.util.Set;
 /**
  * {@link RecordConfig} describes what the exporter should do with a record of a given {@link
  * io.camunda.zeebe.protocol.record.ValueType} - this is mapped via {@link RecordsConfig}, which
- * holds a map of {@link io.camunda.zeebe.protocol.record.ValueType} => {@link RecordConfig}.
+ * holds a map of {@link io.camunda.zeebe.protocol.record.ValueType} to {@link RecordConfig}.
  *
  * <p>For the {@link io.camunda.zeebe.protocol.record.ValueType} associated with this instance, only
  * records with a {@link Record#getRecordType()} which is included in {@code allowedTypes} will be

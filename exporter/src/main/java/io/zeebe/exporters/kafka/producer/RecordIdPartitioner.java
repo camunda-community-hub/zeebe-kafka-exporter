@@ -41,21 +41,21 @@ import org.slf4j.LoggerFactory;
  * <p>For example, if you have 3 Zeebe partitions, and 2 Kafka partitions:
  *
  * <ul>
- *   <li>RecordId{partitionId=1, position=1} => Kafka partition 1
- *   <li>RecordId{partitionId=2, position=1} => Kafka partition 0
- *   <li>RecordId{partitionId=3, position=1} => Kafka partition 1
- *   <li>RecordId{partitionId=3, position=2} => Kafka partition 1
- *   <li>RecordId{partitionId=2, position=2} => Kafka partition 0
+ *   <li>RecordId{partitionId=1, position=1} to Kafka partition 1
+ *   <li>RecordId{partitionId=2, position=1} to Kafka partition 0
+ *   <li>RecordId{partitionId=3, position=1} to Kafka partition 1
+ *   <li>RecordId{partitionId=3, position=2} to Kafka partition 1
+ *   <li>RecordId{partitionId=2, position=2} to Kafka partition 0
  * </ul>
  *
  * <p>With more Kafka partitions, for example, 4 Kafka partitions, and 3 Zeebe partitions:
  *
  * <ul>
- *   <li>RecordId{partitionId=1, position=1} => Kafka partition 1
- *   <li>RecordId{partitionId=2, position=1} => Kafka partition 2
- *   <li>RecordId{partitionId=3, position=1} => Kafka partition 3
- *   <li>RecordId{partitionId=3, position=2} => Kafka partition 3
- *   <li>RecordId{partitionId=2, position=2} => Kafka partition 2
+ *   <li>RecordId{partitionId=1, position=1} to Kafka partition 1
+ *   <li>RecordId{partitionId=2, position=1} to Kafka partition 2
+ *   <li>RecordId{partitionId=3, position=1} to Kafka partition 3
+ *   <li>RecordId{partitionId=3, position=2} to Kafka partition 3
+ *   <li>RecordId{partitionId=2, position=2} to Kafka partition 2
  * </ul>
  */
 public final class RecordIdPartitioner implements Partitioner {
