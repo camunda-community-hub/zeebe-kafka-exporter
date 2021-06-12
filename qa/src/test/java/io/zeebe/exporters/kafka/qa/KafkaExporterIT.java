@@ -20,6 +20,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import io.camunda.zeebe.client.ZeebeClient;
 import io.camunda.zeebe.protocol.record.Record;
 import io.zeebe.containers.ZeebeContainer;
+import io.zeebe.containers.ZeebeDefaults;
 import io.zeebe.exporters.kafka.serde.RecordDeserializer;
 import io.zeebe.exporters.kafka.serde.RecordId;
 import io.zeebe.exporters.kafka.serde.RecordIdDeserializer;
@@ -271,7 +272,8 @@ final class KafkaExporterIT {
 
   @SuppressWarnings("OctalInteger")
   private ZeebeContainer newZeebeContainer() {
-    final var container = new ZeebeContainer();
+    final var container =
+        new ZeebeContainer(ZeebeDefaults.getInstance().getDefaultDockerImage().withTag("1.0.1"));
     final var exporterJar = MountableFile.forClasspathResource("zeebe-kafka-exporter.jar", 0775);
     final var exporterConfig = MountableFile.forClasspathResource("exporters.yml", 0775);
     final var loggingConfig = MountableFile.forClasspathResource("log4j2.xml", 0775);
@@ -289,7 +291,7 @@ final class KafkaExporterIT {
         .withEnv(
             "LOG4J_CONFIGURATION_FILE",
             "/usr/local/zeebe/config/log4j2.xml,/usr/local/zeebe/config/log4j2-exporter.xml")
-        .withCopyFileToContainer(exporterJar, "/usr/local/zeebe/lib/zeebe-kafka-exporter.jar")
+        .withCopyFileToContainer(exporterJar, "/usr/local/zeebe/exporters/zeebe-kafka-exporter.jar")
         .withCopyFileToContainer(exporterConfig, "/usr/local/zeebe/config/exporters.yml")
         .withCopyFileToContainer(loggingConfig, "/usr/local/zeebe/config/log4j2-exporter.xml")
         .withEnv("SPRING_CONFIG_ADDITIONAL_LOCATION", "file:/usr/local/zeebe/config/exporters.yml")
