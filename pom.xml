@@ -70,7 +70,7 @@
     <plugin.version.owasp>6.2.0</plugin.version.owasp>
     <plugin.version.protobuf>0.6.1</plugin.version.protobuf>
     <plugin.version.proto-compat>1.0.6</plugin.version.proto-compat>
-    <plugin.version.revapi>0.14.2</plugin.version.revapi>
+    <plugin.version.revapi>0.14.3</plugin.version.revapi>
     <plugin.version.sonar>3.9.0.2155</plugin.version.sonar>
     <plugin.version.shade>3.2.4</plugin.version.shade>
     <plugin.version.surefire>3.0.0-M5</plugin.version.surefire>
