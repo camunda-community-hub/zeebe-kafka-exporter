@@ -63,16 +63,35 @@ At the moment, the only guarantees for backwards compatibility are:
 The quickest way to get started is:
 
 1. Download the latest release (`zeebe-kafka-exporter-*-jar-with-dependencies.jar`).
-1. Copy it to the `lib/` folder of your Zeebe brokers.
-1. Copy the contents of the configuration from `exporter.yml` into your Zeebe `application.yml`
+1. Copy it somewhere accessible the Zeebe broker
+1. Add the following to your Zeebe broker's `application.yaml`
+
+```yaml
+zeebe:
+  broker:
+    exporters:
+      kafka:
+        className: io.zeebe.exporters.kafka.KafkaExporter
+        jarPath: /path/to/zeebe-kafka-exporter-3.0.0-jar-with-dependencies.jar
+        args:
+          producer:
+            # update this to point to your Kafka brokers
+            servers: "kafka-1:9092,kafka-2:9092"
+```
+
 1. Update the configuration's list of servers to point to your Kafka instances.
 
 The next time you start your Zeebe cluster, all event-type records will be exported to their
-respective Kafka topics.
+respective Kafka topics. See [exporter/exporter.yml](/exporter/exporter.yml) for a fully commented
+configuration file example.
 
-> NOTE: there's a bug in Zeebe which prevents this exporter from being loaded in an isolated way.
-> See [this issue](https://github.com/camunda-cloud/zeebe/issues/4196) for more. When that is fixed,
-> then the exporter should be loaded as any other external exporter.
+> NOTE: pre Zeebe 1.0.1, there was a bug in Zeebe which prevented this exporter from being loaded in
+> an isolated way. See [this issue](https://github.com/camunda-cloud/zeebe/issues/4196) for more. If
+> that's the case for you, then you _must_ place this exporter in the `lib/` folder of your Zeebe
+> broker directory - by default that would be `/usr/local/zeebe/lib`. It will then be automatically
+> available on the classpath, and you can omit the `jarPath` configuration option. This is not
+> recommended however, and if you're on Zeebe 1.0.1 or greater, you should use the method described
+> above.
 
 ## Usage
 
@@ -338,6 +357,9 @@ zeebe:
     exporters:
       kafka:
         className: io.zeebe.exporters.kafka.KafkaExporter
+        # Update this path to the location of the JAR
+        # Note that this must be visible to the broker process
+        jarPath: /path/to/zeebe-kafka-exporter-3.0.0-jar-with-dependencies.jar
         args:
           # Controls the number of records to buffer in a single record batch before forcing a flush. Note
           # that a flush may occur before anyway due to periodic flushing. This setting should help you
