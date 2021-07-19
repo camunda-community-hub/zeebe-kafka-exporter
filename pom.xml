@@ -48,7 +48,7 @@
     <version.mockito>3.11.1</version.mockito>
     <version.mockito-jupiter>3.9.0</version.mockito-jupiter>
     <version.revapi>0.24.2</version.revapi>
-    <version.slf4j>1.7.30</version.slf4j>
+    <version.slf4j>1.7.31</version.slf4j>
     <version.spotbugs>4.2.0</version.spotbugs>
     <version.testcontainers>1.15.3</version.testcontainers>
     <version.zeebe>1.0.1</version.zeebe>
