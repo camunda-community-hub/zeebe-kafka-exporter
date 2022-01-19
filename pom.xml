@@ -50,7 +50,7 @@
     <version.revapi>0.24.4</version.revapi>
     <version.slf4j>1.7.31</version.slf4j>
     <version.spotbugs>4.2.0</version.spotbugs>
-    <version.testcontainers>1.15.3</version.testcontainers>
+    <version.testcontainers>1.16.3</version.testcontainers>
     <version.zeebe>1.0.1</version.zeebe>
     <version.zeebe-protocol-immutables>2.0.0</version.zeebe-protocol-immutables>
     <version.zeebe-test-container>3.0.0</version.zeebe-test-container>
