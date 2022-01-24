@@ -2,7 +2,8 @@ Zeebe Kafka Exporter
 =====================
 
 [![](https://img.shields.io/badge/Community%20Extension-An%20open%20source%20community%20maintained%20project-FF4700)](https://github.com/camunda-community-hub/community)
-[![](https://img.shields.io/badge/Lifecycle-Incubating-blue)](https://github.com/Camunda-Community-Hub/community/blob/main/extension-lifecycle.md#incubating-)
+[![](https://img.shields.io/badge/Lifecycle-Unmaintained-lightgrey)](https://github.com/Camunda-Community-Hub/community/blob/main/extension-lifecycle.md#Unmaintained-)
+[![](https://img.shields.io/badge/Maintainer%20Wanted-This%20extension%20is%20in%20search%20of%20a%20Maintainer-ff69b4)](https://github.com/camunda-community-hub/community/issues/new?assignees=&labels=abandoned-extension-maintainer-proposal&template=abandoned-extension-maintainer-proposal.md&title=New+zeebe-kafka-exporter+Maintainer+Proposal)
 [![](https://img.shields.io/github/v/release/camunda-community-hub/zeebe-kafka-exporter?sort=semver)](https://github.com/camunda-community-hub/zeebe-kafka-exporter/releases/latest)
 [![Java CI](https://github.com/camunda-community-hub/zeebe-kafka-exporter/actions/workflows/ci.yml/badge.svg)](https://github.com/camunda-community-hub/zeebe-kafka-exporter/actions/workflows/ci.yml)
 
