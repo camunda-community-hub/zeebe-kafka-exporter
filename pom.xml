@@ -70,7 +70,7 @@
     <plugin.version.license>4.1</plugin.version.license>
     <plugin.version.protobuf>0.6.1</plugin.version.protobuf>
     <plugin.version.proto-compat>1.0.6</plugin.version.proto-compat>
-    <plugin.version.revapi>0.14.3</plugin.version.revapi>
+    <plugin.version.revapi>0.14.6</plugin.version.revapi>
     <plugin.version.surefire>3.0.0-M5</plugin.version.surefire>
 
     <!-- maven extensions -->
