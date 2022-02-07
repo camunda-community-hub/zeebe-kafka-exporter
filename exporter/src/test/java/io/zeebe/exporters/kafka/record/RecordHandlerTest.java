@@ -17,6 +17,8 @@ package io.zeebe.exporters.kafka.record;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import io.camunda.zeebe.protocol.jackson.record.DeploymentRecordValueBuilder;
+import io.camunda.zeebe.protocol.jackson.record.RecordBuilder;
 import io.camunda.zeebe.protocol.record.Record;
 import io.camunda.zeebe.protocol.record.RecordType;
 import io.camunda.zeebe.protocol.record.ValueType;
@@ -25,8 +27,6 @@ import io.camunda.zeebe.protocol.record.value.DeploymentRecordValue;
 import io.zeebe.exporters.kafka.config.RecordConfig;
 import io.zeebe.exporters.kafka.config.RecordsConfig;
 import io.zeebe.exporters.kafka.serde.RecordId;
-import io.zeebe.protocol.immutables.record.value.ImmutableDeploymentRecordValue;
-import io.zeebe.protocol.immutables.record.value.ImmutableRecord;
 import java.nio.charset.StandardCharsets;
 import java.util.EnumSet;
 import java.util.Map;
@@ -87,13 +87,13 @@ final class RecordHandlerTest {
     return new RecordsConfig(Map.of(ValueType.DEPLOYMENT, recordConfig), DEFAULT_RECORD_CONFIG);
   }
 
-  private ImmutableRecord.Builder<DeploymentRecordValue> buildDeploymentRecord() {
-    return ImmutableRecord.<DeploymentRecordValue>builder()
+  private RecordBuilder<DeploymentRecordValue> buildDeploymentRecord() {
+    return new RecordBuilder<DeploymentRecordValue>()
         .valueType(ValueType.DEPLOYMENT)
         .recordType(RecordType.EVENT)
         .timestamp(System.currentTimeMillis())
         .intent(DeploymentIntent.CREATE)
-        .value(ImmutableDeploymentRecordValue.builder().build())
+        .value(new DeploymentRecordValueBuilder().build())
         .partitionId(1)
         .position(1);
   }

@@ -19,12 +19,13 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.cbor.databind.CBORMapper;
+import io.camunda.zeebe.protocol.jackson.record.DeploymentRecordValueBuilder;
+import io.camunda.zeebe.protocol.jackson.record.RecordBuilder;
 import io.camunda.zeebe.protocol.record.Record;
 import io.camunda.zeebe.protocol.record.RecordType;
 import io.camunda.zeebe.protocol.record.ValueType;
 import io.camunda.zeebe.protocol.record.intent.DeploymentIntent;
-import io.zeebe.protocol.immutables.record.value.ImmutableDeploymentRecordValue;
-import io.zeebe.protocol.immutables.record.value.ImmutableRecord;
+import io.camunda.zeebe.protocol.record.value.DeploymentRecordValue;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.parallel.Execution;
 import org.junit.jupiter.api.parallel.ExecutionMode;
@@ -37,11 +38,11 @@ final class RecordTest {
   void shouldSerialize() {
     // given
     final Record<?> record =
-        ImmutableRecord.builder()
+        new RecordBuilder<DeploymentRecordValue>()
             .intent(DeploymentIntent.CREATED)
             .recordType(RecordType.EVENT)
             .valueType(ValueType.DEPLOYMENT)
-            .value(ImmutableDeploymentRecordValue.builder().build())
+            .value(new DeploymentRecordValueBuilder().build())
             .build();
     final RecordSerializer serializer = new RecordSerializer();
     final RecordDeserializer deserializer = new RecordDeserializer();
@@ -61,11 +62,11 @@ final class RecordTest {
     // given
     final ObjectMapper cborMapper = new CBORMapper();
     final Record<?> record =
-        ImmutableRecord.builder()
+        new RecordBuilder<DeploymentRecordValue>()
             .intent(DeploymentIntent.CREATED)
             .recordType(RecordType.EVENT)
             .valueType(ValueType.DEPLOYMENT)
-            .value(ImmutableDeploymentRecordValue.builder().build())
+            .value(new DeploymentRecordValueBuilder().build())
             .build();
     final RecordSerializer serializer = new RecordSerializer(cborMapper);
     final RecordDeserializer deserializer = new RecordDeserializer(cborMapper);
