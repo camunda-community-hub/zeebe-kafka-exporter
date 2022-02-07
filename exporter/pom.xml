@@ -120,23 +120,24 @@
         </configuration>
       </plugin>
 
-      <!-- build JAR with dependencies -->
+      <!-- build a JAR with the minimal set of dependencies included -->
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-shade-plugin</artifactId>
+        <artifactId>maven-assembly-plugin</artifactId>
         <configuration>
-          <artifactSet>
-            <includes>
-              <!-- serialization/deserialization -->
-              <include>${project.groupId}:zeebe-kafka-exporter-serde</include>
-
-              <!-- kafka specific dependencies -->
-              <include>org.apache.kafka:kafka-clients</include>
-              <include>com.github.luben:zstd-jni</include>
-              <include>org.xerial.snappy:snappy-java</include>
-            </includes>
-          </artifactSet>
+          <descriptors>
+            <descriptor>${project.basedir}/src/assembly/standalone.xml</descriptor>
+          </descriptors>
         </configuration>
+        <executions>
+          <execution>
+            <id>standalone</id>
+            <goals>
+              <goal>single</goal>
+            </goals>
+            <phase>package</phase>
+          </execution>
+        </executions>
       </plugin>
     </plugins>
   </build>
