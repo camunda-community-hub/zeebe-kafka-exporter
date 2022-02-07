@@ -71,7 +71,6 @@
     <plugin.version.protobuf>0.6.1</plugin.version.protobuf>
     <plugin.version.proto-compat>1.0.6</plugin.version.proto-compat>
     <plugin.version.revapi>0.14.3</plugin.version.revapi>
-    <plugin.version.sonar>3.9.0.2155</plugin.version.sonar>
     <plugin.version.surefire>3.0.0-M5</plugin.version.surefire>
 
     <!-- maven extensions -->
@@ -604,39 +603,6 @@
                 <arg>loopback</arg>
               </gpgArguments>
             </configuration>
-          </plugin>
-        </plugins>
-      </build>
-    </profile>
-
-    <profile>
-      <id>sonar</id>
-      <properties>
-        <!-- sonarscanner integration -->
-        <!-- sonar.login token must be passed at runtime to avoid sharing token -->
-        <sonar.host.url>https://sonarcloud.io</sonar.host.url>
-        <sonar.organization>zeebe-io</sonar.organization>
-        <sonar.login>${env.SONARCLOUD_TOKEN}</sonar.login>
-
-        <!-- skip some checks -->
-        <skipTests>true</skipTests>
-        <skip.check>true</skip.check>
-      </properties>
-
-      <build>
-        <plugins>
-          <plugin>
-            <groupId>org.sonarsource.scanner.maven</groupId>
-            <artifactId>sonar-maven-plugin</artifactId>
-            <version>${plugin.version.sonar}</version>
-            <executions>
-              <execution>
-                <phase>verify</phase>
-                <goals>
-                  <goal>sonar</goal>
-                </goals>
-              </execution>
-            </executions>
           </plugin>
         </plugins>
       </build>
