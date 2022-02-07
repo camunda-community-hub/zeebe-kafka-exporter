@@ -43,7 +43,7 @@
     <version.awaitility>4.1.0</version.awaitility>
     <version.checkstyle>9.3</version.checkstyle>
     <version.jackson>2.12.4</version.jackson>
-    <version.junit-jupiter>5.7.2</version.junit-jupiter>
+    <version.junit-jupiter>5.8.2</version.junit-jupiter>
     <version.kafka>2.8.0</version.kafka>
     <version.mockito>3.12.1</version.mockito>
     <version.mockito-jupiter>3.9.0</version.mockito-jupiter>
