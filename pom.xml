@@ -44,7 +44,7 @@
     <version.checkstyle>9.3</version.checkstyle>
     <version.jackson>2.13.1</version.jackson>
     <version.junit-jupiter>5.8.2</version.junit-jupiter>
-    <version.kafka>2.8.0</version.kafka>
+    <version.kafka>3.1.0</version.kafka>
     <version.mockito>4.3.1</version.mockito>
     <version.mockito-jupiter>3.9.0</version.mockito-jupiter>
     <version.revapi>0.26.1</version.revapi>
