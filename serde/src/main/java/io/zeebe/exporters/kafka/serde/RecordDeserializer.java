@@ -15,16 +15,17 @@
  */
 package io.zeebe.exporters.kafka.serde;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectReader;
+import io.camunda.zeebe.protocol.jackson.record.AbstractRecord;
 import io.camunda.zeebe.protocol.record.Record;
-import io.zeebe.protocol.immutables.ImmutableRecordTypeReference;
 import org.apache.kafka.common.serialization.Deserializer;
 
 /**
  * A {@link Deserializer} implementations for {@link Record} objects, which uses a pre-configured *
  * {@link ObjectReader} for that type, and {@link
- * io.zeebe.protocol.immutables.record.value.ImmutableRecord} as the concrete {@link Record}
+ * io.camunda.zeebe.protocol.jackson.record.AbstractRecord} as the concrete {@link Record}
  * implementation.
  */
 public final class RecordDeserializer extends JacksonDeserializer<Record<?>> {
@@ -34,7 +35,7 @@ public final class RecordDeserializer extends JacksonDeserializer<Record<?>> {
   }
 
   public RecordDeserializer(final ObjectMapper objectMapper) {
-    this(objectMapper.readerFor(new ImmutableRecordTypeReference<>()));
+    this(objectMapper.readerFor(new TypeReference<AbstractRecord<?>>() {}));
   }
 
   public RecordDeserializer(final ObjectReader objectReader) {

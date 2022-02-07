@@ -23,8 +23,8 @@
   <dependencies>
     <!-- serialization -->
     <dependency>
-      <groupId>io.zeebe</groupId>
-      <artifactId>zeebe-protocol-immutables</artifactId>
+      <groupId>io.camunda</groupId>
+      <artifactId>zeebe-protocol-jackson</artifactId>
     </dependency>
 
     <dependency>

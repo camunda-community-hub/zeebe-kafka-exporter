@@ -12,3 +12,13 @@ updates:
       - "dependencies"
     target-branch: "master"
     open-pull-requests-limit: 10
+  # Enable version updates for the github actions
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "daily"
+    commit-message:
+      prefix: "deps: "
+    labels:
+      - "dependencies"
+    open-pull-requests-limit: 5
