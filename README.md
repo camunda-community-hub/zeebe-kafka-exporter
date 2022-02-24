@@ -531,9 +531,9 @@ To work on an issue, follow the following steps:
 
 1. Check that a [GitHub issue][issues] exists for the task you want to work on. If one does not,
    create one.
-1. Checkout the `master` branch and pull the latest changes.
+1. Checkout the `main` branch and pull the latest changes.
    ```
-   git checkout develop
+   git checkout main
    git pull
    ```
 1. Create a new branch with the naming scheme `issueId-description`.

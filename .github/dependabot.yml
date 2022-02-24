@@ -1,6 +1,6 @@
 version: 2
 updates:
-  # Enable version updates for master
+  # Enable version updates for main
   - package-ecosystem: "maven"
     # Look for the root pom
     directory: "/"
@@ -10,7 +10,6 @@ updates:
       prefix: "build: "
     labels:
       - "dependencies"
-    target-branch: "master"
     open-pull-requests-limit: 10
   # Enable version updates for the github actions
   - package-ecosystem: "github-actions"

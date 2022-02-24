@@ -8,7 +8,7 @@ on:
       - '**/*.properties'
       - '**/*.yml'
   push:
-    branches: [ master ]
+    branches: [ main ]
     paths:
       - '**/*.java'
       - '**/*.xml'
