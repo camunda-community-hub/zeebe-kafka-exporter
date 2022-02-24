@@ -7,7 +7,7 @@
   <artifactId>zeebe-kafka-exporter-root</artifactId>
   <groupId>io.zeebe</groupId>
   <packaging>pom</packaging>
-  <version>3.1.1</version>
+  <version>3.1.2-SNAPSHOT</version>
   <inceptionYear>2019</inceptionYear>
   <url>https://github.com/zeebe-io/zeebe-kafka-exporter</url>
 
