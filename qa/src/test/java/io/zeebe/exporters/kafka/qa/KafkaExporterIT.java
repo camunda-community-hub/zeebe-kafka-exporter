@@ -20,7 +20,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import io.camunda.zeebe.client.ZeebeClient;
 import io.camunda.zeebe.protocol.record.Record;
 import io.zeebe.containers.ZeebeContainer;
-import io.zeebe.containers.ZeebeDefaults;
 import io.zeebe.exporters.kafka.serde.RecordDeserializer;
 import io.zeebe.exporters.kafka.serde.RecordId;
 import io.zeebe.exporters.kafka.serde.RecordIdDeserializer;
@@ -222,9 +221,9 @@ final class KafkaExporterIT {
               assertThat(records)
                   .allSatisfy(
                       (partitionId, list) -> {
-                        assertThat(list.size())
+                        assertThat(list)
                             .as("records consumed for partition %d", partitionId)
-                            .isEqualTo(expectedRecords.get(partitionId).size());
+                            .hasSameSizeAs(expectedRecords.get(partitionId));
                       });
             });
 
@@ -272,8 +271,7 @@ final class KafkaExporterIT {
 
   @SuppressWarnings("OctalInteger")
   private ZeebeContainer newZeebeContainer() {
-    final var container =
-        new ZeebeContainer(ZeebeDefaults.getInstance().getDefaultDockerImage().withTag("1.0.1"));
+    final var container = new ZeebeContainer();
     final var exporterJar = MountableFile.forClasspathResource("zeebe-kafka-exporter.jar", 0775);
     final var exporterConfig = MountableFile.forClasspathResource("exporters.yml", 0775);
     final var loggingConfig = MountableFile.forClasspathResource("log4j2.xml", 0775);
