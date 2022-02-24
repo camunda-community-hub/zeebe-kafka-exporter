@@ -35,7 +35,7 @@ jobs:
         id: test
         timeout-minutes: 20
         run: >
-          mvn -B test
+          mvn -B verify
       - name: Archive Test Results on Failure
         uses: actions/upload-artifact@v2
         if: failure()
