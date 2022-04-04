@@ -63,7 +63,7 @@
     <plugin.version.dependency-analyzer>1.11.1</plugin.version.dependency-analyzer>
     <plugin.version.dependency>3.1.2</plugin.version.dependency>
     <plugin.version.enforcer>3.0.0</plugin.version.enforcer>
-    <plugin.version.failsafe>3.0.0-M5</plugin.version.failsafe>
+    <plugin.version.failsafe>3.0.0-M6</plugin.version.failsafe>
     <plugin.version.fmt>2.13</plugin.version.fmt>
     <plugin.version.gpg>3.0.1</plugin.version.gpg>
     <plugin.version.javadoc>3.3.2</plugin.version.javadoc>
