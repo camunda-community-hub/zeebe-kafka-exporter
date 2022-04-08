@@ -37,7 +37,7 @@ jobs:
         run: >
           mvn -B verify
       - name: Archive Test Results on Failure
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         if: failure()
         with:
           name: test-results
