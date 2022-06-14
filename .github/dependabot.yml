@@ -1,23 +1,18 @@
 version: 2
 updates:
-  # Enable version updates for main
   - package-ecosystem: "maven"
-    # Look for the root pom
     directory: "/"
+    commit-message:
+      prefix: "YM-293"
     schedule:
       interval: "daily"
-    commit-message:
-      prefix: "build: "
-    labels:
-      - "dependencies"
-    open-pull-requests-limit: 10
-  # Enable version updates for the github actions
+      time: "01:00"
+      timezone: "America/Los_Angeles"
   - package-ecosystem: "github-actions"
     directory: "/"
+    commit-message:
+      prefix: "YM-293"
     schedule:
       interval: "daily"
-    commit-message:
-      prefix: "deps: "
-    labels:
-      - "dependencies"
-    open-pull-requests-limit: 5
+      time: "01:00"
+      timezone: "America/Los_Angeles"
