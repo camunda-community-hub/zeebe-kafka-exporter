@@ -58,15 +58,15 @@
     <plugin.version.animal-sniffer>1.21</plugin.version.animal-sniffer>
     <plugin.version.assembly>3.3.0</plugin.version.assembly>
     <plugin.version.compiler>3.10.1</plugin.version.compiler>
-    <plugin.version.checkstyle>3.1.2</plugin.version.checkstyle>
+    <plugin.version.checkstyle>3.2.0</plugin.version.checkstyle>
     <plugin.version.clean>3.2.0</plugin.version.clean>
     <plugin.version.dependency-analyzer>1.11.1</plugin.version.dependency-analyzer>
     <plugin.version.dependency>3.1.2</plugin.version.dependency>
-    <plugin.version.enforcer>3.0.0</plugin.version.enforcer>
+    <plugin.version.enforcer>3.1.0</plugin.version.enforcer>
     <plugin.version.failsafe>3.0.0-M7</plugin.version.failsafe>
     <plugin.version.fmt>2.13</plugin.version.fmt>
     <plugin.version.gpg>3.0.1</plugin.version.gpg>
-    <plugin.version.javadoc>3.3.2</plugin.version.javadoc>
+    <plugin.version.javadoc>3.4.1</plugin.version.javadoc>
     <plugin.version.license>4.1</plugin.version.license>
     <plugin.version.protobuf>0.6.1</plugin.version.protobuf>
     <plugin.version.proto-compat>1.0.6</plugin.version.proto-compat>
