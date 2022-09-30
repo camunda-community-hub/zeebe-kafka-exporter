@@ -37,7 +37,7 @@
     <license.header>com/mycila/maven/plugin/license/templates/APACHE-2.txt</license.header>
 
     <!-- project dependencies -->
-    <version.agrona>1.14.0</version.agrona>
+    <version.agrona>1.17.1</version.agrona>
     <version.apiguardian>1.1.2</version.apiguardian>
     <version.assertj>3.22.0</version.assertj>
     <version.awaitility>4.2.0</version.awaitility>
