@@ -40,7 +40,7 @@
     <version.agrona>1.14.0</version.agrona>
     <version.apiguardian>1.1.2</version.apiguardian>
     <version.assertj>3.22.0</version.assertj>
-    <version.awaitility>4.1.1</version.awaitility>
+    <version.awaitility>4.2.0</version.awaitility>
     <version.checkstyle>9.3</version.checkstyle>
     <version.jackson>2.13.1</version.jackson>
     <version.junit-jupiter>5.8.2</version.junit-jupiter>
