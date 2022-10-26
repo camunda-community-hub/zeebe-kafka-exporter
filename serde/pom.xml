@@ -23,11 +23,6 @@
   <dependencies>
     <!-- serialization -->
     <dependency>
-      <groupId>io.camunda</groupId>
-      <artifactId>zeebe-protocol-jackson</artifactId>
-    </dependency>
-
-    <dependency>
       <groupId>com.fasterxml.jackson.core</groupId>
       <artifactId>jackson-databind</artifactId>
     </dependency>
@@ -49,6 +44,11 @@
     </dependency>
 
     <!-- Zeebe -->
+    <dependency>
+      <groupId>io.camunda</groupId>
+      <artifactId>zeebe-protocol-jackson</artifactId>
+    </dependency>
+
     <dependency>
       <groupId>io.camunda</groupId>
       <artifactId>zeebe-protocol</artifactId>

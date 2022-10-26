@@ -19,9 +19,15 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.tuple;
 
+import io.camunda.zeebe.exporter.test.ExporterTestConfiguration;
+import io.camunda.zeebe.exporter.test.ExporterTestContext;
+import io.camunda.zeebe.exporter.test.ExporterTestController;
+import io.camunda.zeebe.protocol.record.ImmutableRecord;
+import io.camunda.zeebe.protocol.record.Record;
+import io.camunda.zeebe.protocol.record.RecordType;
 import io.camunda.zeebe.protocol.record.ValueType;
-import io.camunda.zeebe.test.exporter.ExporterTestHarness;
-import io.camunda.zeebe.test.exporter.record.MockRecordMetadata;
+import io.camunda.zeebe.protocol.record.intent.DeploymentIntent;
+import io.camunda.zeebe.protocol.record.value.ImmutableDeploymentRecordValue;
 import io.zeebe.exporters.kafka.config.Config;
 import io.zeebe.exporters.kafka.config.parser.MockConfigParser;
 import io.zeebe.exporters.kafka.config.parser.RawConfigParser;
@@ -31,7 +37,8 @@ import io.zeebe.exporters.kafka.config.raw.RawRecordsConfig;
 import io.zeebe.exporters.kafka.producer.RecordBatchStub;
 import io.zeebe.exporters.kafka.record.RecordHandler;
 import io.zeebe.exporters.kafka.serde.RecordId;
-import java.util.stream.Collectors;
+import java.time.Duration;
+import java.util.List;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.parallel.Execution;
@@ -44,45 +51,49 @@ final class KafkaExporterTest {
 
   private final RawConfig rawConfig = new RawConfig();
   private final MockConfigParser<RawConfig, Config> mockConfigParser =
-      new MockConfigParser<>(new RawConfigParser());
+    new MockConfigParser<>(new RawConfigParser());
+
+  private final ExporterTestContext context =
+    new ExporterTestContext().setConfiguration(new ExporterTestConfiguration<>("test", rawConfig));
+  private final ExporterTestController controller = new ExporterTestController();
+
   private final RecordBatchStub.Factory batchStubFactory = new RecordBatchStub.Factory();
   private final KafkaExporter exporter = new KafkaExporter(batchStubFactory, mockConfigParser);
-  private final ExporterTestHarness testHarness = new ExporterTestHarness(exporter);
 
   @Test
-  void shouldAddRecordToBatchOnExport() throws Exception {
+  void shouldAddRecordToBatchOnExport() {
     // given
     rawConfig.maxBatchSize = 5;
-    testHarness.configure(EXPORTER_ID, rawConfig);
-    testHarness.open();
+    exporter.configure(context);
+    exporter.open(controller);
+
+    final Record<?> record = recordFixture();
 
     // when
-    final var records = testHarness.stream().export(5);
+    exporter.export(record);
 
     // then
-    final var expectedIds =
-        records.stream()
-            .map(r -> new RecordId(r.getPartitionId(), r.getPosition()))
-            .collect(Collectors.toList());
+    final var expectedIds = new RecordId(record.getPartitionId(), record.getPosition());
     assertThat(batchStubFactory.stub.getPendingRecords())
         .as("the records were added to the batch in order")
         .extracting(ProducerRecord::key)
-        .containsExactlyElementsOf(expectedIds);
+        .containsExactlyElementsOf(List.of(expectedIds));
     assertThat(batchStubFactory.stub.getFlushedRecords())
         .as("no records were flushed yet")
         .isEmpty();
   }
 
   @Test
-  void shouldUseCorrectSerializer() throws Exception {
+  void shouldUseCorrectSerializer() {
     // given
-    testHarness.configure(EXPORTER_ID, rawConfig);
-    testHarness.open();
+    exporter.configure(context);
+    exporter.open(controller);
     final var recordHandler = new RecordHandler(mockConfigParser.config.getRecords());
 
+    final Record<?> record = recordFixture();
+
     // when
-    final var json = "{\"a\": 1}";
-    final var record = testHarness.export(r -> r.setJson(json));
+    exporter.export(record);
 
     // then
     final var expectedRecord = recordHandler.transform(record);
@@ -93,18 +104,20 @@ final class KafkaExporterTest {
             tuple(expectedRecord.topic(), expectedRecord.key(), expectedRecord.value()));
   }
 
+
   @Test
-  void shouldSkipDisallowedRecords() throws Exception {
+  void shouldSkipDisallowedRecords() {
     // given
     rawConfig.records = new RawRecordsConfig();
     rawConfig.records.deployment = new RawRecordConfig();
     rawConfig.records.deployment.type = "";
-    testHarness.configure(EXPORTER_ID, rawConfig);
-    testHarness.open();
+    exporter.configure(context);
+    exporter.open(controller);
+
+    final Record<?> record = recordFixture();
 
     // when
-    testHarness.export(
-        r -> r.setMetadata(new MockRecordMetadata().setValueType(ValueType.DEPLOYMENT)));
+    exporter.export(record);
 
     // then
     assertThat(batchStubFactory.stub.getPendingRecords())
@@ -112,104 +125,115 @@ final class KafkaExporterTest {
         .isEmpty();
   }
 
+
   @Test
-  void shouldFlushOnScheduledTask() throws Exception {
+  void shouldFlushOnScheduledTask() {
     // given
-    rawConfig.maxBatchSize = 5;
-    testHarness.configure(EXPORTER_ID, rawConfig);
-    testHarness.open();
+    exporter.configure(context);
+    exporter.open(controller);
+
+    final Record<?> record = recordFixture();
 
     // when
-    final var records = testHarness.stream().export(5);
-    triggerFlushTask();
+    exporter.export(record);
+    controller.runScheduledTasks(Duration.ofSeconds(10));
 
     // then
-    final var expectedIds =
-        records.stream()
-            .map(r -> new RecordId(r.getPartitionId(), r.getPosition()))
-            .collect(Collectors.toList());
+    final var expectedIds = new RecordId(record.getPartitionId(), record.getPosition());
     assertThat(batchStubFactory.stub.getFlushedRecords())
         .as("the records were added to the batch in order")
         .extracting(ProducerRecord::key)
-        .containsExactlyElementsOf(expectedIds);
+        .containsExactlyElementsOf(List.of(expectedIds));
     assertThat(batchStubFactory.stub.getPendingRecords())
         .as("no pending records after flush")
         .isEmpty();
   }
 
   @Test
-  void shouldUpdatePositionOnFlush() throws Exception {
+  void shouldUpdatePositionOnFlush() {
     // given
-    testHarness.configure(EXPORTER_ID, rawConfig);
-    testHarness.open();
+    exporter.configure(context);
+    exporter.open(controller);
+
+    final Record<?> record = recordFixture();
 
     // when
-    final var records = testHarness.stream().export(5);
-    triggerFlushTask();
+    exporter.export(record);
+    controller.runScheduledTasks(Duration.ofSeconds(10));
 
     // then
-    assertThat(testHarness.getLastUpdatedPosition())
+    assertThat(controller.getPosition())
         .as("position should be updated since after flush")
-        .isEqualTo(records.get(4).getPosition());
+        .isEqualTo(record.getPosition());
   }
 
   @Test
-  void shouldRescheduleFlushTaskEvenOnException() throws Exception {
+  void shouldRescheduleFlushTaskEvenOnException() {
     // given
-    testHarness.configure(EXPORTER_ID, rawConfig);
-    testHarness.open();
+    exporter.configure(context);
+    exporter.open(controller);
+
+    final Record<?> record = recordFixture();
 
     // when
-    final var records = testHarness.stream().export(2);
+    exporter.export(record);
     batchStubFactory.stub.flushException = new RuntimeException("failed to flush");
-    assertThatThrownBy(this::triggerFlushTask).isEqualTo(batchStubFactory.stub.flushException);
+    assertThatThrownBy(() -> controller.runScheduledTasks(Duration.ofSeconds(10))).isEqualTo(batchStubFactory.stub.flushException);
     batchStubFactory.stub.flushException = null;
-    triggerFlushTask();
+    controller.runScheduledTasks(Duration.ofSeconds(10));
 
     // then
-    assertThat(testHarness.getLastUpdatedPosition())
+    assertThat(controller.getPosition())
         .as("position should be updated since we managed to flush after the second try")
-        .isEqualTo(records.get(1).getPosition());
+        .isEqualTo(record.getPosition());
   }
 
   @Test
-  void shouldFlushBatchOnClose() throws Exception {
+  void shouldFlushBatchOnClose() {
     // given
-    testHarness.configure(EXPORTER_ID, rawConfig);
-    testHarness.open();
+    exporter.configure(context);
+    exporter.open(controller);
+    final Record<?> record = recordFixture();
 
     // when
-    final var records = testHarness.stream().export(2);
-    testHarness.close();
+    exporter.export(record);
+    exporter.close();
 
     // then
-    assertThat(testHarness.getLastUpdatedPosition())
+    assertThat(controller.getPosition())
         .as("position should be updated since we managed to flush after the second try")
-        .isEqualTo(records.get(1).getPosition());
+        .isEqualTo(record.getPosition());
     assertThat(batchStubFactory.stub.isClosed())
         .as("batch should be closed on exporter close")
         .isTrue();
   }
 
   @Test
-  void shouldRescheduleFlush() throws Exception {
+  void shouldRescheduleFlush() {
     // given
-    testHarness.configure(EXPORTER_ID, rawConfig);
-    testHarness.open();
+    exporter.configure(context);
+    exporter.open(controller);
 
     // when
-    triggerFlushTask();
-    final var records = testHarness.stream().export(2);
-    triggerFlushTask();
+    controller.runScheduledTasks(Duration.ofSeconds(10));
+    exporter.export(recordFixture());
+    controller.runScheduledTasks(Duration.ofSeconds(10));
 
     // then
-    assertThat(testHarness.getLastUpdatedPosition())
+    assertThat(controller.getPosition())
         .as("position should be updated after triggering the second flush task")
-        .isEqualTo(records.get(1).getPosition());
+        .isEqualTo(0);
   }
 
-  private void triggerFlushTask() {
-    mockConfigParser.parse(rawConfig);
-    testHarness.runScheduledTasks(mockConfigParser.config.getFlushInterval());
+  Record<?> recordFixture() {
+    return
+      ImmutableRecord.builder()
+        .withIntent(DeploymentIntent.CREATED)
+        .withRecordType(RecordType.EVENT)
+        .withValueType(ValueType.DEPLOYMENT)
+        .withValue(ImmutableDeploymentRecordValue
+          .builder()
+          .build())
+        .build();
   }
 }
