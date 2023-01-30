@@ -23,7 +23,7 @@ jobs:
     steps:
       - uses: actions/checkout@v3 # pin@v2
       - name: Cache
-        uses: actions/cache@ac8075791e805656e71b4ba23325ace9e3421120 # pin@v2
+        uses: actions/cache@627f0f41f6904a5b1efbaed9f96d9eb58e92e920 # pin@v2
         with:
           path: ~/.m2/repository
           key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
