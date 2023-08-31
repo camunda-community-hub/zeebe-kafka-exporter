@@ -47,7 +47,7 @@
     <version.kafka>3.3.0</version.kafka>
     <version.mockito>4.8.0</version.mockito>
     <version.mockito-jupiter>3.9.0</version.mockito-jupiter>
-    <version.revapi>0.27.0</version.revapi>
+    <version.revapi>0.28.0</version.revapi>
     <version.slf4j>1.7.36</version.slf4j>
     <version.spotbugs>4.2.0</version.spotbugs>
     <version.testcontainers>1.17.4</version.testcontainers>
