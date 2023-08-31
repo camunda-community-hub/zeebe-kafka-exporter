@@ -31,7 +31,15 @@ import org.junit.jupiter.api.parallel.ExecutionMode;
 @Execution(ExecutionMode.CONCURRENT)
 final class RawRecordsConfigParserTest {
   private static final Set<ValueType> EXPECTED_VALUE_TYPES =
-      EnumSet.complementOf(EnumSet.of(ValueType.NULL_VAL, ValueType.SBE_UNKNOWN));
+      EnumSet.complementOf(EnumSet.of(
+        ValueType.NULL_VAL,
+        ValueType.SBE_UNKNOWN,
+        ValueType.DECISION,
+        ValueType.DECISION_REQUIREMENTS,
+        ValueType.DECISION_EVALUATION,
+        ValueType.CHECKPOINT,
+        ValueType.PROCESS_INSTANCE_MODIFICATION
+      ));
 
   private final RawRecordsConfigParser parser = new RawRecordsConfigParser();
 

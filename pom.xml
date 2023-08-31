@@ -26,7 +26,7 @@
 
   <properties>
     <!-- release parent settings -->
-    <version.java>11</version.java>
+    <version.java>17</version.java>
     <nexus.snapshot.repository>
       https://artifacts.camunda.com/artifactory/zeebe-io-snapshots/
     </nexus.snapshot.repository>
@@ -51,8 +51,8 @@
     <version.slf4j>1.7.36</version.slf4j>
     <version.spotbugs>4.2.0</version.spotbugs>
     <version.testcontainers>1.17.4</version.testcontainers>
-    <version.zeebe>1.3.6</version.zeebe>
     <version.zeebe-test-container>3.5.2</version.zeebe-test-container>
+    <version.zeebe>8.1.2</version.zeebe>
 
     <!-- plugin version -->
     <plugin.version.animal-sniffer>1.22</plugin.version.animal-sniffer>
@@ -60,11 +60,10 @@
     <plugin.version.compiler>3.10.1</plugin.version.compiler>
     <plugin.version.checkstyle>3.2.0</plugin.version.checkstyle>
     <plugin.version.clean>3.2.0</plugin.version.clean>
-    <plugin.version.dependency-analyzer>1.11.1</plugin.version.dependency-analyzer>
-    <plugin.version.dependency>3.1.2</plugin.version.dependency>
+    <plugin.version.dependency-analyzer>1.11.2</plugin.version.dependency-analyzer>
+    <plugin.version.dependency>3.3.0</plugin.version.dependency>
     <plugin.version.enforcer>3.1.0</plugin.version.enforcer>
     <plugin.version.failsafe>3.0.0-M7</plugin.version.failsafe>
-    <plugin.version.fmt>2.13</plugin.version.fmt>
     <plugin.version.gpg>3.0.1</plugin.version.gpg>
     <plugin.version.javadoc>3.4.1</plugin.version.javadoc>
     <plugin.version.license>4.1</plugin.version.license>
@@ -72,6 +71,7 @@
     <plugin.version.proto-compat>1.0.6</plugin.version.proto-compat>
     <plugin.version.revapi>0.14.7</plugin.version.revapi>
     <plugin.version.surefire>3.0.0-M7</plugin.version.surefire>
+    <plugin.version.spotless>2.17.3</plugin.version.spotless>
 
     <!-- maven extensions -->
     <extension.version.os-maven-plugin>1.6.1</extension.version.os-maven-plugin>
@@ -88,6 +88,7 @@
     <enforcer.skip>${skipChecks}</enforcer.skip>
     <mdep.analyze.skip>${skipChecks}</mdep.analyze.skip>
     <revapi.skip>${skipChecks}</revapi.skip>
+    <spotless.apply.skip>${skipChecks}</spotless.apply.skip>
     <spotless.check.skip>${skipChecks}</spotless.check.skip>
   </properties>
 
@@ -115,6 +116,24 @@
         <type>pom</type>
       </dependency>
 
+      <dependency>
+        <groupId>io.camunda</groupId>
+        <artifactId>zeebe-protocol-jackson</artifactId>
+        <version>${version.zeebe}</version>
+      </dependency>
+
+      <dependency>
+        <groupId>io.camunda</groupId>
+        <artifactId>zeebe-protocol-asserts</artifactId>
+        <version>${version.zeebe}</version>
+      </dependency>
+
+      <dependency>
+        <groupId>io.camunda</groupId>
+        <artifactId>zeebe-exporter-test</artifactId>
+        <version>${version.zeebe}</version>
+      </dependency>
+
       <!-- Integration testing via Docker -->
       <dependency>
         <groupId>org.testcontainers</groupId>
@@ -128,6 +147,12 @@
         <groupId>io.zeebe</groupId>
         <artifactId>zeebe-test-container</artifactId>
         <version>${version.zeebe-test-container}</version>
+      </dependency>
+
+      <dependency>
+        <groupId>io.camunda</groupId>
+        <artifactId>zeebe-process-test-extension</artifactId>
+        <version>${version.zeebe}</version>
       </dependency>
 
       <!-- Unit test engine -->
@@ -351,16 +376,17 @@
 
         <!-- Google code format plugin -->
         <plugin>
-          <groupId>com.coveo</groupId>
-          <artifactId>fmt-maven-plugin</artifactId>
-          <version>${plugin.version.fmt}</version>
-          <executions>
-            <execution>
-              <goals>
-                <goal>format</goal>
-              </goals>
-            </execution>
-          </executions>
+          <groupId>com.diffplug.spotless</groupId>
+          <artifactId>spotless-maven-plugin</artifactId>
+          <version>${plugin.version.spotless}</version>
+          <configuration>
+            <java>
+              <googleJavaFormat>
+                <version>1.12.0</version>
+                <style>GOOGLE</style>
+              </googleJavaFormat>
+            </java>
+          </configuration>
         </plugin>
 
         <!-- jar with dependency assembly -->
@@ -403,13 +429,6 @@
           <artifactId>maven-dependency-plugin</artifactId>
           <version>${plugin.version.dependency}</version>
           <!-- To run with Java 11 - https://issues.apache.org/jira/browse/MDEP-613-->
-          <dependencies>
-            <dependency>
-              <groupId>org.apache.maven.shared</groupId>
-              <artifactId>maven-dependency-analyzer</artifactId>
-              <version>${plugin.version.dependency-analyzer}</version>
-            </dependency>
-          </dependencies>
 
           <executions>
             <execution>
@@ -495,11 +514,6 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-surefire-plugin</artifactId>
-      </plugin>
-
-      <plugin>
-        <groupId>com.coveo</groupId>
-        <artifactId>fmt-maven-plugin</artifactId>
       </plugin>
 
       <plugin>
