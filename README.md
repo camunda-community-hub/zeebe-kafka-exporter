@@ -8,6 +8,8 @@ Zeebe Kafka Exporter
 [![Java CI](https://github.com/camunda-community-hub/zeebe-kafka-exporter/actions/workflows/ci.yml/badge.svg)](https://github.com/camunda-community-hub/zeebe-kafka-exporter/actions/workflows/ci.yml)
 ![Compatible with: Camunda Platform 8](https://img.shields.io/badge/Compatible%20with-Camunda%20Platform%208-0072Ce)
 
+> :warning: **This is not the official Kafka connector for Camunda 8.** The Kafka Producer and Kafka Consumer connectors are found [here.](https://docs.camunda.io/docs/components/connectors/out-of-the-box-connectors/kafka/) 
+
 An easy to use exporter which will export Zeebe records to a configured Kafka topic.
 
 > For more information about the exporters please read the
