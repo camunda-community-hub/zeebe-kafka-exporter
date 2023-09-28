@@ -11,7 +11,7 @@
     <artifactId>zeebe-kafka-exporter-root</artifactId>
     <groupId>io.zeebe</groupId>
     <relativePath>../pom.xml</relativePath>
-    <version>3.1.2-SNAPSHOT</version>
+    <version>4.0.0-SNAPSHOT</version>
   </parent>
 
   <properties>
@@ -19,6 +19,17 @@
   </properties>
 
   <dependencies>
+    <!-- serialization -->
+    <dependency>
+      <groupId>com.fasterxml.jackson.core</groupId>
+      <artifactId>jackson-databind</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>com.fasterxml.jackson.core</groupId>
+      <artifactId>jackson-core</artifactId>
+    </dependency>
+
     <!-- runtime dependencies which must be packaged with the exporter -->
     <dependency>
       <groupId>io.zeebe</groupId>
@@ -44,6 +55,11 @@
     </dependency>
 
     <dependency>
+      <groupId>io.camunda</groupId>
+      <artifactId>zeebe-protocol-jackson</artifactId>
+    </dependency>
+
+    <dependency>
       <artifactId>slf4j-api</artifactId>
       <groupId>org.slf4j</groupId>
       <scope>provided</scope>
@@ -58,13 +74,7 @@
     <!-- test dependencies -->
     <dependency>
       <groupId>io.camunda</groupId>
-      <artifactId>zeebe-protocol-jackson</artifactId>
-      <scope>test</scope>
-    </dependency>
-
-    <dependency>
-      <groupId>io.camunda</groupId>
-      <artifactId>zeebe-test</artifactId>
+      <artifactId>zeebe-exporter-test</artifactId>
       <scope>test</scope>
     </dependency>
 

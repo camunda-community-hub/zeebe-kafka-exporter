@@ -15,8 +15,12 @@
  */
 package io.zeebe.exporters.kafka.record;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import io.camunda.zeebe.protocol.jackson.ZeebeProtocolModule;
 import io.camunda.zeebe.protocol.record.Record;
 import java.util.Map;
+import org.apache.kafka.common.errors.SerializationException;
 import org.apache.kafka.common.serialization.Serializer;
 import org.apache.kafka.common.serialization.StringSerializer;
 
@@ -28,13 +32,15 @@ import org.apache.kafka.common.serialization.StringSerializer;
  */
 public final class RecordSerializer implements Serializer<Record<?>> {
   private final StringSerializer delegate;
+  private final ObjectMapper mapper;
 
   public RecordSerializer() {
     this(new StringSerializer());
   }
 
   public RecordSerializer(final StringSerializer delegate) {
-    this.delegate = delegate;
+    this.mapper = new ObjectMapper().registerModule(new ZeebeProtocolModule());
+    this.delegate = new StringSerializer();
   }
 
   @Override
@@ -44,7 +50,12 @@ public final class RecordSerializer implements Serializer<Record<?>> {
 
   @Override
   public byte[] serialize(final String topic, final Record data) {
-    return delegate.serialize(topic, data.toJson());
+    try {
+      return delegate.serialize(topic, mapper.writeValueAsString(data));
+    } catch (JsonProcessingException e) {
+      throw new SerializationException(
+        String.format("Expected to serialize data for topic [%s], but failed", topic), e);
+    }
   }
 
   @Override

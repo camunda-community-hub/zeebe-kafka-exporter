@@ -103,7 +103,39 @@ public class RawRecordsConfigParser implements ConfigParser<RawRecordsConfig, Re
     Optional.ofNullable(config.variableDocument)
         .map(recordConfigParser::parse)
         .ifPresent(c -> typeMap.put(ValueType.VARIABLE_DOCUMENT, c));
-
+    Optional.ofNullable(config.decision)
+            .map(recordConfigParser::parse)
+            .ifPresent(c -> typeMap.put(ValueType.DECISION, c));
+    Optional.ofNullable(config.decisionRequirements)
+            .map(recordConfigParser::parse)
+            .ifPresent(c -> typeMap.put(ValueType.DECISION_REQUIREMENTS, c));
+    Optional.ofNullable(config.decisionEvaluation)
+            .map(recordConfigParser::parse)
+            .ifPresent(c -> typeMap.put(ValueType.DECISION_EVALUATION, c));
+    Optional.ofNullable(config.processInstanceModification)
+            .map(recordConfigParser::parse)
+            .ifPresent(c -> typeMap.put(ValueType.PROCESS_INSTANCE_MODIFICATION, c));
+    Optional.ofNullable(config.escalation)
+            .map(recordConfigParser::parse)
+            .ifPresent(c -> typeMap.put(ValueType.ESCALATION, c));
+    Optional.ofNullable(config.signalSubscription)
+            .map(recordConfigParser::parse)
+            .ifPresent(c -> typeMap.put(ValueType.SIGNAL_SUBSCRIPTION, c));
+    Optional.ofNullable(config.signal)
+            .map(recordConfigParser::parse)
+            .ifPresent(c -> typeMap.put(ValueType.SIGNAL, c));
+    Optional.ofNullable(config.resourceDeletion)
+            .map(recordConfigParser::parse)
+            .ifPresent(c -> typeMap.put(ValueType.RESOURCE_DELETION, c));
+    Optional.ofNullable(config.commandDistribution)
+            .map(recordConfigParser::parse)
+            .ifPresent(c -> typeMap.put(ValueType.COMMAND_DISTRIBUTION, c));
+    Optional.ofNullable(config.processInstanceBatch)
+            .map(recordConfigParser::parse)
+            .ifPresent(c -> typeMap.put(ValueType.PROCESS_INSTANCE_BATCH, c));
+    Optional.ofNullable(config.checkpoint)
+            .map(recordConfigParser::parse)
+            .ifPresent(c -> typeMap.put(ValueType.CHECKPOINT, c));
     return new RecordsConfig(typeMap, defaults);
   }
 }
