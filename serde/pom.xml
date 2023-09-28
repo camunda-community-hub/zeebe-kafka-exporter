@@ -11,22 +11,17 @@
   <parent>
     <artifactId>zeebe-kafka-exporter-root</artifactId>
     <groupId>io.zeebe</groupId>
-    <version>3.1.2-SNAPSHOT</version>
+    <version>4.0.0-SNAPSHOT</version>
     <relativePath>../pom.xml</relativePath>
   </parent>
 
   <properties>
     <!-- allow consumers to target Java 8+ -->
-    <version.java>8</version.java>
+    <version.java>17</version.java>
   </properties>
 
   <dependencies>
     <!-- serialization -->
-    <dependency>
-      <groupId>io.camunda</groupId>
-      <artifactId>zeebe-protocol-jackson</artifactId>
-    </dependency>
-
     <dependency>
       <groupId>com.fasterxml.jackson.core</groupId>
       <artifactId>jackson-databind</artifactId>
@@ -49,6 +44,11 @@
     </dependency>
 
     <!-- Zeebe -->
+    <dependency>
+      <groupId>io.camunda</groupId>
+      <artifactId>zeebe-protocol-jackson</artifactId>
+    </dependency>
+
     <dependency>
       <groupId>io.camunda</groupId>
       <artifactId>zeebe-protocol</artifactId>

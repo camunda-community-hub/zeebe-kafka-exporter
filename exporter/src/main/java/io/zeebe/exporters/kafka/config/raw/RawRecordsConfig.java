@@ -112,4 +112,70 @@ public final class RawRecordsConfig {
    * io.camunda.zeebe.protocol.record.ValueType#VARIABLE_DOCUMENT}
    */
   public RawRecordConfig variableDocument;
+
+  /**
+   * For records with a value of type {@link
+   * io.camunda.zeebe.protocol.record.ValueType#DECISION}
+   */
+  public RawRecordConfig decision;
+
+  /**
+   * For records with a value of type {@link
+   * io.camunda.zeebe.protocol.record.ValueType#DECISION_REQUIREMENTS}
+   */
+  public RawRecordConfig decisionRequirements;
+
+  /**
+   * For records with a value of type {@link
+   * io.camunda.zeebe.protocol.record.ValueType#DECISION_EVALUATION}
+   */
+  public RawRecordConfig decisionEvaluation;
+
+  /**
+   * For records with a value of type {@link
+   * io.camunda.zeebe.protocol.record.ValueType#PROCESS_INSTANCE_MODIFICATION}
+   */
+  public RawRecordConfig processInstanceModification;
+
+  /**
+   * For records with a value of type {@link
+   * io.camunda.zeebe.protocol.record.ValueType#ESCALATION}
+   */
+  public RawRecordConfig escalation;
+
+  /**
+   * For records with a value of type {@link
+   * io.camunda.zeebe.protocol.record.ValueType#SIGNAL_SUBSCRIPTION}
+   */
+  public RawRecordConfig signalSubscription;
+
+  /**
+   * For records with a value of type {@link
+   * io.camunda.zeebe.protocol.record.ValueType#SIGNAL}
+   */
+  public RawRecordConfig signal;
+
+  /**
+   * For records with a value of type {@link
+   * io.camunda.zeebe.protocol.record.ValueType#RESOURCE_DELETION}
+   */
+  public RawRecordConfig resourceDeletion;
+
+  /**
+   * For records with a value of type {@link
+   * io.camunda.zeebe.protocol.record.ValueType#COMMAND_DISTRIBUTION}
+   */
+  public RawRecordConfig commandDistribution;
+
+  /**
+   * For records with a value of type {@link
+   * io.camunda.zeebe.protocol.record.ValueType#PROCESS_INSTANCE_BATCH}
+   */
+  public RawRecordConfig processInstanceBatch;
+
+  /**
+   * For records with a value of type {@link
+   * io.camunda.zeebe.protocol.record.ValueType#CHECKPOINT}
+   */
+  public RawRecordConfig checkpoint;
 }

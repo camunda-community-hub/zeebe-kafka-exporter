@@ -17,6 +17,7 @@ package io.zeebe.exporters.kafka.serde;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectReader;
+import io.camunda.zeebe.protocol.jackson.ZeebeProtocolModule;
 import org.apache.kafka.common.serialization.Deserializer;
 
 /**
@@ -25,7 +26,7 @@ import org.apache.kafka.common.serialization.Deserializer;
  */
 public final class RecordIdDeserializer extends JacksonDeserializer<RecordId> {
   public RecordIdDeserializer() {
-    this(new ObjectMapper());
+    this(new ObjectMapper().registerModule(new ZeebeProtocolModule()));
   }
 
   public RecordIdDeserializer(final ObjectMapper objectMapper) {

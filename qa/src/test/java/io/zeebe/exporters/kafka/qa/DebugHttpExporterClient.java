@@ -18,7 +18,6 @@ package io.zeebe.exporters.kafka.qa;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectReader;
-import io.camunda.zeebe.protocol.jackson.record.AbstractRecord;
 import io.camunda.zeebe.protocol.record.Record;
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -42,7 +41,7 @@ import java.util.stream.Stream;
 final class DebugHttpExporterClient {
 
   private static final ObjectReader READER =
-      new ObjectMapper().readerFor(new TypeReference<List<AbstractRecord<?>>>() {});
+      new ObjectMapper().readerFor(new TypeReference<List<Record<?>>>() {});
 
   private final URL serverUrl;
 
@@ -53,7 +52,7 @@ final class DebugHttpExporterClient {
   Stream<Record<?>> streamRecords() {
     try {
       // the HTTP exporter returns records in reversed order, so flip them before returning
-      final List<AbstractRecord<?>> records = READER.readValue(serverUrl);
+      final List<Record<?>> records = READER.readValue(serverUrl);
       Collections.reverse(records);
 
       return records.stream().map(r -> r);
