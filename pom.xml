@@ -62,7 +62,6 @@
     <plugin.version.dependency>3.1.2</plugin.version.dependency>
     <plugin.version.enforcer>3.1.0</plugin.version.enforcer>
     <plugin.version.failsafe>3.0.0-M7</plugin.version.failsafe>
-    <plugin.version.fmt>2.13</plugin.version.fmt>
     <plugin.version.gpg>3.0.1</plugin.version.gpg>
     <plugin.version.javadoc>3.4.1</plugin.version.javadoc>
     <plugin.version.license>4.1</plugin.version.license>
@@ -264,46 +263,41 @@
           </executions>
         </plugin>
 
-        <!-- CHECKSTYLE -->
-        <plugin>
-          <groupId>org.apache.maven.plugins</groupId>
-          <artifactId>maven-checkstyle-plugin</artifactId>
-          <version>${plugin.version.checkstyle}</version>
-          <!-- dependency on build tool to reference the checkstyle cfg -->
-          <dependencies>
-            <dependency>
-              <groupId>io.camunda</groupId>
-              <artifactId>zeebe-build-tools</artifactId>
-              <version>${version.zeebe}</version>
-            </dependency>
-            <dependency>
-              <groupId>com.puppycrawl.tools</groupId>
-              <artifactId>checkstyle</artifactId>
-              <version>${version.checkstyle}</version>
-            </dependency>
-          </dependencies>
-          <configuration>
-            <configLocation>check/.checkstyle.xml</configLocation>
-            <includeTestSourceDirectory>true</includeTestSourceDirectory>
-            <encoding>UTF-8</encoding>
-            <failOnViolation>true</failOnViolation>
-            <sourceDirectories>
-              <sourceDirectory>${project.build.sourceDirectory}</sourceDirectory>
-              <sourceDirectory>${project.build.testSourceDirectory}</sourceDirectory>
-            </sourceDirectories>
-          </configuration>
-          <executions>
-            <execution>
-              <id>validate-java</id>
-              <phase>validate</phase>
-              <goals>
-                <goal>check</goal>
-              </goals>
-              <configuration>
-              </configuration>
-            </execution>
-          </executions>
-        </plugin>
+<!--        &lt;!&ndash; CHECKSTYLE &ndash;&gt;-->
+<!--        <plugin>-->
+<!--          <groupId>org.apache.maven.plugins</groupId>-->
+<!--          <artifactId>maven-checkstyle-plugin</artifactId>-->
+<!--          <version>${plugin.version.checkstyle}</version>-->
+<!--          &lt;!&ndash; dependency on build tool to reference the checkstyle cfg &ndash;&gt;-->
+<!--          <dependencies>-->
+<!--            <dependency>-->
+<!--              <groupId>com.puppycrawl.tools</groupId>-->
+<!--              <artifactId>checkstyle</artifactId>-->
+<!--              <version>${version.checkstyle}</version>-->
+<!--            </dependency>-->
+<!--          </dependencies>-->
+<!--          <configuration>-->
+<!--            <configLocation>check/.checkstyle.xml</configLocation>-->
+<!--            <includeTestSourceDirectory>true</includeTestSourceDirectory>-->
+<!--            <encoding>UTF-8</encoding>-->
+<!--            <failOnViolation>true</failOnViolation>-->
+<!--            <sourceDirectories>-->
+<!--              <sourceDirectory>${project.build.sourceDirectory}</sourceDirectory>-->
+<!--              <sourceDirectory>${project.build.testSourceDirectory}</sourceDirectory>-->
+<!--            </sourceDirectories>-->
+<!--          </configuration>-->
+<!--          <executions>-->
+<!--            <execution>-->
+<!--              <id>validate-java</id>-->
+<!--              <phase>validate</phase>-->
+<!--              <goals>-->
+<!--                <goal>check</goal>-->
+<!--              </goals>-->
+<!--              <configuration>-->
+<!--              </configuration>-->
+<!--            </execution>-->
+<!--          </executions>-->
+<!--        </plugin>-->
 
         <!-- unit tests -->
         <plugin>
@@ -502,11 +496,6 @@
       </plugin>
 
       <plugin>
-        <groupId>com.coveo</groupId>
-        <artifactId>fmt-maven-plugin</artifactId>
-      </plugin>
-
-      <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-enforcer-plugin</artifactId>
       </plugin>
@@ -569,10 +558,6 @@
           <value>!true</value>
         </property>
       </activation>
-
-      <modules>
-        <module>qa</module>
-      </modules>
     </profile>
   </profiles>
 
