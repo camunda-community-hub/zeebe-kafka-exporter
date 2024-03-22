@@ -1,30 +1,128 @@
-version: '3.3'
-
 services:
-  zeebe:
-    image: ${ZEEBE_IMAGE:-camunda/zeebe}:${ZEEBE_VERSION:-1.0.0}
+
+  zeebe: # https://docs.camunda.io/docs/self-managed/platform-deployment/docker/#zeebe
+    image: camunda/zeebe:${CAMUNDA_PLATFORM_VERSION}
     container_name: zeebe
-    hostname: zeebe
-    depends_on:
-      - kafka
     ports:
       - "26500:26500"
-    restart: always
-    environment:
-      SPRING_CONFIG_ADDITIONAL_LOCATION: /usr/local/zeebe/config/exporter.yml
-      ZEEBE_BROKER_EXPORTERS_KAFKA_ARGS_PRODUCER_SERVERS: "kafka:9092"
+      - "9600:9600"
+    environment: # https://docs.camunda.io/docs/self-managed/zeebe-deployment/configuration/environment-variables/
+      - ZEEBE_BROKER_GATEWAY_SECURITY_AUTHENTICATION_MODE=${ZEEBE_AUTHENTICATION_MODE}
+      - ZEEBE_BROKER_GATEWAY_SECURITY_AUTHENTICATION_IDENTITY_ISSUERBACKENDURL=http://keycloak:8080/auth/realms/camunda-platform
+      - ZEEBE_BROKER_GATEWAY_SECURITY_AUTHENTICATION_IDENTITY_AUDIENCE=zeebe-api
+      - ZEEBE_BROKER_GATEWAY_SECURITY_AUTHENTICATION_IDENTITY_BASEURL=http://identity:8084
+      - ZEEBE_BROKER_GATEWAY_MULTITENANCY_ENABLED=${MULTI_TENANCY_ENABLED}
+      # allow running with low disk space
+      - ZEEBE_BROKER_DATA_DISKUSAGECOMMANDWATERMARK=0.998
+      - ZEEBE_BROKER_DATA_DISKUSAGEREPLICATIONWATERMARK=0.999
+      - "JAVA_TOOL_OPTIONS=-Xms512m -Xmx512m"
+      - SPRING_CONFIG_ADDITIONAL_LOCATION=/usr/local/zeebe/config/exporter.yml
+    healthcheck:
+      test: [ "CMD-SHELL", "timeout 10s bash -c ':> /dev/tcp/127.0.0.1/9600' || exit 1" ]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
     volumes:
+      - zeebe:/usr/local/zeebe/data
       - ./exporter/exporter.yml:/usr/local/zeebe/config/exporter.yml
-      - ./exporter/target/zeebe-kafka-exporter-jar-with-dependencies.jar:/usr/local/zeebe/lib/zeebe-kafka-exporter.jar
-
-  consumer:
-    image: edenhill/kafkacat:${KAFKACAT_VERSION:-1.5.0}
-    container_name: consumer
-    hostname: consumer
+      - ./exporter/target/zeebe-kafka-exporter-3.1.2-SNAPSHOT-jar-with-dependencies.jar:/usr/local/zeebe/exporters/zeebe-kafka-exporter.jar
+    networks:
+      - camunda-platform
     depends_on:
+      - identity
       - kafka
-    restart: always
-    command: [ "kafkacat", "-b", "kafka:9092", "-C", "-J", "-X", "metadata.max.age.ms=1000", "-X", "topic.metadata.refresh.interval.ms=1000", "-G", "zeebe", "^zeebe.*$$" ]
+
+
+  identity: # https://docs.camunda.io/docs/self-managed/platform-deployment/docker/#identity
+    container_name: identity
+    image: camunda/identity:${CAMUNDA_PLATFORM_VERSION}
+    ports:
+      - "8084:8084"
+    environment: # https://docs.camunda.io/docs/self-managed/identity/deployment/configuration-variables/
+      SERVER_PORT: 8084
+      IDENTITY_RETRY_DELAY_SECONDS: 30
+      KEYCLOAK_URL: http://keycloak:8080/auth
+      IDENTITY_AUTH_PROVIDER_BACKEND_URL: http://keycloak:8080/auth/realms/camunda-platform
+      IDENTITY_DATABASE_HOST: postgres
+      IDENTITY_DATABASE_PORT: 5432
+      IDENTITY_DATABASE_NAME: bitnami_keycloak
+      IDENTITY_DATABASE_USERNAME: bn_keycloak
+      IDENTITY_DATABASE_PASSWORD: "#3]O?4RGj)DE7Z!9SA5"
+      KEYCLOAK_INIT_WEBMODELER_ROOT_URL: http://${HOST}:8070
+      KEYCLOAK_INIT_ZEEBE_NAME: zeebe
+      KEYCLOAK_USERS_0_USERNAME: "demo"
+      KEYCLOAK_USERS_0_PASSWORD: "demo"
+      KEYCLOAK_USERS_0_FIRST_NAME: "demo"
+      KEYCLOAK_USERS_0_EMAIL: "demo@acme.com"
+      KEYCLOAK_USERS_0_ROLES_0: "Identity"
+      KEYCLOAK_USERS_0_ROLES_1: "Web Modeler"
+      KEYCLOAK_CLIENTS_0_NAME: zeebe
+      KEYCLOAK_CLIENTS_0_ID: ${ZEEBE_CLIENT_ID}
+      KEYCLOAK_CLIENTS_0_SECRET: ${ZEEBE_CLIENT_SECRET}
+      KEYCLOAK_CLIENTS_0_TYPE: M2M
+      KEYCLOAK_CLIENTS_0_PERMISSIONS_0_RESOURCE_SERVER_ID: zeebe-api
+      KEYCLOAK_CLIENTS_0_PERMISSIONS_0_DEFINITION: write:*
+      MULTITENANCY_ENABLED: ${MULTI_TENANCY_ENABLED}
+      RESOURCE_PERMISSIONS_ENABLED: ${RESOURCE_AUTHORIZATIONS_ENABLED}
+    healthcheck:
+      test: [ "CMD", "wget", "-q", "--tries=1", "--spider", "http://localhost:8082/actuator/health" ]
+      interval: 5s
+      timeout: 15s
+      retries: 30
+      start_period: 60s
+    volumes:
+      - keycloak-theme:/app/keycloak-theme
+    networks:
+      - camunda-platform
+      - identity-network
+    depends_on:
+      keycloak:
+        condition: service_healthy
+
+  postgres: # https://hub.docker.com/_/postgres
+    container_name: postgres
+    image: postgres:${POSTGRES_VERSION}
+    environment:
+      POSTGRES_DB: bitnami_keycloak
+      POSTGRES_USER: bn_keycloak
+      POSTGRES_PASSWORD: "#3]O?4RGj)DE7Z!9SA5"
+
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -d $${POSTGRES_DB} -U $${POSTGRES_USER}" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - postgres:/var/lib/postgresql/data
+    networks:
+      - identity-network
+
+  keycloak: # https://hub.docker.com/r/bitnami/keycloak
+    container_name: keycloak
+    image: bitnami/keycloak:${KEYCLOAK_SERVER_VERSION}
+    volumes:
+      - keycloak-theme:/opt/bitnami/keycloak/themes/identity
+    ports:
+      - "18080:8080"
+    environment:
+      KEYCLOAK_HTTP_RELATIVE_PATH: /auth
+      KEYCLOAK_DATABASE_HOST: postgres
+      KEYCLOAK_DATABASE_PASSWORD: "#3]O?4RGj)DE7Z!9SA5"
+      KEYCLOAK_ADMIN_USER: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin
+
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8080/auth" ]
+      interval: 30s
+      timeout: 15s
+      retries: 5
+      start_period: 30s
+    networks:
+      - camunda-platform
+      - identity-network
+    depends_on:
+      - postgres
 
   zookeeper:
     image: confluentinc/cp-zookeeper:${KAFKA_VERSION:-5.5.1}
@@ -35,7 +133,8 @@ services:
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
       ZOOKEEPER_TICK_TIME: 2000
-    restart: always
+    networks:
+      - camunda-platform
 
   kafka:
     image: confluentinc/cp-kafka:${KAFKA_VERSION:-5.5.1}
@@ -53,4 +152,21 @@ services:
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INSIDE:PLAINTEXT,OUTSIDE:PLAINTEXT
       KAFKA_INTER_BROKER_LISTENER_NAME: INSIDE
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-    restart: always
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_MIN_INSYNC_REPLICAS: 1
+      KAFKA_DEFAULT_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_TRANSACTION_STATE_LOG_NUM_PARTITIONS: 1
+
+    networks:
+      - camunda-platform
+volumes:
+  zeebe:
+  postgres:
+  keycloak-theme:
+
+networks:
+  # Note there are two bridge networks: One for Camunda Platform and one for Identity.
+  # Identity and Keycloak are part of both as they need to be accessible by platform components.
+  camunda-platform:
+  identity-network:

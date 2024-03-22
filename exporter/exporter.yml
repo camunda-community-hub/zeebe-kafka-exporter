@@ -5,7 +5,7 @@ zeebe:
         className: io.zeebe.exporters.kafka.KafkaExporter
         # Update this path to the location of the JAR
         # Note that this must be visible to the broker process
-        jarPath: /path/to/zeebe-kafka-exporter-3.0.0-jar-with-dependencies.jar
+        jarPath: exporters/zeebe-kafka-exporter.jar
         args:
           # Controls the number of records to buffer in a single record batch before forcing a flush. Note
           # that a flush may occur before anyway due to periodic flushing. This setting should help you
@@ -41,7 +41,7 @@ zeebe:
             # Maps to ProducerConfig.BOOTSTRAP_SERVERS_CONFIG
             # For example:
             # servers: "kafka:9092,localhost:29092"
-            servers: ""
+            servers: "kafka:9092"
             # Controls how long the producer will wait for a request to be acknowledged by
             # the Kafka broker before retrying it
             # Maps to ProducerConfig.REQUEST_TIMEOUT_MS_CONFIG
