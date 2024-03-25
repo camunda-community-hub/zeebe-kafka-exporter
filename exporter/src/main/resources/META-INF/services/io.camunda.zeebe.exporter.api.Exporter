@@ -1,1 +1,1 @@
-io.zeebe.exporters.kafka.KafkaExporter
+at.phactum.zeebe.exporters.kafka.KafkaExporter

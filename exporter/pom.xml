@@ -9,7 +9,7 @@
 
   <parent>
     <artifactId>zeebe-kafka-exporter-root</artifactId>
-    <groupId>io.zeebe</groupId>
+    <groupId>at.phactum.zeebe</groupId>
     <relativePath>../pom.xml</relativePath>
     <version>3.1.2-SNAPSHOT</version>
   </parent>
@@ -21,7 +21,7 @@
   <dependencies>
     <!-- runtime dependencies which must be packaged with the exporter -->
     <dependency>
-      <groupId>io.zeebe</groupId>
+      <groupId>at.phactum.zeebe</groupId>
       <artifactId>zeebe-kafka-exporter-serde</artifactId>
     </dependency>
 

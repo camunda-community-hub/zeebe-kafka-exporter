@@ -2,7 +2,7 @@ zeebe:
   broker:
     exporters:
       kafka:
-        className: io.zeebe.exporters.kafka.KafkaExporter
+        className: at.phactum.zeebe.exporters.kafka.KafkaExporter
         # Update this path to the location of the JAR
         # Note that this must be visible to the broker process
         jarPath: exporters/zeebe-kafka-exporter.jar
@@ -105,6 +105,8 @@ zeebe:
             processEvent: { topic: zeebe-process-event }
             # For records with a value of type PROCESS_INSTANCE
             processInstance: { topic: zeebe-process-instance }
+            # For records with a value of type PROCESS_INSTANCE_CREATION
+            processInstanceCreation: { topic: zeebe }
             # For records with a value of type PROCESS_INSTANCE_RESULT
             processInstanceResult: { topic: zeebe-process-instance-result }
             # For records with a value of type PROCESS_MESSAGE_SUBSCRIPTION

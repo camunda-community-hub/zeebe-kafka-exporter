@@ -8,7 +8,7 @@ Zeebe Kafka Exporter
 [![Java CI](https://github.com/camunda-community-hub/zeebe-kafka-exporter/actions/workflows/ci.yml/badge.svg)](https://github.com/camunda-community-hub/zeebe-kafka-exporter/actions/workflows/ci.yml)
 ![Compatible with: Camunda Platform 8](https://img.shields.io/badge/Compatible%20with-Camunda%20Platform%208-0072Ce)
 
-> :warning: **This is not the official Kafka connector for Camunda 8.** The Kafka Producer and Kafka Consumer connectors are found [here.](https://docs.camunda.io/docs/components/connectors/out-of-the-box-connectors/kafka/) 
+> :warning: **This is not the official Kafka connector for Camunda 8.** The Kafka Producer and Kafka Consumer connectors are found [here.](https://docs.camunda.io/docs/components/connectors/out-of-the-box-connectors/kafka/)
 
 An easy to use exporter which will export Zeebe records to a configured Kafka topic.
 
@@ -75,7 +75,7 @@ zeebe:
   broker:
     exporters:
       kafka:
-        className: io.zeebe.exporters.kafka.KafkaExporter
+        className: at.phactum.zeebe.exporters.kafka.KafkaExporter
         jarPath: /path/to/zeebe-kafka-exporter-3.0.0-jar-with-dependencies.jar
         args:
           producer:
@@ -106,7 +106,7 @@ to minimize issues with out-of-order processing. As such, your consumers should 
 isolation level.
 
 Records are serialized to Kafka using plain JSON. Keys are JSON representation of
-`io.zeebe.exporters.kafka.serde.RecordId`, and values are serialized using the standard Zeebe
+`serde.at.phactum.zeebe.exporters.kafka.RecordId`, and values are serialized using the standard Zeebe
 `io.zeebe.protocol.record.Record#toJson()` method.
 The `io.zeebe.exporters:zeebe-kafka-exporter-serde`
 module provides easy to use `Deserializer` implementations in Java for use in your consumers.
@@ -360,7 +360,7 @@ zeebe:
   broker:
     exporters:
       kafka:
-        className: io.zeebe.exporters.kafka.KafkaExporter
+        className: at.phactum.zeebe.exporters.kafka.KafkaExporter
         # Update this path to the location of the JAR
         # Note that this must be visible to the broker process
         jarPath: /path/to/zeebe-kafka-exporter-3.0.0-jar-with-dependencies.jar

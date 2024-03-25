@@ -5,34 +5,18 @@
   <modelVersion>4.0.0</modelVersion>
   <name>Zeebe Kafka Exporter Root</name>
   <artifactId>zeebe-kafka-exporter-root</artifactId>
-  <groupId>io.zeebe</groupId>
+  <groupId>at.phactum.zeebe</groupId>
   <packaging>pom</packaging>
   <version>3.1.2-SNAPSHOT</version>
-  <inceptionYear>2019</inceptionYear>
-  <url>https://github.com/zeebe-io/zeebe-kafka-exporter</url>
 
   <modules>
     <module>exporter</module>
     <module>serde</module>
   </modules>
 
-  <parent>
-    <groupId>org.camunda.community</groupId>
-    <artifactId>community-hub-release-parent</artifactId>
-    <version>1.4.4</version>
-  </parent>
-
   <properties>
     <!-- release parent settings -->
     <version.java>17</version.java>
-    <nexus.snapshot.repository>
-      https://artifacts.camunda.com/artifactory/zeebe-io-snapshots/
-    </nexus.snapshot.repository>
-    <nexus.release.repository>https://artifacts.camunda.com/artifactory/zeebe-io/
-    </nexus.release.repository>
-
-    <!-- license header -->
-    <license.header>com/mycila/maven/plugin/license/templates/APACHE-2.txt</license.header>
 
     <!-- project dependencies -->
     <version.agrona>1.17.1</version.agrona>
@@ -65,13 +49,15 @@
     <plugin.version.gpg>3.0.1</plugin.version.gpg>
     <plugin.version.javadoc>3.4.1</plugin.version.javadoc>
     <plugin.version.license>4.1</plugin.version.license>
-    <plugin.version.protobuf>0.6.1</plugin.version.protobuf>
-    <plugin.version.proto-compat>1.0.6</plugin.version.proto-compat>
     <plugin.version.revapi>0.14.7</plugin.version.revapi>
     <plugin.version.surefire>3.0.0-M7</plugin.version.surefire>
 
     <!-- maven extensions -->
     <extension.version.os-maven-plugin>1.6.1</extension.version.os-maven-plugin>
+
+
+    <maven.compiler.source>17</maven.compiler.source>
+    <maven.compiler.target>17</maven.compiler.target>
 
     <!--
       you can use the following to disable specific checks. the approach taken is to use a single
@@ -92,13 +78,13 @@
     <dependencies>
       <!-- Sibling modules -->
       <dependency>
-        <groupId>io.zeebe</groupId>
+        <groupId>at.phactum.zeebe</groupId>
         <artifactId>zeebe-kafka-exporter</artifactId>
         <version>${project.version}</version>
       </dependency>
 
       <dependency>
-        <groupId>io.zeebe</groupId>
+        <groupId>at.phactum.zeebe</groupId>
         <artifactId>zeebe-kafka-exporter-serde</artifactId>
         <version>${project.version}</version>
       </dependency>
@@ -234,71 +220,6 @@
           </configuration>
         </plugin>
 
-        <!-- LICENSE PLUGIN -->
-        <plugin>
-          <groupId>com.mycila</groupId>
-          <artifactId>license-maven-plugin</artifactId>
-          <version>${plugin.version.license}</version>
-          <configuration>
-            <header>${license.header}</header>
-            <properties>
-              <owner>camunda services GmbH</owner>
-              <email>info@camunda.com</email>
-            </properties>
-            <includes>
-              <include>**/*.java</include>
-            </includes>
-            <mapping>
-              <java>SLASHSTAR_STYLE</java>
-            </mapping>
-          </configuration>
-          <executions>
-            <execution>
-              <id>add-license</id>
-              <phase>compile</phase>
-              <goals>
-                <goal>format</goal>
-              </goals>
-            </execution>
-          </executions>
-        </plugin>
-
-<!--        &lt;!&ndash; CHECKSTYLE &ndash;&gt;-->
-<!--        <plugin>-->
-<!--          <groupId>org.apache.maven.plugins</groupId>-->
-<!--          <artifactId>maven-checkstyle-plugin</artifactId>-->
-<!--          <version>${plugin.version.checkstyle}</version>-->
-<!--          &lt;!&ndash; dependency on build tool to reference the checkstyle cfg &ndash;&gt;-->
-<!--          <dependencies>-->
-<!--            <dependency>-->
-<!--              <groupId>com.puppycrawl.tools</groupId>-->
-<!--              <artifactId>checkstyle</artifactId>-->
-<!--              <version>${version.checkstyle}</version>-->
-<!--            </dependency>-->
-<!--          </dependencies>-->
-<!--          <configuration>-->
-<!--            <configLocation>check/.checkstyle.xml</configLocation>-->
-<!--            <includeTestSourceDirectory>true</includeTestSourceDirectory>-->
-<!--            <encoding>UTF-8</encoding>-->
-<!--            <failOnViolation>true</failOnViolation>-->
-<!--            <sourceDirectories>-->
-<!--              <sourceDirectory>${project.build.sourceDirectory}</sourceDirectory>-->
-<!--              <sourceDirectory>${project.build.testSourceDirectory}</sourceDirectory>-->
-<!--            </sourceDirectories>-->
-<!--          </configuration>-->
-<!--          <executions>-->
-<!--            <execution>-->
-<!--              <id>validate-java</id>-->
-<!--              <phase>validate</phase>-->
-<!--              <goals>-->
-<!--                <goal>check</goal>-->
-<!--              </goals>-->
-<!--              <configuration>-->
-<!--              </configuration>-->
-<!--            </execution>-->
-<!--          </executions>-->
-<!--        </plugin>-->
-
         <!-- unit tests -->
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
@@ -408,21 +329,6 @@
               <version>${plugin.version.dependency-analyzer}</version>
             </dependency>
           </dependencies>
-
-          <executions>
-            <execution>
-              <id>analyze-dependencies</id>
-              <goals>
-                <goal>analyze-only</goal>
-              </goals>
-              <!-- The analyze-only goal assumes that the test-compile phase has been executed -->
-              <phase>verify</phase>
-              <configuration>
-                <failOnWarning>true</failOnWarning>
-                <outputXML>true</outputXML>
-              </configuration>
-            </execution>
-          </executions>
         </plugin>
 
         <!-- enforce version of clean plugin -->
@@ -478,16 +384,6 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-compiler-plugin</artifactId>
-      </plugin>
-
-      <plugin>
-        <groupId>com.mycila</groupId>
-        <artifactId>license-maven-plugin</artifactId>
-      </plugin>
-
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-checkstyle-plugin</artifactId>
       </plugin>
 
       <plugin>
