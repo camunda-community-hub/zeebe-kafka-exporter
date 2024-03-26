@@ -26,7 +26,7 @@ services:
     volumes:
       - zeebe:/usr/local/zeebe/data
       - ./exporter/exporter.yml:/usr/local/zeebe/config/exporter.yml
-      - ./exporter/target/zeebe-kafka-exporter-3.1.2-SNAPSHOT-jar-with-dependencies.jar:/usr/local/zeebe/exporters/zeebe-kafka-exporter.jar
+      - ./exporter/target/zeebe-kafka-exporter-4.0.0-jar-with-dependencies.jar:/usr/local/zeebe/exporters/zeebe-kafka-exporter.jar
     networks:
       - camunda-platform
     depends_on:
