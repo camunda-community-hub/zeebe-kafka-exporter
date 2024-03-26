@@ -483,11 +483,12 @@
     </repository>
   </repositories>
 
-  <scm>
-    <url>https://github.com/camunda-community-hub/zeebe-kafka-exporter</url>
-    <connection>scm:git:git@github.com:camunda-community-hub/zeebe-kafka-exporter.git</connection>
-    <developerConnection>scm:git:git@github.com:camunda-community-hub/zeebe-kafka-exporter.git
-    </developerConnection>
-    <tag>HEAD</tag>
-  </scm>
+  <distributionManagement>
+    <repository>
+      <id>github</id>
+      <name>GitHub Phactum Apache Maven Packages</name>
+      <url>https://maven.pkg.github.com/phactum/zeebe-kafka-exporter</url>
+    </repository>
+  </distributionManagement>
+
 </project>
