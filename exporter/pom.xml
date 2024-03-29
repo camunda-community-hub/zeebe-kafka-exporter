@@ -11,7 +11,7 @@
     <artifactId>zeebe-kafka-exporter-root</artifactId>
     <groupId>at.phactum.zeebe</groupId>
     <relativePath>../pom.xml</relativePath>
-    <version>4.0.0</version>
+    <version>4.0.1-SNAPSHOT</version>
   </parent>
 
   <properties>
