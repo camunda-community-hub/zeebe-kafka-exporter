@@ -7,7 +7,7 @@
   <artifactId>zeebe-kafka-exporter-root</artifactId>
   <groupId>at.phactum.zeebe</groupId>
   <packaging>pom</packaging>
-  <version>4.0.1-SNAPSHOT</version>
+  <version>8.5.0-SNAPSHOT</version>
 
   <modules>
     <module>exporter</module>
@@ -33,7 +33,7 @@
     <version.slf4j>1.7.36</version.slf4j>
     <version.spotbugs>4.2.0</version.spotbugs>
     <version.testcontainers>1.17.4</version.testcontainers>
-    <version.zeebe>8.3.5</version.zeebe>
+    <version.zeebe>8.5.0</version.zeebe>
     <version.zeebe-test-container>3.5.2</version.zeebe-test-container>
 
     <!-- plugin version -->
