@@ -16,6 +16,10 @@
 
   <properties>
     <exporter.finalName>${project.artifactId}-${project.version}</exporter.finalName>
+
+    <version.java>21</version.java>
+    <maven.compiler.source>17</maven.compiler.source>
+    <maven.compiler.target>17</maven.compiler.target>
   </properties>
 
   <dependencies>
