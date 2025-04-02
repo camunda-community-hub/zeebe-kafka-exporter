@@ -5,9 +5,11 @@
   <modelVersion>4.0.0</modelVersion>
   <name>Zeebe Kafka Exporter Root</name>
   <artifactId>zeebe-kafka-exporter-root</artifactId>
-  <groupId>at.phactum.zeebe</groupId>
+  <groupId>com.phactum.zeebe</groupId>
   <packaging>pom</packaging>
-  <version>8.5.1-SNAPSHOT</version>
+  <version>8.6.0</version>
+  <description>Export events from Zeebe to Kafka</description>
+  <url>https://github.com/phactum/zeebe-kafka-exporter</url>
 
   <modules>
     <module>exporter</module>
@@ -33,7 +35,7 @@
     <version.slf4j>1.7.36</version.slf4j>
     <version.spotbugs>4.2.0</version.spotbugs>
     <version.testcontainers>1.17.4</version.testcontainers>
-    <version.zeebe>8.5.0</version.zeebe>
+    <version.zeebe>8.6.0</version.zeebe>
     <version.zeebe-test-container>3.5.2</version.zeebe-test-container>
 
     <!-- plugin version -->
@@ -79,13 +81,13 @@
     <dependencies>
       <!-- Sibling modules -->
       <dependency>
-        <groupId>at.phactum.zeebe</groupId>
+        <groupId>com.phactum.zeebe</groupId>
         <artifactId>zeebe-kafka-exporter</artifactId>
         <version>${project.version}</version>
       </dependency>
 
       <dependency>
-        <groupId>at.phactum.zeebe</groupId>
+        <groupId>com.phactum.zeebe</groupId>
         <artifactId>zeebe-kafka-exporter-serde</artifactId>
         <version>${project.version}</version>
       </dependency>
@@ -204,6 +206,18 @@
   <build>
     <pluginManagement>
       <plugins>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-source-plugin</artifactId>
+          <executions>
+            <execution>
+              <id>attach-sources</id>
+              <goals>
+                <goal>jar</goal>
+              </goals>
+            </execution>
+          </executions>
+        </plugin>
         <!-- compiler -->
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
@@ -213,12 +227,21 @@
 
         <!-- JAVADOC -->
         <plugin>
-          <groupId>org.apache.maven.plugins</groupId>
-          <artifactId>maven-javadoc-plugin</artifactId>
-          <version>${plugin.version.javadoc}</version>
-          <configuration>
-            <source>${version.java}</source>
-          </configuration>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-jar-plugin</artifactId>
+            <executions>
+                <execution>
+                    <id>empty-javadoc-jar</id>
+                    <phase>package</phase>
+                    <goals>
+                        <goal>jar</goal>
+                    </goals>
+                    <configuration>
+                        <classifier>javadoc</classifier>
+                        <classesDirectory>${basedir}/javadoc</classesDirectory>
+                    </configuration>
+                </execution>
+            </executions>
         </plugin>
 
         <!-- unit tests -->
@@ -410,15 +433,42 @@
   </build>
 
   <profiles>
+    <!--
+      development profile is on by default, but disabled during release
+     -->
     <profile>
-      <id>community-action-maven-release</id>
+      <id>development</id>
+      <activation>
+        <property>
+          <name>performRelease</name>
+          <value>!true</value>
+        </property>
+      </activation>
+      <distributionManagement>
+        <repository>
+          <id>github</id>
+          <name>GitHub Phactum Apache Maven Packages</name>
+          <url>https://maven.pkg.github.com/phactum/zeebe-kafka-exporter</url>
+        </repository>
+      </distributionManagement>
+    </profile>
+    <profile>
+      <id>ossrh</id>
       <properties>
         <skipChecks>true</skipChecks>
         <performRelease>true</performRelease>
+        <serverId>phactum-ossrh</serverId>
       </properties>
-
       <build>
         <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-deploy-plugin</artifactId>
+            <version>2.7</version>
+            <configuration>
+              <skip>true</skip>
+            </configuration>
+          </plugin>
           <plugin>
             <groupId>org.apache.maven.plugins</groupId>
             <artifactId>maven-gpg-plugin</artifactId>
@@ -440,21 +490,17 @@
               </gpgArguments>
             </configuration>
           </plugin>
+          <plugin>
+            <groupId>org.sonatype.central</groupId>
+            <artifactId>central-publishing-maven-plugin</artifactId> 
+            <version>0.7.0</version>
+            <extensions>true</extensions>
+            <configuration>
+              <publishingServerId>${serverId}</publishingServerId>
+            </configuration>
+          </plugin>
         </plugins>
       </build>
-    </profile>
-
-    <!--
-      development profile is on by default, but disabled during release
-     -->
-    <profile>
-      <id>development</id>
-      <activation>
-        <property>
-          <name>performRelease</name>
-          <value>!true</value>
-        </property>
-      </activation>
     </profile>
   </profiles>
 
@@ -484,12 +530,25 @@
     </repository>
   </repositories>
 
-  <distributionManagement>
-    <repository>
-      <id>github</id>
-      <name>GitHub Phactum Apache Maven Packages</name>
-      <url>https://maven.pkg.github.com/phactum/zeebe-kafka-exporter</url>
-    </repository>
-  </distributionManagement>
+  <licenses>
+    <license>
+      <name>Apache License, Version 2.0</name>
+      <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
+      <distribution>repo</distribution>
+    </license>
+  </licenses>
 
+  <developers>
+    <developer>
+      <id>VanillaBP</id>
+      <organization>Phactum Softwareentwicklung GmbH</organization>
+      <organizationUrl>https://www.phactum.at</organizationUrl>
+    </developer>
+  </developers>
+
+  <scm>
+    <connection>scm:git:https://github.com/phactum/zeebe-kafka-exporter.git</connection>
+    <developerConnection>scm:git:https://github.com/phactum/zeebe-kafka-exporter.git</developerConnection>
+    <url>https://github.com/phactum/zeebe-kafka-exporter/tree/main</url>
+  </scm>
 </project>

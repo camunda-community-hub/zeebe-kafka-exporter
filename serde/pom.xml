@@ -10,10 +10,23 @@
 
   <parent>
     <artifactId>zeebe-kafka-exporter-root</artifactId>
-    <groupId>at.phactum.zeebe</groupId>
-    <version>8.5.1-SNAPSHOT</version>
+    <groupId>com.phactum.zeebe</groupId>
+    <version>8.6.0</version>
     <relativePath>../pom.xml</relativePath>
   </parent>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-source-plugin</artifactId>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-jar-plugin</artifactId>
+      </plugin>
+    </plugins>
+  </build>
 
   <dependencies>
     <!-- serialization -->
