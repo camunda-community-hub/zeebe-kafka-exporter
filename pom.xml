@@ -7,7 +7,7 @@
   <artifactId>zeebe-kafka-exporter-root</artifactId>
   <groupId>com.phactum.zeebe</groupId>
   <packaging>pom</packaging>
-  <version>8.6.0</version>
+  <version>8.6.1-SNAPSHOT</version>
   <description>Export events from Zeebe to Kafka</description>
   <url>https://github.com/phactum/zeebe-kafka-exporter</url>
 
